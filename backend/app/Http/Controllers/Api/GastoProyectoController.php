@@ -28,6 +28,11 @@ class GastoProyectoController extends Controller
         return $query->latest()->get();
     }
 
+    public function show($id)
+    {
+        return GastoProyecto::with(['proyecto', 'subpartida', 'proveedor'])->findOrFail($id);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

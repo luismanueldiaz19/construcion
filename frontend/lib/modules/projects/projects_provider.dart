@@ -12,13 +12,21 @@ class ProjectsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  Future<void> fetchProyectos() async {
+  Future<void> fetchProyectos({
+    String? estado,
+    int? year,
+    String? search,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _proyectos = await _apiService.getProyectos();
+      _proyectos = await _apiService.getProyectos(
+        estado: estado,
+        year: year,
+        search: search,
+      );
     } catch (e) {
       _error = e.toString();
     } finally {

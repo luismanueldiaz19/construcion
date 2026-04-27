@@ -9,9 +9,29 @@ use Illuminate\Support\Facades\DB;
 
 class ProyectoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $proyectos = Proyecto::with(['partidas.subpartidas.avances'])->get();
+        $query = Proyecto::with(['partidas.subpartidas.avances']);
+
+        if ($request->has('estado') && !empty($request->estado) && $request->estado !== 'Todos') {
+            $estados = explode(',', $request->estado);
+            $query->whereIn('estado', $estados);
+        }
+
+        if ($request->has('year') && !empty($request->year)) {
+            $query->whereYear('created_at', $request->year);
+        }
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('cliente', 'like', "%{$search}%")
+                  ->orWhere('ubicacion', 'like', "%{$search}%");
+            });
+        }
+
+        $proyectos = $query->orderBy('created_at', 'desc')->get();
         
         foreach ($proyectos as $proyecto) {
             $this->calculateProgress($proyecto);
@@ -98,6 +118,7 @@ class ProyectoController extends Controller
             'transporte' => 'nullable|numeric',
             'supervision_tecnica' => 'nullable|numeric',
             'otros_costos' => 'nullable|numeric',
+            'notas' => 'nullable|string',
             'partidas' => 'nullable|array',
             'partidas.*.descripcion' => 'required|string',
             'partidas.*.subpartidas' => 'nullable|array',
@@ -146,6 +167,48 @@ class ProyectoController extends Controller
         return $proyecto;
     }
 
+    public function uploadLogo(Request $request, $id)
+    {
+        $request->validate([
+            'logo' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:15360', // 15MB max
+        ]);
+
+        $proyecto = Proyecto::findOrFail($id);
+
+        if ($request->hasFile('logo')) {
+            // Eliminar logo anterior si existe
+            if ($proyecto->logo_path) {
+                \Storage::disk('public')->delete($proyecto->logo_path);
+            }
+
+            $year = date('Y');
+            $folder = "proyectos/{$year}/{$id}";
+            $extension = $request->file('logo')->getClientOriginalExtension();
+            $filename = 'logo-' . time() . '.' . $extension;
+            
+            $path = $request->file('logo')->storeAs($folder, $filename, 'public');
+            $proyecto->update(['logo_path' => $path]);
+
+            return response()->json([
+                'message' => 'Logo subido correctamente',
+                'logo_path' => $path,
+                'logo_url' => \Storage::url($path)
+            ]);
+        }
+
+        return response()->json(['message' => 'No se recibió ningún archivo'], 400);
+    }
+
+    public function removeLogo($id)
+    {
+        $proyecto = Proyecto::findOrFail($id);
+        if ($proyecto->logo_path) {
+            \Storage::disk('public')->delete($proyecto->logo_path);
+            $proyecto->update(['logo_path' => null]);
+        }
+        return response()->json(['message' => 'Logo eliminado']);
+    }
+
     public function destroy(Proyecto $proyecto)
     {
         $proyecto->delete();
@@ -154,13 +217,7 @@ class ProyectoController extends Controller
 
     public function partidas($id)
     {
-        $proyecto = Proyecto::findOrFail($id);
-        // Retornamos todas las subpartidas vinculadas al proyecto a través de sus partidas
-        return DB::table('subpartidas')
-            ->join('partidas', 'subpartidas.partida_id', '=', 'partidas.id')
-            ->where('partidas.proyecto_id', $id)
-            ->select('subpartidas.id', 'subpartidas.descripcion as nombre')
-            ->get();
+        return Proyecto::with('partidas.subpartidas')->findOrFail($id)->partidas;
     }
 
     public function provisionarTodo($id)
@@ -180,5 +237,80 @@ class ProyectoController extends Controller
             }
         }
         return response()->json(['message' => 'Proyecto provisionado al 100%']);
+    }
+
+    public function addPartida(Request $request, $id)
+    {
+        $proyecto = Proyecto::findOrFail($id);
+        
+        $validated = $request->validate([
+            'descripcion' => 'required|string',
+            'subpartidas' => 'nullable|array',
+            'subpartidas.*.descripcion' => 'required|string',
+            'subpartidas.*.cantidad' => 'required|numeric',
+            'subpartidas.*.costo_unitario' => 'required|numeric',
+            'subpartidas.*.unidad' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($validated, $proyecto) {
+            $partida = $proyecto->partidas()->create([
+                'descripcion' => $validated['descripcion']
+            ]);
+
+            $sum = 0;
+            if(isset($validated['subpartidas'])) {
+                foreach($validated['subpartidas'] as $sub) {
+                    $subtotal = $sub['cantidad'] * $sub['costo_unitario'];
+                    $sum += $subtotal;
+                    
+                    $partida->subpartidas()->create([
+                        'descripcion' => $sub['descripcion'],
+                        'unidad' => $sub['unidad'] ?? 'GL',
+                        'cantidad' => $sub['cantidad'],
+                        'costo_unitario' => $sub['costo_unitario'],
+                        'total_presupuestado' => $subtotal,
+                    ]);
+                }
+            }
+            
+            $proyecto->increment('presupuesto_estimado', $sum);
+            
+            return response()->json([
+                'message' => 'Partida agregada con éxito',
+                'partida' => $partida->load('subpartidas')
+            ]);
+        });
+    }
+
+    public function addSubpartida(Request $request, $id)
+    {
+        $partida = \App\Models\Partida::findOrFail($id);
+        $proyecto = $partida->proyecto;
+        
+        $validated = $request->validate([
+            'descripcion' => 'required|string',
+            'cantidad' => 'required|numeric',
+            'costo_unitario' => 'required|numeric',
+            'unidad' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($validated, $partida, $proyecto) {
+            $subtotal = $validated['cantidad'] * $validated['costo_unitario'];
+            
+            $sub = $partida->subpartidas()->create([
+                'descripcion' => $validated['descripcion'],
+                'unidad' => $validated['unidad'] ?? 'GL',
+                'cantidad' => $validated['cantidad'],
+                'costo_unitario' => $validated['costo_unitario'],
+                'total_presupuestado' => $subtotal,
+            ]);
+            
+            $proyecto->increment('presupuesto_estimado', $subtotal);
+            
+            return response()->json([
+                'message' => 'Sub-partida agregada con éxito',
+                'subpartida' => $sub
+            ]);
+        });
     }
 }

@@ -20,15 +20,27 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
   final _transporteController = TextEditingController(text: '0');
   final _supervisionController = TextEditingController(text: '0');
   final _otrosCostosController = TextEditingController(text: '0');
+  final _notasController = TextEditingController();
 
   String _estado = 'Cotización';
-  List<Map<String, dynamic>> _partidas = [];
+  List<Map<String, dynamic>> _partidas = [
+    {
+      'descripcion': '',
+      'subpartidas': [
+        {
+          'descripcion': '',
+          'unidad': 'GL',
+          'cantidad': 0.0,
+          'costo_unitario': 0.0,
+        },
+      ],
+    }
+  ];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _addPartida();
   }
 
   void _addPartida() {
@@ -69,6 +81,22 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (_partidas.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes agregar al menos una partida al proyecto.')),
+      );
+      return;
+    }
+    for (var p in _partidas) {
+      if ((p['subpartidas'] as List).isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Todas las partidas deben tener al menos una sub-partida.')),
+        );
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -82,6 +110,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
             double.tryParse(_supervisionController.text) ?? 0,
         'otros_costos': double.tryParse(_otrosCostosController.text) ?? 0,
         'estado': _estado,
+        'notas': _notasController.text,
         'partidas': _partidas,
       };
 
@@ -225,6 +254,17 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _notasController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Observaciones / Notas para el Presupuesto',
+                border: OutlineInputBorder(),
+                hintText:
+                    'Ej: Esta cotización incluye materiales y mano de obra...',
+              ),
+            ),
           ],
         ),
       ),
@@ -251,6 +291,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Descripción de la Partida',
                     ),
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
                   ),
                 ),
                 IconButton(
@@ -301,6 +342,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
               initialValue: sub['descripcion'],
               onChanged: (v) => sub['descripcion'] = v,
               decoration: const InputDecoration(labelText: 'Descripción'),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
             ),
           ),
           const SizedBox(width: 8),
@@ -309,6 +351,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
               initialValue: sub['unidad'],
               onChanged: (v) => sub['unidad'] = v,
               decoration: const InputDecoration(labelText: 'Unid'),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Req.' : null,
             ),
           ),
           const SizedBox(width: 8),

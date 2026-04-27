@@ -8,7 +8,8 @@ class Proyecto extends Model
 {
     protected $fillable = [
         'nombre', 'cliente', 'ubicacion', 'fecha_inicio', 'fecha_fin', 
-        'presupuesto_estimado', 'estado', 'itbis', 'transporte', 'otros_costos', 'supervision_tecnica'
+        'presupuesto_estimado', 'estado', 'itbis', 'transporte', 'otros_costos', 'supervision_tecnica',
+        'logo_path', 'notas'
     ];
 
     public function partidas()
@@ -24,5 +25,10 @@ class Proyecto extends Model
     public function inventarios()
     {
         return $this->hasMany(Inventario::class);
+    }
+
+    public function documentos()
+    {
+        return $this->hasMany(Documento::class);
     }
 }

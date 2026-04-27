@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'project_documents_screen.dart';
 import 'projects_provider.dart';
 import 'package:intl/intl.dart';
 import 'project_form_screen.dart';
@@ -21,7 +22,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   void _refresh() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProjectsProvider>().fetchProyectos();
+      context.read<ProjectsProvider>().fetchProyectos(
+        estado: 'Activo,Cotización',
+      );
     });
   }
 
@@ -63,63 +66,172 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             return const Center(child: Text('No hay proyectos registrados.'));
           }
 
-          return ListView.builder(
+          return GridView.builder(
             padding: const EdgeInsets.all(24),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 350,
+              mainAxisSpacing: 24,
+              crossAxisSpacing: 24,
+              mainAxisExtent: 240,
+            ),
             itemCount: provider.proyectos.length,
             itemBuilder: (context, index) {
               final proyecto = provider.proyectos[index];
-              return InkWell(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ProjectDetailsScreen(proyecto: proyecto),
-                  ),
+              return Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF003366),
-                      child: Icon(Icons.construction, color: Colors.white),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ProjectDetailsScreen(proyecto: proyecto),
                     ),
-                    title: Text(
-                      proyecto['nombre'] ?? 'Sin nombre',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Ubicación: ${proyecto['ubicacion'] ?? 'No especificada'}',
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Presupuesto: ${f.format(double.tryParse(proyecto['presupuesto_estimado']?.toString() ?? '0') ?? 0)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(
-                              proyecto['estado'],
-                            ).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            proyecto['estado'] ?? 'Pendiente',
-                            style: TextStyle(
-                              color: _getStatusColor(proyecto['estado']),
-                              fontSize: 12,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const CircleAvatar(
+                              backgroundColor: Color(0xFF003366),
+                              child: Icon(
+                                Icons.construction,
+                                color: Colors.white,
+                              ),
                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(
+                                  proyecto['estado'],
+                                ).withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _getStatusColor(proyecto['estado']),
+                                ),
+                              ),
+                              child: Text(
+                                proyecto['estado'] ?? 'Pendiente',
+                                style: TextStyle(
+                                  color: _getStatusColor(proyecto['estado']),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          proyecto['nombre'] ?? 'Sin nombre',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                proyecto['ubicacion'] ?? 'No especificada',
+                                style: const TextStyle(color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Presupuesto',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  f.format(
+                                    double.tryParse(
+                                          proyecto['presupuesto_estimado']
+                                                  ?.toString() ??
+                                              '0',
+                                        ) ??
+                                        0,
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            FilledButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ProjectDetailsScreen(proyecto: proyecto),
+                                ),
+                              ),
+                              icon: const Icon(Icons.arrow_forward, size: 16),
+                              label: const Text('Ver'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ProjectDocumentsScreen(
+                                          proyectoId: proyecto['id'],
+                                          proyectoNombre: proyecto['nombre'],
+                                        ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.folder_shared_outlined,
+                                color: Colors.blue,
+                              ),
+                              tooltip: 'Planos y Documentos',
+                            ),
+                          ],
                         ),
                       ],
                     ),

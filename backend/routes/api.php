@@ -23,9 +23,15 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('gastos-proyecto', GastoProyectoController::class);
     Route::post('proyectos/{id}/pago-cliente', [ProyectoController::class, 'pagoCliente']);
     Route::post('proyectos/{id}/provisionar-todo', [ProyectoController::class, 'provisionarTodo']);
+    Route::post('proyectos/{id}/logo', [ProyectoController::class, 'uploadLogo']);
+    Route::delete('proyectos/{id}/logo', [ProyectoController::class, 'removeLogo']);
+    Route::post('proyectos/{id}/partidas', [ProyectoController::class, 'addPartida']);
+    Route::post('partidas/{id}/subpartidas', [ProyectoController::class, 'addSubpartida']);
     Route::get('/proyectos/{id}/partidas', [ProyectoController::class, 'partidas']);
     Route::apiResource('materiales', \App\Http\Controllers\Api\MaterialController::class);
     Route::get('/inventario-proyectos', [InventarioController::class, 'index']);
+    Route::get('/inventario-proyectos/{id}', [InventarioController::class, 'show']);
+    Route::get('/inventario-proyectos/{id}/pdf', [InventarioController::class, 'downloadPdf']);
     Route::apiResource('compras', \App\Http\Controllers\Api\CompraController::class);
     Route::post('/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'store']);
     Route::post('/pagos', [\App\Http\Controllers\Api\PagoClienteController::class, 'store']);
@@ -39,5 +45,8 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('proveedores', ProveedorController::class);
     Route::apiResource('compras', CompraController::class);
     Route::post('recepciones', [RecepcionController::class, 'store']);
-    Route::post('consumos', [ConsumoController::class, 'store']);
+    Route::apiResource('consumos', ConsumoController::class);
+    Route::get('/proyectos/{id}/documentos', [\App\Http\Controllers\Api\DocumentoController::class, 'index']);
+    Route::post('/documentos', [\App\Http\Controllers\Api\DocumentoController::class, 'store']);
+    Route::delete('/documentos/{id}', [\App\Http\Controllers\Api\DocumentoController::class, 'destroy']);
 });

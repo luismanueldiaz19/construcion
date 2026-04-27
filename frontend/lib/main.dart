@@ -1,9 +1,12 @@
+import 'package:construccion_erp/modules/projects/historial_proyectos_screen.dart';
 import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
 import 'modules/dashboard/dashboard_screen.dart';
 import 'modules/projects/projects_screen.dart';
 import 'modules/accounting/accounting_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
+import 'modules/reports/compras_report_screen.dart';
+import 'modules/reports/gastos_report_screen.dart';
 
 import 'package:provider/provider.dart';
 import 'modules/dashboard/dashboard_provider.dart';
@@ -49,8 +52,11 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const ProjectsScreen(),
+    const HistorialProyectosScreen(),
     const AccountingScreen(),
     const InventoryScreen(),
+    const ComprasReportScreen(),
+    const GastosReportScreen(),
     const Center(child: Text('Configuración')),
   ];
 
@@ -83,6 +89,11 @@ class _MainLayoutState extends State<MainLayout> {
                 label: Text('Proyectos'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.calendar_today_outlined),
+                selectedIcon: Icon(Icons.calendar_today_outlined),
+                label: Text('Historial Proyectos'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.account_balance_outlined),
                 selectedIcon: Icon(Icons.account_balance),
                 label: Text('Contabilidad'),
@@ -91,6 +102,16 @@ class _MainLayoutState extends State<MainLayout> {
                 icon: Icon(Icons.inventory_2_outlined),
                 selectedIcon: Icon(Icons.inventory_2),
                 label: Text('Inventario'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.shopping_cart_outlined),
+                selectedIcon: Icon(Icons.shopping_cart),
+                label: Text('Compras'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long),
+                label: Text('Gastos'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.settings_outlined),

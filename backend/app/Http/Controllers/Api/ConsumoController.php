@@ -20,6 +20,15 @@ class ConsumoController extends Controller
         $this->asientoService = $asientoService;
     }
 
+    public function index(Request $request)
+    {
+        $query = Consumo::with(['proyecto', 'material', 'subpartida']);
+        if ($request->has('proyecto_id')) {
+            $query->where('proyecto_id', $request->proyecto_id);
+        }
+        return $query->latest()->get();
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

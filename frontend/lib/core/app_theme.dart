@@ -34,16 +34,16 @@ class AppTheme {
         fontWeight: FontWeight.w600,
         fontSize: 18,
       ),
-      bodyMedium: TextStyle(
-        color: textSecondary,
-        fontSize: 14,
-      ),
+      bodyMedium: TextStyle(color: textSecondary, fontSize: 14),
     ),
     navigationRailTheme: const NavigationRailThemeData(
       backgroundColor: primaryColor,
       selectedIconTheme: IconThemeData(color: accentColor),
       unselectedIconTheme: IconThemeData(color: Colors.white70),
-      selectedLabelTextStyle: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
+      selectedLabelTextStyle: TextStyle(
+        color: accentColor,
+        fontWeight: FontWeight.bold,
+      ),
       unselectedLabelTextStyle: TextStyle(color: Colors.white70),
     ),
   );

@@ -24,6 +24,10 @@ class CompraController extends Controller
         return Compra::with('proveedor', 'proyecto', 'detalles.material')->latest()->get();
     }
 
+    public function show($id){
+        return Compra::with('proveedor', 'proyecto', 'detalles.material')->findOrFail($id);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
