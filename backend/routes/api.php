@@ -29,6 +29,8 @@ Route::prefix('v1')->group(function () {
     Route::post('partidas/{id}/subpartidas', [ProyectoController::class, 'addSubpartida']);
     Route::get('/proyectos/{id}/partidas', [ProyectoController::class, 'partidas']);
     Route::apiResource('materiales', \App\Http\Controllers\Api\MaterialController::class);
+    Route::post('materiales/{id}/toggle-estado', [\App\Http\Controllers\Api\MaterialController::class, 'toggleEstado']);
+    Route::apiResource('categorias', \App\Http\Controllers\Api\CategoriaController::class);
     Route::get('/inventario-proyectos', [InventarioController::class, 'index']);
     Route::get('/inventario-proyectos/{id}', [InventarioController::class, 'show']);
     Route::get('/inventario-proyectos/{id}/pdf', [InventarioController::class, 'downloadPdf']);

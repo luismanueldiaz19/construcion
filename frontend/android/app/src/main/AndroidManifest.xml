@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Permisos para conexión a Internet -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
-        android:label="construccion_erp"
+        android:label="Neo Project S.R.L"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

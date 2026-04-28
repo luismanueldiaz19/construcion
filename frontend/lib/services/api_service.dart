@@ -259,6 +259,17 @@ class ApiService {
       throw Exception('Error al crear proveedor');
   }
 
+  Future<void> updateProveedor(int id, Map<String, dynamic> data) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/proveedores/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(data),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Error al actualizar proveedor');
+    }
+  }
+
   Future<void> createCompra(Map<String, dynamic> data) async {
     print('POST Request to $baseUrl/compras with data: ${json.encode(data)}');
     final response = await http.post(
@@ -306,6 +317,43 @@ class ApiService {
     if (response.statusCode != 201 && response.statusCode != 200) {
       print('ERROR en registrarRecepcion: ${response.body}');
       throw Exception('Error al registrar recepción: ${response.body}');
+    }
+  }
+
+  Future<List<dynamic>> getCategorias() async {
+    final response = await http.get(Uri.parse('$baseUrl/categorias'));
+    if (response.statusCode == 200) return json.decode(response.body);
+    throw Exception('Error al cargar categorías');
+  }
+
+  Future<void> createMaterial(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/materiales'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(data),
+    );
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Error al crear material: ${response.body}');
+    }
+  }
+
+  Future<void> updateMaterial(int id, Map<String, dynamic> data) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/materiales/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(data),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Error al actualizar material: ${response.body}');
+    }
+  }
+
+  Future<void> toggleMaterialEstado(int id) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/materiales/$id/toggle-estado'),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Error al cambiar estado del material');
     }
   }
 
@@ -399,9 +447,12 @@ class ApiService {
     int? partidaId,
     required String filePath,
   }) async {
-    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/documentos'));
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/documentos'),
+    );
     request.headers['Accept'] = 'application/json';
-    
+
     request.fields['proyecto_id'] = proyectoId.toString();
     request.fields['nombre'] = nombre;
     request.fields['tipo'] = tipo;
@@ -424,6 +475,8 @@ class ApiService {
       Uri.parse('$baseUrl/documentos/$id'),
       headers: {'Accept': 'application/json'},
     );
-    if (response.statusCode != 200) throw Exception('Error al eliminar documento');
+    if (response.statusCode != 200) {
+      throw Exception('Error al eliminar documento');
+    }
   }
 }

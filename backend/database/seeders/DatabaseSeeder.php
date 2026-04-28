@@ -17,8 +17,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             CatalogoCuentasSeeder::class,
-            MaterialSeeder::class,
             ProyectoSeeder::class,
+            CategoriaMaterialSeeder::class,
         ]);
     }
 }

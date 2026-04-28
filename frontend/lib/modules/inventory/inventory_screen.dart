@@ -46,15 +46,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
         title: const Text('Inventario por Proyecto'),
         actions: [
           TextButton.icon(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SuppliersScreen()),
-            ),
-            icon: const Icon(Icons.people_outline, color: Colors.blue),
-            label: const Text('Proveedores'),
-          ),
-          const SizedBox(width: 8),
-          TextButton.icon(
             onPressed: () async {
               await Navigator.push(
                 context,
@@ -70,20 +61,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
             label: const Text('Recibir en Obra'),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PurchaseFormScreen(),
-                ),
-              );
-              if (result == true) _loadData();
-            },
-            icon: const Icon(Icons.shopping_cart),
-            label: const Text('Nueva Compra'),
-          ),
+
           const SizedBox(width: 24),
         ],
       ),

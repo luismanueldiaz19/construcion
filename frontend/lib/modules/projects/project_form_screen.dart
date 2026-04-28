@@ -34,7 +34,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
           'costo_unitario': 0.0,
         },
       ],
-    }
+    },
   ];
   bool _isLoading = false;
 
@@ -81,17 +81,23 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_partidas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes agregar al menos una partida al proyecto.')),
+        const SnackBar(
+          content: Text('Debes agregar al menos una partida al proyecto.'),
+        ),
       );
       return;
     }
     for (var p in _partidas) {
       if ((p['subpartidas'] as List).isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Todas las partidas deben tener al menos una sub-partida.')),
+          const SnackBar(
+            content: Text(
+              'Todas las partidas deben tener al menos una sub-partida.',
+            ),
+          ),
         );
         return;
       }
@@ -291,7 +297,8 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Descripción de la Partida',
                     ),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Requerido' : null,
                   ),
                 ),
                 IconButton(
@@ -342,7 +349,8 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
               initialValue: sub['descripcion'],
               onChanged: (v) => sub['descripcion'] = v,
               decoration: const InputDecoration(labelText: 'Descripción'),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Requerido' : null,
             ),
           ),
           const SizedBox(width: 8),

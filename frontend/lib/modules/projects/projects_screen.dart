@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants.dart';
 import 'project_documents_screen.dart';
 import 'projects_provider.dart';
 import 'package:intl/intl.dart';
@@ -192,44 +194,80 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                 ),
                               ],
                             ),
-                            FilledButton.icon(
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ProjectDetailsScreen(proyecto: proyecto),
-                                ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              icon: const Icon(Icons.arrow_forward, size: 16),
-                              label: const Text('Ver'),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ProjectDocumentsScreen(
-                                          proyectoId: proyecto['id'],
-                                          proyectoNombre: proyecto['nombre'],
-                                        ),
-                                  ),
-                                );
+                              onSelected: (value) async {
+                                switch (value) {
+                                  case 'detalles':
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ProjectDetailsScreen(
+                                              proyecto: proyecto,
+                                            ),
+                                      ),
+                                    );
+                                    break;
+                                  case 'documentos':
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ProjectDocumentsScreen(
+                                              proyectoId: proyecto['id'],
+                                              proyectoNombre:
+                                                  proyecto['nombre'],
+                                              logoPath: proyecto['logo_path'],
+                                            ),
+                                      ),
+                                    );
+                                    break;
+                                  case 'Pdf':
+                                    final url = Uri.parse(
+                                      '$host/reports/proyecto/${proyecto['id']}/pdf',
+                                    );
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url);
+                                    } else {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'No se pudo abrir el reporte completo del proyecto',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                    break;
+                                }
                               },
-                              icon: const Icon(
-                                Icons.folder_shared_outlined,
-                                color: Colors.blue,
-                              ),
-                              tooltip: 'Planos y Documentos',
+                              itemBuilder: (context) => [
+                                _buildPopupMenuItem(
+                                  'detalles',
+                                  Icons.analytics_outlined,
+                                  'Ver Detalles',
+                                  Colors.blue,
+                                ),
+                                _buildPopupMenuItem(
+                                  'documentos',
+                                  Icons.folder_shared_outlined,
+                                  'Documentos',
+                                  Colors.orange,
+                                ),
+                                _buildPopupMenuItem(
+                                  'Pdf',
+                                  Icons.picture_as_pdf_outlined,
+                                  'Reporte General (PDF)',
+                                  Colors.red.shade700,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -241,6 +279,27 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             },
           );
         },
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupMenuItem(
+    String value,
+    IconData icon,
+    String text,
+    Color color,
+  ) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            text,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ],
       ),
     );
   }

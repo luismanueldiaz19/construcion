@@ -358,19 +358,19 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                           ...partidas
                               .map((p) => _buildPartidaCard(p, f))
                               .toList(),
-                          if (!_isReadonly)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16.0,
-                              ),
-                              child: Center(
-                                child: ElevatedButton.icon(
-                                  onPressed: _showAddPartidaDialog,
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Añadir Partida Extra'),
-                                ),
-                              ),
-                            ),
+                          // if (!_isReadonly)
+                          //   Padding(
+                          //     padding: const EdgeInsets.symmetric(
+                          //       vertical: 16.0,
+                          //     ),
+                          //     child: Center(
+                          //       child: ElevatedButton.icon(
+                          //         onPressed: _showAddPartidaDialog,
+                          //         icon: const Icon(Icons.add),
+                          //         label: const Text('Añadir Partida Extra'),
+                          //       ),
+                          //     ),
+                          //   ),
                           const SizedBox(height: 32),
                           _buildGastosSection(f),
                         ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
+import '../../widgets/search_selector_dialog.dart';
 
 class PurchaseFormScreen extends StatefulWidget {
   const PurchaseFormScreen({super.key});
@@ -165,21 +167,12 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<int>(
+                  child: _buildSearchableSelector(
+                    label: 'Proveedor',
                     value: _selectedProveedorId,
-                    decoration: const InputDecoration(
-                      labelText: 'Proveedor',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _proveedores
-                        .map(
-                          (p) => DropdownMenuItem<int>(
-                            value: p['id'],
-                            child: Text(p['nombre']),
-                          ),
-                        )
-                        .toList(),
+                    items: _proveedores,
                     onChanged: (v) => setState(() => _selectedProveedorId = v),
+                    displayMapper: (p) => p['nombre'],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -280,51 +273,116 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 3,
-            child: DropdownButtonFormField<int>(
+            child: _buildSearchableSelector(
+              label: 'Material',
               value: item['material_id'],
-              decoration: const InputDecoration(
-                labelText: 'Material',
-                border: OutlineInputBorder(),
-              ),
-              items: _materiales
-                  .map(
-                    (m) => DropdownMenuItem<int>(
-                      value: m['id'],
-                      child: Text("${m['nombre']} (${m['unidad']})"),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => item['material_id'] = v),
+              items: _materiales,
+              onChanged: (v) {
+                setState(() {
+                  item['material_id'] = v;
+                  final selectedMaterial = _materiales.firstWhere(
+                    (m) => m['id'] == v,
+                    orElse: () => null,
+                  );
+                  if (selectedMaterial != null) {
+                    item['precio_unitario'] =
+                        double.tryParse(
+                          selectedMaterial['precio_costo']?.toString() ?? '0',
+                        ) ??
+                        0.0;
+                  }
+                });
+              },
+              displayMapper: (m) => "${m['nombre']} (${m['unidad']})",
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             flex: 1,
             child: TextFormField(
-              keyboardType: TextInputType.number,
+              initialValue: item['cantidad'] == 0
+                  ? ''
+                  : item['cantidad'].toString(),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,4}')),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Cant.',
                 border: OutlineInputBorder(),
               ),
+              validator: (v) =>
+                  (double.tryParse(v ?? '') ?? 0) <= 0 ? '!' : null,
               onChanged: (v) =>
                   setState(() => item['cantidad'] = double.tryParse(v) ?? 0.0),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            flex: 2,
+            flex: 1,
             child: TextFormField(
-              keyboardType: TextInputType.number,
+              key: Key("price_${item['material_id']}_$index"),
+              initialValue: item['precio_unitario'] == 0
+                  ? ''
+                  : item['precio_unitario'].toString(),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Precio Unit.',
                 border: OutlineInputBorder(),
                 prefixText: '\$',
               ),
+              validator: (v) =>
+                  (double.tryParse(v ?? '') ?? 0) <= 0 ? '!' : null,
               onChanged: (v) => setState(
                 () => item['precio_unitario'] = double.tryParse(v) ?? 0.0,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 1,
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'ITBIS',
+                border: OutlineInputBorder(),
+                prefixText: '\$',
+              ),
+              child: Text(
+                NumberFormat(
+                  '#,###.##',
+                ).format(item['cantidad'] * item['precio_unitario'] * 0.18),
+                style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 1,
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Importe',
+                border: OutlineInputBorder(),
+                prefixText: '\$',
+              ),
+              child: Text(
+                NumberFormat(
+                  '#,###.##',
+                ).format((item['cantidad'] * item['precio_unitario']) * 1.18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
             ),
           ),
@@ -333,6 +391,246 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             icon: const Icon(Icons.delete_outline, color: Colors.red),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchableSelector({
+    required String label,
+    required dynamic value,
+    required List<dynamic> items,
+    required Function(dynamic) onChanged,
+    required String Function(dynamic) displayMapper,
+  }) {
+    final selectedItem = items.firstWhere(
+      (i) => i['id'] == value,
+      orElse: () => null,
+    );
+    final displayText = selectedItem != null
+        ? displayMapper(selectedItem)
+        : 'Seleccione $label';
+
+    return InkWell(
+      onTap: () => _showSearchDialog(label, items, onChanged, displayMapper),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          suffixIcon: const Icon(Icons.search),
+        ),
+        child: Text(
+          displayText,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: selectedItem != null ? Colors.black : Colors.grey[600],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSearchDialog(
+    String title,
+    List<dynamic> items,
+    Function(dynamic) onSelect,
+    String Function(dynamic) displayMapper,
+  ) async {
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => SearchSelectorDialog(
+        title: title,
+        items: items,
+        displayMapper: displayMapper,
+        subtitleMapper: (item) {
+          if (title == 'Material') {
+            return "Código: ${item['codigo'] ?? 'N/A'} | Unidad: ${item['unidad']}";
+          }
+          if (title == 'Proveedor') {
+            return "RNC: ${item['rnc'] ?? 'N/A'}";
+          }
+          return null;
+        },
+        onAdd: () {
+          Navigator.pop(context); // Close search dialog
+          if (title == 'Proveedor') {
+            _quickAddProveedor();
+          } else if (title == 'Material') {
+            _quickAddMaterial();
+          }
+        },
+      ),
+    );
+
+    if (result != null) {
+      onSelect(result);
+    }
+  }
+
+  void _quickAddProveedor() {
+    final nombreController = TextEditingController();
+    final rncController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Agregar Proveedor Rápido'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nombreController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre *',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: rncController,
+              decoration: const InputDecoration(
+                labelText: 'RNC/Cédula',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nombreController.text.isEmpty) return;
+              try {
+                await _apiService.createProveedor({
+                  'nombre': nombreController.text,
+                  'rnc': rncController.text,
+                });
+                final updatedList = await _apiService.getProveedores();
+                setState(() => _proveedores = updatedList);
+                if (mounted) Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Proveedor creado')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Error: $e')));
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _quickAddMaterial() async {
+    final nombreController = TextEditingController();
+    final unidadController = TextEditingController();
+    final precioController = TextEditingController();
+    final categorias = await _apiService.getCategorias();
+    int? selectedCatId;
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Agregar Material Rápido'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nombreController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                value: selectedCatId,
+                decoration: const InputDecoration(
+                  labelText: 'Categoría',
+                  border: OutlineInputBorder(),
+                ),
+                items: categorias
+                    .map(
+                      (c) => DropdownMenuItem<int>(
+                        value: c['id'],
+                        child: Text(c['nombre']),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setDialogState(() => selectedCatId = v),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: unidadController,
+                      decoration: const InputDecoration(
+                        labelText: 'Unidad *',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: precioController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Precio',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nombreController.text.isEmpty ||
+                    unidadController.text.isEmpty)
+                  return;
+                try {
+                  await _apiService.createMaterial({
+                    'nombre': nombreController.text,
+                    'unidad': unidadController.text.toUpperCase(),
+                    'precio_costo':
+                        double.tryParse(precioController.text) ?? 0.0,
+                    'categoria_id': selectedCatId,
+                    'codigo':
+                        'GEN-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+                  });
+                  final updatedList = await _apiService.getMateriales();
+                  setState(() => _materiales = updatedList);
+                  if (mounted) Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Material creado')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,7 +708,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
           ),
         ),
         child: const Text(
-          'PROCESAR COMPRA Y REGISTRAR EN CONTABILIDAD',
+          'REGISTRAR COMPRA',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),

@@ -8,9 +8,11 @@ import 'modules/inventory/inventory_screen.dart';
 import 'modules/reports/compras_report_screen.dart';
 import 'modules/reports/gastos_report_screen.dart';
 
+import 'modules/inventory/suppliers_screen.dart';
+import 'modules/inventory/purchase_form_screen.dart';
+import 'modules/inventory/products_screen.dart';
 import 'package:provider/provider.dart';
 import 'modules/dashboard/dashboard_provider.dart';
-
 import 'modules/projects/projects_provider.dart';
 
 void main() {
@@ -31,7 +33,7 @@ class ConstruccionERP extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Construcción ERP',
+      title: 'Neo Project S.R.L',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const MainLayout(),
@@ -53,10 +55,13 @@ class _MainLayoutState extends State<MainLayout> {
     const DashboardScreen(),
     const ProjectsScreen(),
     const HistorialProyectosScreen(),
-    const AccountingScreen(),
-    const InventoryScreen(),
+    const SuppliersScreen(),
+    const ProductsScreen(),
+    const PurchaseFormScreen(),
     const ComprasReportScreen(),
     const GastosReportScreen(),
+    const InventoryScreen(),
+    const AccountingScreen(),
     const Center(child: Text('Configuración')),
   ];
 
@@ -94,14 +99,19 @@ class _MainLayoutState extends State<MainLayout> {
                 label: Text('Historial Proyectos'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.account_balance_outlined),
-                selectedIcon: Icon(Icons.account_balance),
-                label: Text('Contabilidad'),
+                icon: Icon(Icons.people_outline),
+                selectedIcon: Icon(Icons.people),
+                label: Text('Proveedores'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.inventory_2_outlined),
-                selectedIcon: Icon(Icons.inventory_2),
-                label: Text('Inventario'),
+                icon: Icon(Icons.inventory_outlined),
+                selectedIcon: Icon(Icons.inventory),
+                label: Text('Productos'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.add_shopping_cart_outlined),
+                selectedIcon: Icon(Icons.add_shopping_cart),
+                label: Text('Nueva Compra'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.shopping_cart_outlined),
@@ -112,6 +122,16 @@ class _MainLayoutState extends State<MainLayout> {
                 icon: Icon(Icons.receipt_long_outlined),
                 selectedIcon: Icon(Icons.receipt_long),
                 label: Text('Gastos'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.inventory_2_outlined),
+                selectedIcon: Icon(Icons.inventory_2),
+                label: Text('Inventario Proy.'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.account_balance_outlined),
+                selectedIcon: Icon(Icons.account_balance),
+                label: Text('Contabilidad'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.settings_outlined),

@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
+import '../../core/models/document_model.dart';
+import '../../core/repositories/document_repository.dart';
+import '../../core/app_theme.dart';
+import '../../core/constants.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProjectDocumentsScreen extends StatefulWidget {
   final int proyectoId;
   final String proyectoNombre;
+  final String? logoPath;
 
   const ProjectDocumentsScreen({
     super.key,
     required this.proyectoId,
     required this.proyectoNombre,
+    this.logoPath,
   });
 
   @override
@@ -18,10 +27,18 @@ class ProjectDocumentsScreen extends StatefulWidget {
 }
 
 class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
+  final DocumentRepository _repository = DocumentRepository();
   final ApiService _apiService = ApiService();
+
   bool _isLoading = true;
-  List<dynamic> _documentos = [];
+  List<DocumentModel> _documentos = [];
   List<dynamic> _partidas = [];
+
+  // Filtros y Vista
+  String _searchQuery = '';
+  String _selectedTipo = 'todos';
+  bool _isGridView = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -30,24 +47,57 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
     try {
-      final docs = await _apiService.getDocumentosProyecto(widget.proyectoId);
+      final docs = await _repository.getDocumentsByProject(widget.proyectoId);
       final parts = await _apiService.getPartidas(widget.proyectoId);
-      print('Partidas cargadas para documentos: $parts');
-      setState(() {
-        _documentos = docs;
-        _partidas = parts;
-        _isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          _documentos = docs;
+          _partidas = parts;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al cargar datos: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar datos: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
+  }
+
+  // Lógica de Filtrado
+  List<DocumentModel> get _filteredDocuments {
+    return _documentos.where((doc) {
+      final matchesSearch =
+          doc.nombre.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (doc.categoria?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+              false);
+      final matchesTipo = _selectedTipo == 'todos' || doc.tipo == _selectedTipo;
+      return matchesSearch && matchesTipo;
+    }).toList();
+  }
+
+  int get _totalSizeBytes {
+    return _documentos.fold(0, (sum, doc) => sum + doc.fileSize);
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes <= 0) return "0 B";
+    const suffixes = ["B", "KB", "MB", "GB", "TB"];
+    double size = bytes.toDouble();
+    int suffixIndex = 0;
+    while (size >= 1024 && suffixIndex < suffixes.length - 1) {
+      size /= 1024;
+      suffixIndex++;
+    }
+    return "${size.toStringAsFixed(1)} ${suffixes[suffixIndex]}";
   }
 
   void _showUploadDialog() {
@@ -59,120 +109,170 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Subir Documento / Plano'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nombreController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del archivo',
-                    hintText: 'Ej: Plano Eléctrico 1er Nivel',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedTipo,
-                  decoration: const InputDecoration(labelText: 'Tipo'),
-                  items: const [
-                    DropdownMenuItem(value: 'plano', child: Text('Plano')),
-                    DropdownMenuItem(
-                      value: 'evidencia',
-                      child: Text('Evidencia'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (stfContext, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.upload_file, color: AppTheme.primaryColor),
+              const SizedBox(width: 10),
+              const Text('Subir Documento'),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nombreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre del archivo',
+                      hintText: 'Ej: Plano Eléctrico 1er Nivel',
+                      prefixIcon: Icon(Icons.title),
                     ),
-                    DropdownMenuItem(value: 'otro', child: Text('Otro')),
-                  ],
-                  onChanged: (v) => setDialogState(() => selectedTipo = v!),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: categoriaController,
-                  decoration: const InputDecoration(
-                    labelText: 'Categoría / Área',
-                    hintText: 'Ej: Cocina, Sala, Azotea...',
                   ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int>(
-                  value: selectedPartidaId,
-                  decoration: InputDecoration(
-                    labelText: 'Vincular a Partida (Opcional)',
-                    hintText: _isLoading
-                        ? 'Cargando partidas...'
-                        : (_partidas.isEmpty
-                              ? 'No hay partidas en este proyecto'
-                              : 'Seleccione una partida'),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedTipo,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo',
+                      prefixIcon: Icon(Icons.category),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'plano', child: Text('Plano')),
+                      DropdownMenuItem(
+                        value: 'evidencia',
+                        child: Text('Evidencia'),
+                      ),
+                      DropdownMenuItem(value: 'otro', child: Text('Otro')),
+                    ],
+                    onChanged: (v) => setDialogState(() => selectedTipo = v!),
                   ),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Ninguna')),
-                    ..._partidas.map(
-                      (p) => DropdownMenuItem(
-                        value: p['id'],
-                        child: Text(
-                          p['descripcion'] ??
-                              p['nombre'] ??
-                              'Partida #${p['id']}',
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: categoriaController,
+                    decoration: const InputDecoration(
+                      labelText: 'Categoría / Área',
+                      hintText: 'Ej: Cocina, Sala, Azotea...',
+                      prefixIcon: Icon(Icons.layers),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: selectedPartidaId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Vincular a Partida (Opcional)',
+                      prefixIcon: Icon(Icons.link),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Ninguna'),
+                      ),
+                      ..._partidas.map(
+                        (p) => DropdownMenuItem(
+                          value: p['id'],
+                          child: Text(
+                            p['descripcion'] ??
+                                p['nombre'] ??
+                                'Partida #${p['id']}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  onChanged: (v) => setDialogState(() => selectedPartidaId = v),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await FilePicker.platform.pickFiles(
-                      type: FileType.custom,
-                      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-                    );
-                    if (result != null) {
-                      if (result.files.first.size > 15 * 1024 * 1024) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('El archivo supera los 15MB'),
-                            ),
-                          );
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => selectedPartidaId = v),
+                  ),
+                  const SizedBox(height: 24),
+                  InkWell(
+                    onTap: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+                      );
+                      if (result != null) {
+                        if (result.files.first.size > 15 * 1024 * 1024) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('El archivo supera los 15MB'),
+                              ),
+                            );
+                          }
+                          return;
                         }
-                        return;
+                        setDialogState(() => pickedFile = result.files.first);
                       }
-                      setDialogState(() => pickedFile = result.files.first);
-                    }
-                  },
-                  icon: const Icon(Icons.attach_file),
-                  label: Text(
-                    pickedFile == null
-                        ? 'Seleccionar Archivo'
-                        : 'Cambiar Archivo',
-                  ),
-                ),
-                if (pickedFile != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Seleccionado: ${pickedFile!.name}',
-                      style: const TextStyle(fontSize: 12, color: Colors.green),
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey.shade50,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            pickedFile == null
+                                ? Icons.add_circle_outline
+                                : Icons.check_circle,
+                            color: pickedFile == null
+                                ? Colors.grey
+                                : Colors.green,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              pickedFile == null
+                                  ? 'Seleccionar Archivo'
+                                  : pickedFile!.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: pickedFile == null
+                                    ? Colors.grey.shade700
+                                    : Colors.green.shade700,
+                                fontWeight: pickedFile == null
+                                    ? FontWeight.normal
+                                    : FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               onPressed: pickedFile == null || nombreController.text.isEmpty
                   ? null
                   : () async {
-                      Navigator.pop(context);
+                      Navigator.pop(dialogContext);
                       setState(() => _isLoading = true);
                       try {
-                        await _apiService.uploadDocumento(
+                        await _repository.uploadDocument(
                           proyectoId: widget.proyectoId,
                           nombre: nombreController.text,
                           tipo: selectedTipo,
@@ -182,24 +282,28 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                           partidaId: selectedPartidaId,
                           filePath: pickedFile!.path!,
                         );
-                        _loadData();
+                        await _loadData();
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Archivo subido con éxito'),
+                              backgroundColor: Colors.green,
                             ),
                           );
                         }
                       } catch (e) {
-                        setState(() => _isLoading = false);
                         if (mounted) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                          setState(() => _isLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
                         }
                       }
                     },
-              child: const Text('Subir'),
+              child: const Text('Subir Documento'),
             ),
           ],
         ),
@@ -209,113 +313,554 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Documentos: ${widget.proyectoNombre}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_a_photo),
-            onPressed: _showUploadDialog,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showUploadDialog,
-        child: const Icon(Icons.upload_file),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _documentos.isEmpty
-          ? const Center(child: Text('No hay documentos cargados.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _documentos.length,
-              itemBuilder: (context, index) {
-                final doc = _documentos[index];
-                final isPdf =
-                    doc['file_extension'].toString().toLowerCase() == 'pdf';
+    final fDate = DateFormat('dd/MM/yyyy HH:mm');
+    final filtered = _filteredDocuments;
 
-                return Card(
-                  child: ListTile(
-                    leading: Icon(
-                      isPdf ? Icons.picture_as_pdf : Icons.image,
-                      color: isPdf ? Colors.red : Colors.blue,
-                    ),
-                    title: Text(
-                      doc['nombre'],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tipo: ${doc['tipo'].toString().toUpperCase()} | Cat: ${doc['categoria'] ?? "N/A"}',
-                        ),
-                        if (doc['partida'] != null)
-                          Text(
-                            'Vinculado a: ${doc['partida']['descripcion']}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.download, color: Colors.green),
-                          onPressed: () async {
-                            final url = Uri.parse(
-                              _apiService.baseUrl.replaceFirst(
-                                    '/api/v1',
-                                    '/storage/',
-                                  ) +
-                                  doc['file_path'],
-                            );
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url);
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Eliminar'),
-                                content: const Text(
-                                  '¿Está seguro de eliminar este documento?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('No'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Sí'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              await _apiService.deleteDocumento(doc['id']);
-                              _loadData();
-                            }
-                          },
-                        ),
-                      ],
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          _buildFiltersAndStats(),
+          _isLoading
+              ? const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(50),
+                      child: CircularProgressIndicator(),
                     ),
                   ),
-                );
-              },
-            ),
+                )
+              : filtered.isEmpty
+              ? SliverToBoxAdapter(child: _buildEmptyState())
+              : _isGridView
+              ? _buildGridView(filtered, fDate)
+              : _buildListView(filtered, fDate),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showUploadDialog,
+        backgroundColor: AppTheme.accentColor,
+        icon: const Icon(Icons.upload_file, color: Colors.black),
+        label: const Text(
+          'Subir Archivo',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+      ),
     );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120.0,
+      floating: false,
+      pinned: true,
+      backgroundColor: AppTheme.primaryColor,
+      foregroundColor: Colors.white,
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          widget.proyectoNombre,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                offset: Offset(0, 1),
+                blurRadius: 4.0,
+                color: Colors.black54,
+              ),
+            ],
+          ),
+        ),
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(color: AppTheme.primaryColor),
+            if (widget.logoPath != null)
+              Opacity(
+                opacity: 0.5,
+                child: Image.network(
+                  '$host/storage/${widget.logoPath}',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Center(child: FlutterLogo(size: 80)),
+                ),
+              )
+            else
+              Opacity(
+                opacity: 0.1,
+                child: Center(child: FlutterLogo(size: 80)),
+              ),
+            // Gradiente para mejorar legibilidad
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
+          onPressed: () => setState(() => _isGridView = !_isGridView),
+          tooltip: _isGridView ? 'Vista de Lista' : 'Vista de Cuadrícula',
+        ),
+        IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
+      ],
+    );
+  }
+
+  Widget _buildFiltersAndStats() {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      decoration: const InputDecoration(
+                        hintText: 'Buscar por nombre o categoría...',
+                        prefixIcon: Icon(Icons.search),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                _buildStatBadge(
+                  Icons.storage,
+                  'Espacio: ${_formatFileSize(_totalSizeBytes)}',
+                  Colors.blue,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('Todos', 'todos'),
+                  _buildFilterChip('Planos', 'plano'),
+                  _buildFilterChip('Evidencias', 'evidencia'),
+                  _buildFilterChip('Otros', 'otro'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatBadge(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _selectedTipo == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(label),
+        onSelected: (s) => setState(() => _selectedTipo = value),
+        selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+        checkmarkColor: AppTheme.primaryColor,
+        labelStyle: TextStyle(
+          color: isSelected ? AppTheme.primaryColor : Colors.grey.shade700,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.description_outlined,
+              size: 80,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No se encontraron documentos',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Intenta con otros filtros o sube un nuevo archivo',
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListView(List<DocumentModel> docs, DateFormat fDate) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => _buildDocumentCard(docs[index], fDate, false),
+          childCount: docs.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridView(List<DocumentModel> docs, DateFormat fDate) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 350,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          mainAxisExtent: 180,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => _buildDocumentCard(docs[index], fDate, true),
+          childCount: docs.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentCard(DocumentModel doc, DateFormat fDate, bool isGrid) {
+    Color iconColor = Colors.blue;
+    IconData iconData = Icons.insert_drive_file;
+
+    if (doc.isPdf) {
+      iconColor = Colors.redAccent;
+      iconData = Icons.picture_as_pdf;
+    } else if (doc.isImage) {
+      iconColor = Colors.green;
+      iconData = Icons.image;
+    }
+
+    final card = Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: isGrid
+            ? _buildGridCardContent(doc, fDate, iconData, iconColor)
+            : _buildListCardContent(doc, fDate, iconData, iconColor),
+      ),
+    );
+
+    return card;
+  }
+
+  Widget _buildListCardContent(
+    DocumentModel doc,
+    DateFormat fDate,
+    IconData icon,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        _buildImagePreview(doc, icon, color, size: 50, isGrid: false),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                doc.nombre,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (doc.categoria != null && doc.categoria!.isNotEmpty)
+                Text(
+                  doc.categoria!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      doc.tipo.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey.shade700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatFileSize(doc.fileSize),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+              if (doc.partida != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Partida: ${doc.partida['descripcion'] ?? doc.partida['nombre']}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: AppTheme.primaryColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        _buildActions(doc),
+      ],
+    );
+  }
+
+  Widget _buildGridCardContent(
+    DocumentModel doc,
+    DateFormat fDate,
+    IconData icon,
+    Color color,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildImagePreview(doc, icon, color, size: 45, isGrid: true),
+            _buildActions(doc),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          doc.nombre,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (doc.categoria != null && doc.categoria!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              doc.categoria!,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        const Spacer(),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _formatFileSize(doc.fileSize),
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
+            Text(
+              doc.createdAt != null
+                  ? DateFormat('dd MMM').format(doc.createdAt!)
+                  : '',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImagePreview(
+    DocumentModel doc,
+    IconData icon,
+    Color color, {
+    required double size,
+    required bool isGrid,
+  }) {
+    if (doc.isImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(isGrid ? 8 : 12),
+        child: CachedNetworkImage(
+          imageUrl: '$host/storage/${doc.filePath}',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(width: size, height: size, color: Colors.white),
+          ),
+          errorWidget: (context, url, error) => Container(
+            width: size,
+            height: size,
+            color: color.withOpacity(0.1),
+            child: Icon(icon, color: color, size: size * 0.6),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(isGrid ? 8 : 12),
+      ),
+      child: Icon(icon, color: color, size: size * 0.6),
+    );
+  }
+
+  Widget _buildActions(DocumentModel doc) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.open_in_new, color: Colors.blue, size: 18),
+          onPressed: () async {
+            final baseUrl = _apiService.baseUrl.replaceFirst('/api/v1', '');
+            final url = Uri.parse('$baseUrl/storage/${doc.filePath}');
+            if (await canLaunchUrl(url)) {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            }
+          },
+        ),
+        IconButton(
+          icon: const Icon(
+            Icons.delete_outline,
+            color: Colors.redAccent,
+            size: 18,
+          ),
+          onPressed: () => _deleteDocument(doc),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _deleteDocument(DocumentModel doc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar Documento'),
+        content: Text(
+          '¿Está seguro de eliminar "${doc.nombre}"? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        await _repository.deleteDocument(doc.id);
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Documento eliminado')));
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    }
   }
 }
