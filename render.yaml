@@ -1,0 +1,26 @@
+services:
+  # Servicio para el Backend (Laravel)
+  - type: web
+    name: construccion-backend
+    env: docker
+    region: ohio # Puedes cambiar la región
+    plan: free   # O el plan que prefieras
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: DB_CONNECTION
+        value: pgsql
+      # Nota: Deberás configurar las credenciales de la DB en el panel de Render o aquí
+
+  # Servicio para el Frontend (Flutter Web)
+  - type: web
+    name: construccion-frontend
+    env: docker
+    region: ohio
+    plan: free
+    dockerContext: frontend
+    dockerfilePath: frontend/Dockerfile
