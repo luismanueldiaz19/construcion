@@ -46,4 +46,4 @@ CMD php artisan config:clear && \
     php artisan view:clear && \
     php artisan storage:link && \
     php artisan migrate --seed --force && \
-    apache2-foreground
+    exec apache2-foreground
