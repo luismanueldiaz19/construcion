@@ -14,6 +14,7 @@ class Compra extends Model
         'subtotal', 
         'itbis', 
         'total', 
+        'fecha_vencimiento',
         'estado'
     ];
 

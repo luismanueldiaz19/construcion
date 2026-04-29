@@ -86,7 +86,7 @@ class ProyectoSeeder extends Seeder
             'cliente' => 'Juan Perez',
             'ubicacion' => 'Moca, RD',
             'fecha_inicio' => '2025-05-01',
-            'presupuesto_estimado' => 45000,
+            'presupuesto_estimado' => 59400,
             'itbis' => 8100, // 18%
             'transporte' => 1800, // 4%
             'supervision_tecnica' => 4500, // 10%
@@ -99,22 +99,22 @@ class ProyectoSeeder extends Seeder
             'unidad' => 'PA', 'cantidad' => 1, 'costo_unitario' => 45000, 'total_presupuestado' => 45000
         ]);
 
-        $p2 = Proyecto::create([
-            'nombre' => 'Pintura de Habitación',
-            'cliente' => 'Maria Marte',
-            'ubicacion' => 'Santiago, RD',
-            'fecha_inicio' => '2025-06-01',
-            'presupuesto_estimado' => 12000,
-            'itbis' => 2160,
-            'transporte' => 480,
-            'supervision_tecnica' => 1200,
-            'estado' => 'Cotización',
-        ]);
-        $par2 = Partida::create(['proyecto_id' => $p2->id, 'descripcion' => 'Terminaciones']);
-        Subpartida::create([
-            'partida_id' => $par2->id,
-            'descripcion' => 'Pintura Paredes y Techo',
-            'unidad' => 'PA', 'cantidad' => 1, 'costo_unitario' => 12000, 'total_presupuestado' => 12000
-        ]);
+        // $p2 = Proyecto::create([
+        //     'nombre' => 'Pintura de Habitación',
+        //     'cliente' => 'Maria Marte',
+        //     'ubicacion' => 'Santiago, RD',
+        //     'fecha_inicio' => '2025-06-01',
+        //     'presupuesto_estimado' => 12000,
+        //     'itbis' => 2160,
+        //     'transporte' => 480,
+        //     'supervision_tecnica' => 1200,
+        //     'estado' => 'Cotización',
+        // ]);
+        // $par2 = Partida::create(['proyecto_id' => $p2->id, 'descripcion' => 'Terminaciones']);
+        // Subpartida::create([
+        //     'partida_id' => $par2->id,
+        //     'descripcion' => 'Pintura Paredes y Techo',
+        //     'unidad' => 'PA', 'cantidad' => 1, 'costo_unitario' => 12000, 'total_presupuestado' => 12000
+        // ]);
     }
 }

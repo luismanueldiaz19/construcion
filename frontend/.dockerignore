@@ -1,0 +1,13 @@
+.dart_tool/
+.pub-cache/
+.pub/
+build/
+ios/
+android/
+windows/
+linux/
+macos/
+.git/
+.gitignore
+Dockerfile
+.dockerignore

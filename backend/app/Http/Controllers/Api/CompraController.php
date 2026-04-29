@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
 use App\Models\CatalogoCuenta;
+use App\Models\CuentaPorPagar;
+use App\Models\PagoCompra;
 use App\Services\AsientoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,7 @@ class CompraController extends Controller
             'proveedor_id' => 'required|exists:proveedores,id',
             'proyecto_id' => 'required|exists:proyectos,id',
             'fecha' => 'required|date',
+            'fecha_vencimiento' => 'nullable|date',
             'tipo_compra' => 'required|in:Contado,Crédito',
             'items' => 'required|array|min:1',
             'items.*.material_id' => 'required|exists:materiales,id',
@@ -60,6 +63,7 @@ class CompraController extends Controller
                 'subtotal' => $subtotal,
                 'itbis' => $itbis,
                 'total' => $total,
+                'fecha_vencimiento' => $validated['fecha_vencimiento'] ?? null,
                 'estado' => 'Pendiente',
             ]);
 
@@ -108,7 +112,50 @@ class CompraController extends Controller
                 $compra->id
             );
 
+            $this->gestionarCXP($compra);
+
             return $compra->load('detalles.material', 'proveedor');
         });
+    }
+
+    /**
+     * Gestiona la creación de la Cuenta por Pagar y el pago inicial si es al contado.
+     */
+    private function gestionarCXP(Compra $compra)  {
+        $cxp = CuentaPorPagar::create([
+            'compra_id' => $compra->id,
+            'proveedor_id' => $compra->proveedor_id,
+            'monto_total' => $compra->total,
+            'monto_pagado' => 0,
+            'saldo' => $compra->total,
+            'fecha_vencimiento' => $compra->fecha_vencimiento,
+            'estado' => 'Pendiente',
+        ]);
+
+        if ($compra->tipo_compra == 'Contado') {
+            PagoCompra::create([
+                'cuenta_por_pagar_id' => $cxp->id,
+                'fecha' => $compra->fecha,
+                'monto' => $compra->total,
+                'metodo_pago' => 'Efectivo/Banco',
+                'notas' => 'Pago automático por compra al contado',
+            ]);
+
+            $cxp->update([
+                'monto_pagado' => $compra->total,
+                'saldo' => 0,
+                'estado' => 'Pagado',
+            ]);
+
+            $compra->update(['estado' => 'Pagado']);
+        }
+    }
+
+    public function imprimirTicket($id)
+    {
+        $compra = Compra::with('proveedor', 'proyecto', 'detalles.material')->findOrFail($id);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.compra_ticket', compact('compra'))
+            ->setPaper([0, 0, 226.77, 600]);
+        return $pdf->stream("ticket_compra_{$compra->id}.pdf");
     }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -201,8 +202,9 @@ class _ProjectInventoryDetailsScreenState
                         Icons.remove_circle_outline,
                         color: Colors.red,
                       ),
-                      onPressed:
-                          stock > 0 ? () => _showConsumoDialog(item) : null,
+                      onPressed: stock > 0
+                          ? () => _showConsumoDialog(item)
+                          : null,
                       tooltip: 'Registrar Salida (Consumo)',
                     ),
                   ),
@@ -316,7 +318,14 @@ class _ProjectInventoryDetailsScreenState
                 const SizedBox(height: 16),
                 TextField(
                   controller: cantidadController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}'),
+                    ),
+                  ],
                   decoration: InputDecoration(
                     labelText: 'Cantidad (${material['unidad']})',
                     border: const OutlineInputBorder(),

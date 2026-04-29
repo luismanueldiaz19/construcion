@@ -48,17 +48,27 @@ class _JournalViewState extends State<JournalView> {
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           child: ExpansionTile(
+            shape: const Border(),
+            collapsedShape: const Border(),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Asiento #${asiento['id']} - ${asiento['referencia_tipo'] ?? 'General'}'),
-                Text(asiento['fecha'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  'Asiento #${asiento['id']} - ${asiento['referencia_tipo'] ?? 'General'}',
+                ),
+                Text(
+                  asiento['fecha'],
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
             subtitle: Text(asiento['glosa'] ?? 'Sin glosa'),
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Table(
                   columnWidths: const {
                     0: FlexColumnWidth(3),
@@ -68,30 +78,69 @@ class _JournalViewState extends State<JournalView> {
                   children: [
                     const TableRow(
                       children: [
-                        Padding(padding: EdgeInsets.all(4), child: Text('Cuenta', style: TextStyle(fontWeight: FontWeight.bold))),
-                        Padding(padding: EdgeInsets.all(4), child: Text('Debe', style: TextStyle(fontWeight: FontWeight.bold))),
-                        Padding(padding: EdgeInsets.all(4), child: Text('Haber', style: TextStyle(fontWeight: FontWeight.bold))),
+                        Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Text(
+                            'Cuenta',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Text(
+                            'Debe',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Text(
+                            'Haber',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ],
                     ),
-                    ...detalles.map((d) => TableRow(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(4), 
-                          child: Text("${d['cuenta']['codigo']} ${d['cuenta']['nombre']}", style: const TextStyle(fontSize: 12))
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(4), 
-                          child: Text(double.parse(d['debe'].toString()) > 0 ? f.format(double.parse(d['debe'].toString())) : '-', style: const TextStyle(fontSize: 12))
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(4), 
-                          child: Text(double.parse(d['haber'].toString()) > 0 ? f.format(double.parse(d['haber'].toString())) : '-', style: const TextStyle(fontSize: 12))
-                        ),
-                      ],
-                    )).toList(),
+                    ...detalles
+                        .map(
+                          (d) => TableRow(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Text(
+                                  "${d['cuenta']['codigo']} ${d['cuenta']['nombre']}",
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Text(
+                                  double.parse(d['debe'].toString()) > 0
+                                      ? f.format(
+                                          double.parse(d['debe'].toString()),
+                                        )
+                                      : '-',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Text(
+                                  double.parse(d['haber'].toString()) > 0
+                                      ? f.format(
+                                          double.parse(d['haber'].toString()),
+                                        )
+                                      : '-',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        .toList(),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         );

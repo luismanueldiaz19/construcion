@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 
 class GastoProyectoDialog extends StatefulWidget {
@@ -27,6 +29,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
   int? _subpartidaId;
   String _metodoPago = 'Transferencia';
   bool _isLoading = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -34,8 +37,12 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
     _loadData();
     _subpartidas = (widget.proyecto['partidas'] as List? ?? []).expand((p) {
       final sList = p['subpartidas'] as List? ?? [];
-      final pNombre = p['nombre'] ?? p['descripcion'] ?? 'Partida';
-      return sList.map((s) => {...s, 'partida_nombre': pNombre});
+      return sList.map(
+        (s) => {
+          ...s as Map<String, dynamic>,
+          'partida_nombre': p['nombre'] ?? p['descripcion'] ?? 'Partida',
+        },
+      );
     }).toList();
   }
 
@@ -46,275 +53,42 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
         _apiService.getProveedores(),
         _apiService.getBancos(),
       ]);
-
       setState(() {
-        final rawCatalogo = results[0] as List;
-        print("DEBUG: Total cuentas en catálogo: ${rawCatalogo.length}");
-
-        // Filtrar solo cuentas de COSTOS (5.xx) que sean de detalle
-        _cuentasCostos = rawCatalogo.where((c) {
-          final isDetalle =
-              c['es_detalle'].toString() == '1' || c['es_detalle'] == true;
-          final isCosto = c['codigo'].toString().startsWith('5');
-          return isCosto && isDetalle;
-        }).toList();
-
-        print(
-          "DEBUG: Cuentas de COSTOS (detalle) encontradas: ${_cuentasCostos.length}",
-        );
-        if (_cuentasCostos.isNotEmpty) {
-          print("DEBUG: Primera cuenta: ${_cuentasCostos[0]}");
-        }
-
-        _proveedores = results[1] as List;
-        _proveedoresFiltrados = _proveedores;
-
-        _bancos = (results[2] as List)
-            .where((b) => b['nombre'].toString().contains('Banco'))
+        // Filtramos para mostrar solo cuentas que empiezan con '5' (Costos)
+        _cuentasCostos = (results[0])
+            .where((c) => c['codigo'].toString().startsWith('5'))
             .toList();
-        if (_bancos.isNotEmpty) _bancoId = _bancos[0]['id'];
 
+        _proveedores = results[1];
+        _bancos = results[2];
         _isLoading = false;
+
+        if (_bancos.isNotEmpty) {
+          _bancoId = _bancos[0]['id'];
+        }
       });
     } catch (e) {
+      print('Error loading data: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al cargar datos: $e')));
+        setState(() => _isLoading = false);
       }
     }
   }
 
   void _filterProveedores(String query) {
     setState(() {
-      _proveedoresFiltrados = _proveedores
-          .where(
-            (p) => p['nombre'].toString().toLowerCase().contains(
-              query.toLowerCase(),
-            ),
-          )
-          .toList();
+      if (query.isEmpty) {
+        _proveedoresFiltrados = [];
+      } else {
+        _proveedoresFiltrados = _proveedores
+            .where(
+              (p) => p['nombre'].toString().toLowerCase().contains(
+                query.toLowerCase(),
+              ),
+            )
+            .toList();
+      }
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading)
-      return const AlertDialog(
-        content: SizedBox(
-          height: 100,
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      );
-
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1E1E2E),
-      title: const Text(
-        'Registrar Gasto Contable',
-        style: TextStyle(color: Colors.orangeAccent),
-      ),
-      content: SizedBox(
-        width: 500,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // BUSCADOR DE PROVEEDORES
-              const Text(
-                'Proveedor / Trabajador',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        hintText: 'Buscar proveedor...',
-                        prefixIcon: Icon(Icons.search, color: Colors.white54),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(12),
-                      ),
-                      onChanged: _filterProveedores,
-                    ),
-                    if (_searchController.text.isNotEmpty ||
-                        _proveedorId == null)
-                      SizedBox(
-                        height: 150,
-                        child: ListView.builder(
-                          itemCount: _proveedoresFiltrados.length,
-                          itemBuilder: (context, index) {
-                            final p = _proveedoresFiltrados[index];
-                            return ListTile(
-                              title: Text(
-                                p['nombre'],
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              selected: _proveedorId == p['id'],
-                              onTap: () {
-                                setState(() {
-                                  _proveedorId = p['id'];
-                                  _searchController.text = p['nombre'];
-                                  _proveedoresFiltrados = [];
-                                });
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // CUENTA CONTABLE DE COSTO
-              DropdownButtonFormField<int>(
-                value: _cuentaCostoId,
-                dropdownColor: const Color(0xFF1E1E2E),
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de Gasto (Cuenta Contable)',
-                  labelStyle: TextStyle(color: Colors.white60),
-                ),
-                items: _cuentasCostos
-                    .map(
-                      (c) => DropdownMenuItem(
-                        value: c['id'] as int,
-                        child: Text(
-                          "${c['codigo']} - ${c['nombre']}",
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _cuentaCostoId = v),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _descController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Descripción / Nota',
-                  labelStyle: TextStyle(color: Colors.white60),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _montoController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                        color: Colors.greenAccent,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Monto \$',
-                        labelStyle: TextStyle(color: Colors.white60),
-                        prefixText: '\$ ',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _metodoPago,
-                      dropdownColor: const Color(0xFF1E1E2E),
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Método',
-                        labelStyle: TextStyle(color: Colors.white60),
-                      ),
-                      items: ['Transferencia', 'Cheque', 'Efectivo', 'Crédito']
-                          .map(
-                            (m) => DropdownMenuItem(value: m, child: Text(m)),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _metodoPago = v!),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              if (_metodoPago != 'Crédito')
-                DropdownButtonFormField<int>(
-                  value: _bancoId,
-                  dropdownColor: const Color(0xFF1E1E2E),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    labelText: 'Cuenta de Origen (Banco)',
-                    labelStyle: TextStyle(color: Colors.white60),
-                  ),
-                  items: _bancos
-                      .map(
-                        (b) => DropdownMenuItem(
-                          value: b['id'] as int,
-                          child: Text(b['nombre']),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _bancoId = v),
-                ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<int?>(
-                value: _subpartidaId,
-                dropdownColor: const Color(0xFF1E1E2E),
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Partida Relacionada',
-                  labelStyle: TextStyle(color: Colors.white60),
-                ),
-                items: _subpartidas
-                    .map(
-                      (s) => DropdownMenuItem<int>(
-                        value: s['id'] as int,
-                        child: Text(
-                          "[${s['partida_nombre']}] ${s['descripcion']}",
-                          style: const TextStyle(fontSize: 10),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _subpartidaId = v),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Cancelar',
-            style: TextStyle(color: Colors.white54),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _saveGasto,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orangeAccent,
-            foregroundColor: Colors.black,
-          ),
-          child: const Text('Guardar Gasto Contable'),
-        ),
-      ],
-    );
   }
 
   Future<void> _saveGasto() async {
@@ -329,12 +103,13 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
       return;
     }
 
+    setState(() => _isSaving = true);
     try {
       await _apiService.createGastoProyecto({
         'proyecto_id': widget.proyecto['id'],
         'subpartida_id': _subpartidaId,
         'proveedor_id': _proveedorId,
-        'cuenta_costo_id': _cuentaCostoId, // Enviamos la cuenta contable real
+        'cuenta_costo_id': _cuentaCostoId,
         'monto': double.parse(_montoController.text),
         'tipo_gasto': _cuentasCostos.firstWhere(
           (c) => c['id'] == _cuentaCostoId,
@@ -346,13 +121,360 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
       });
       if (mounted) {
         Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Gasto registrado correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
+      setState(() => _isSaving = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: _isLoading
+            ? const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Cabecera profesional
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF003366),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.receipt_long,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Registrar Gasto Contable',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                widget.proyecto['nombre'] ?? 'Proyecto',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white70),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Sección de Proveedor
+                          const Text(
+                            'Proveedor / Trabajador',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Colors.blueGrey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildProveedorSearch(),
+                          const SizedBox(height: 20),
+
+                          // Tipo de Gasto
+                          DropdownButtonFormField<int>(
+                            value: _cuentaCostoId,
+                            decoration: InputDecoration(
+                              labelText: 'Tipo de Gasto (Cuenta)',
+                              prefixIcon: const Icon(Icons.category_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: _cuentasCostos
+                                .map(
+                                  (c) => DropdownMenuItem<int>(
+                                    value: c['id'] as int,
+                                    child: Text(
+                                      c['nombre'],
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _cuentaCostoId = v),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Descripción
+                          TextField(
+                            controller: _descController,
+                            decoration: InputDecoration(
+                              labelText: 'Descripción / Nota',
+                              prefixIcon: const Icon(
+                                Icons.description_outlined,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Monto y Método
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: TextField(
+                                  controller: _montoController,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d{0,2}'),
+                                    ),
+                                  ],
+                                  decoration: InputDecoration(
+                                    labelText: 'Monto \$',
+                                    prefixIcon: const Icon(Icons.attach_money),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 5,
+                                child: DropdownButtonFormField<String>(
+                                  value: _metodoPago,
+                                  decoration: InputDecoration(
+                                    labelText: 'Método',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  items:
+                                      [
+                                            'Transferencia',
+                                            'Efectivo',
+                                            'Cheque',
+                                            'Crédito',
+                                          ]
+                                          .map(
+                                            (m) => DropdownMenuItem(
+                                              value: m,
+                                              child: Text(
+                                                m,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (v) =>
+                                      setState(() => _metodoPago = v!),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Banco
+                          if (_metodoPago != 'Crédito')
+                            DropdownButtonFormField<int>(
+                              value: _bancoId,
+                              decoration: InputDecoration(
+                                labelText: 'Cuenta de Origen (Banco)',
+                                prefixIcon: const Icon(
+                                  Icons.account_balance_outlined,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              items: _bancos
+                                  .map(
+                                    (b) => DropdownMenuItem<int>(
+                                      value: b['id'] as int,
+                                      child: Text(
+                                        b['nombre'],
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => _bancoId = v),
+                            ),
+                          const SizedBox(height: 16),
+
+                          // Partida Relacionada
+                          DropdownButtonFormField<int?>(
+                            value: _subpartidaId,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: 'Partida Relacionada (Opcional)',
+                              prefixIcon: const Icon(Icons.link),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: _subpartidas
+                                .map(
+                                  (s) => DropdownMenuItem<int>(
+                                    value: s['id'] as int,
+                                    child: Text(
+                                      "[${s['partida_nombre']}] ${s['descripcion'] ?? s['nombre']}",
+                                      style: const TextStyle(fontSize: 11),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) => setState(() => _subpartidaId = v),
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Botón de Guardar
+                          SizedBox(
+                            width: double.infinity,
+                            height: 55,
+                            child: ElevatedButton(
+                              onPressed: _isSaving ? null : _saveGasto,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(
+                                  0xFFFFA000,
+                                ), // Naranja corporativo
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: _isSaving
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : const Text(
+                                      'GUARDAR GASTO CONTABLE',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildProveedorSearch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: _filterProveedores,
+            decoration: const InputDecoration(
+              hintText: 'Buscar proveedor...',
+              prefixIcon: Icon(Icons.search),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+          ),
+          if (_proveedoresFiltrados.isNotEmpty)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 150),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _proveedoresFiltrados.length,
+                itemBuilder: (context, index) {
+                  final p = _proveedoresFiltrados[index];
+                  final isSelected = _proveedorId == p['id'];
+                  return ListTile(
+                    visualDensity: VisualDensity.compact,
+                    title: Text(
+                      p['nombre'],
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : null,
+                    onTap: () {
+                      setState(() {
+                        _proveedorId = p['id'];
+                        _searchController.text = p['nombre'];
+                        _proveedoresFiltrados = [];
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

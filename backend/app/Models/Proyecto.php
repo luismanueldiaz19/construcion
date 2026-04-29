@@ -31,4 +31,44 @@ class Proyecto extends Model
     {
         return $this->hasMany(Documento::class);
     }
+
+    public function pagos()
+    {
+        return $this->hasMany(PagoCliente::class);
+    }
+
+    public function getTotalPresupuestoConGlobalesAttribute()
+    {
+        $base = $this->partidas->sum(function($p) {
+            return $p->subpartidas->sum('total_presupuestado');
+        });
+        return $base + $this->itbis + $this->transporte + $this->otros_costos + $this->supervision_tecnica;
+    }
+
+    public function getPorcentajeAvanceTotalAttribute()
+    {
+        $totalPresupuestado = $this->partidas->sum(function($p) {
+            return $p->subpartidas->sum('total_presupuestado');
+        });
+
+        if ($totalPresupuestado == 0) return 0;
+
+        $totalEjecutado = $this->partidas->sum(function($p) {
+            return $p->subpartidas->sum('valor_ejecutado');
+        });
+
+        return round(($totalEjecutado / $totalPresupuestado) * 100, 2);
+    }
+
+    public function getMontoEjecutadoTotalAttribute()
+    {
+        return $this->partidas->sum(function($p) {
+            return $p->subpartidas->sum('valor_ejecutado');
+        });
+    }
+
+    public function getTotalCobradoAttribute()
+    {
+        return $this->pagos()->sum('monto');
+    }
 }

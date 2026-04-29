@@ -12,6 +12,9 @@ use App\Http\Controllers\Api\RecepcionController;
 use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\ConsumoController;
 use App\Http\Controllers\Api\GastoProyectoController;
+use App\Http\Controllers\Api\PagoCompraController;
+use App\Http\Controllers\Api\PagosController;
+use App\Http\Controllers\Api\CuentaPorCobrarController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -46,8 +49,15 @@ Route::prefix('v1')->group(function () {
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);
     Route::apiResource('compras', CompraController::class);
+    Route::get('compras/{id}/pdf', [CompraController::class, 'imprimirTicket']);
     Route::post('recepciones', [RecepcionController::class, 'store']);
     Route::apiResource('consumos', ConsumoController::class);
+    Route::get('cuentas-por-pagar', [PagoCompraController::class, 'index']);
+    Route::post('pagos-compras', [PagoCompraController::class, 'store']);
+    Route::get('pagos-compras/{id}/pdf', [PagoCompraController::class, 'imprimirRecibo']);
+    Route::get('pagos-historial', [PagosController::class, 'index']);
+    Route::get('pagos-historial/{tipo}/{id}/pdf', [PagosController::class, 'imprimirRecibo']);
+    Route::get('cuentas-por-cobrar', [CuentaPorCobrarController::class, 'index']);
     Route::get('/proyectos/{id}/documentos', [\App\Http\Controllers\Api\DocumentoController::class, 'index']);
     Route::post('/documentos', [\App\Http\Controllers\Api\DocumentoController::class, 'store']);
     Route::delete('/documentos/{id}', [\App\Http\Controllers\Api\DocumentoController::class, 'destroy']);

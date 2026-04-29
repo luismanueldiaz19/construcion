@@ -106,206 +106,246 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
     String selectedTipo = 'otro';
     int? selectedPartidaId;
     PlatformFile? pickedFile;
+    bool isUploading = false;
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (stfContext, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.upload_file, color: AppTheme.primaryColor),
-              const SizedBox(width: 10),
-              const Text('Subir Documento'),
-            ],
-          ),
-          content: ConstrainedBox(
+        builder: (stfContext, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
-                    controller: nombreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre del archivo',
-                      hintText: 'Ej: Plano Eléctrico 1er Nivel',
-                      prefixIcon: Icon(Icons.title),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedTipo,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipo',
-                      prefixIcon: Icon(Icons.category),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'plano', child: Text('Plano')),
-                      DropdownMenuItem(
-                        value: 'evidencia',
-                        child: Text('Evidencia'),
+                  // Cabecera Premium
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF003366),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
                       ),
-                      DropdownMenuItem(value: 'otro', child: Text('Otro')),
-                    ],
-                    onChanged: (v) => setDialogState(() => selectedTipo = v!),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: categoriaController,
-                    decoration: const InputDecoration(
-                      labelText: 'Categoría / Área',
-                      hintText: 'Ej: Cocina, Sala, Azotea...',
-                      prefixIcon: Icon(Icons.layers),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<int>(
-                    value: selectedPartidaId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Vincular a Partida (Opcional)',
-                      prefixIcon: Icon(Icons.link),
-                    ),
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('Ninguna'),
-                      ),
-                      ..._partidas.map(
-                        (p) => DropdownMenuItem(
-                          value: p['id'],
-                          child: Text(
-                            p['descripcion'] ??
-                                p['nombre'] ??
-                                'Partida #${p['id']}',
-                            overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.cloud_upload_outlined, color: Colors.white, size: 32),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Subir Documento',
+                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Planos, evidencias y anexos del proyecto',
+                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                    onChanged: (v) =>
-                        setDialogState(() => selectedPartidaId = v),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white70),
+                          onPressed: () => Navigator.pop(dialogContext),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  InkWell(
-                    onTap: () async {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-                      );
-                      if (result != null) {
-                        if (result.files.first.size > 15 * 1024 * 1024) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('El archivo supera los 15MB'),
-                              ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Área de Selección de Archivo
+                        InkWell(
+                          onTap: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
                             );
-                          }
-                          return;
-                        }
-                        setDialogState(() => pickedFile = result.files.first);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.grey.shade50,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            pickedFile == null
-                                ? Icons.add_circle_outline
-                                : Icons.check_circle,
-                            color: pickedFile == null
-                                ? Colors.grey
-                                : Colors.green,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              pickedFile == null
-                                  ? 'Seleccionar Archivo'
-                                  : pickedFile!.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: pickedFile == null
-                                    ? Colors.grey.shade700
-                                    : Colors.green.shade700,
-                                fontWeight: pickedFile == null
-                                    ? FontWeight.normal
-                                    : FontWeight.bold,
+                            if (result != null) {
+                              if (result.files.first.size > 15 * 1024 * 1024) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('El archivo supera los 15MB'), backgroundColor: Colors.red),
+                                  );
+                                }
+                                return;
+                              }
+                              setDialogState(() => pickedFile = result.files.first);
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: pickedFile == null ? Colors.blue.withOpacity(0.3) : Colors.green.withOpacity(0.5),
+                                width: 2,
+                                style: BorderStyle.solid,
                               ),
+                              borderRadius: BorderRadius.circular(15),
+                              color: pickedFile == null ? Colors.blue.withOpacity(0.02) : Colors.green.withOpacity(0.05),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  pickedFile == null ? Icons.file_present_rounded : Icons.check_circle,
+                                  size: 48,
+                                  color: pickedFile == null ? Colors.blue.shade300 : Colors.green,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  pickedFile == null ? 'Seleccionar Archivo' : pickedFile!.name,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: pickedFile == null ? Colors.blue.shade700 : Colors.green.shade700,
+                                  ),
+                                ),
+                                if (pickedFile == null)
+                                  const Text(
+                                    'PDF, JPG o PNG (Máx. 15MB)',
+                                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                                  ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        const Text('Detalles del Documento', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 13)),
+                        const SizedBox(height: 16),
+
+                        TextField(
+                          controller: nombreController,
+                          decoration: InputDecoration(
+                            labelText: 'Nombre descriptivo *',
+                            prefixIcon: const Icon(Icons.title),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: selectedTipo,
+                                decoration: InputDecoration(
+                                  labelText: 'Tipo',
+                                  prefixIcon: const Icon(Icons.category),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: 'plano', child: Text('Plano')),
+                                  DropdownMenuItem(value: 'evidencia', child: Text('Evidencia')),
+                                  DropdownMenuItem(value: 'otro', child: Text('Otro')),
+                                ],
+                                onChanged: (v) => setDialogState(() => selectedTipo = v!),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextField(
+                          controller: categoriaController,
+                          decoration: InputDecoration(
+                            labelText: 'Área / Categoría',
+                            hintText: 'Ej: Estructura, Terminación...',
+                            prefixIcon: const Icon(Icons.layers),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<int>(
+                          value: selectedPartidaId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Vincular a Partida (Opcional)',
+                            prefixIcon: const Icon(Icons.link),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('Ninguna')),
+                            ..._partidas.map(
+                              (p) => DropdownMenuItem(
+                                value: p['id'],
+                                child: Text(p['descripcion'] ?? 'Partida #${p['id']}', overflow: TextOverflow.ellipsis),
+                              ),
+                            ),
+                          ],
+                          onChanged: (v) => setDialogState(() => selectedPartidaId = v),
+                        ),
+                        
+                        const SizedBox(height: 32),
+
+                        // Botón de Acción
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: isUploading ? null : () async {
+                              if (nombreController.text.isEmpty || pickedFile == null) {
+                                ScaffoldMessenger.of(stfContext).showSnackBar(
+                                  const SnackBar(content: Text('Nombre y archivo son obligatorios'), backgroundColor: Colors.orange),
+                                );
+                                return;
+                              }
+
+                              setDialogState(() => isUploading = true);
+                              try {
+                                await _apiService.uploadDocumento(
+                                  proyectoId: widget.proyectoId,
+                                  nombre: nombreController.text,
+                                  tipo: selectedTipo,
+                                  categoria: categoriaController.text.isNotEmpty ? categoriaController.text : null,
+                                  partidaId: selectedPartidaId,
+                                  filePath: pickedFile!.path!,
+                                );
+                                if (mounted) {
+                                  Navigator.pop(dialogContext);
+                                  _loadData();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Documento subido con éxito'), backgroundColor: Colors.green),
+                                  );
+                                }
+                              } catch (e) {
+                                setDialogState(() => isUploading = false);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(stfContext).showSnackBar(
+                                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                  );
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFA000),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: isUploading
+                                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('SUBIR DOCUMENTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: pickedFile == null || nombreController.text.isEmpty
-                  ? null
-                  : () async {
-                      Navigator.pop(dialogContext);
-                      setState(() => _isLoading = true);
-                      try {
-                        await _repository.uploadDocument(
-                          proyectoId: widget.proyectoId,
-                          nombre: nombreController.text,
-                          tipo: selectedTipo,
-                          categoria: categoriaController.text.isNotEmpty
-                              ? categoriaController.text
-                              : null,
-                          partidaId: selectedPartidaId,
-                          filePath: pickedFile!.path!,
-                        );
-                        await _loadData();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Archivo subido con éxito'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() => _isLoading = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              child: const Text('Subir Documento'),
-            ),
-          ],
         ),
       ),
     );

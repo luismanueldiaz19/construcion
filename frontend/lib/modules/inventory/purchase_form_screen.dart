@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 import '../../widgets/search_selector_dialog.dart';
 
@@ -19,6 +20,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   int? _selectedProyectoId;
   String _tipoCompra = 'Contado';
   DateTime _fecha = DateTime.now();
+  DateTime? _fechaVencimiento;
 
   List<dynamic> _materiales = [];
   List<dynamic> _proyectos = [];
@@ -26,6 +28,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   List<Map<String, dynamic>> _items = [];
 
   bool _isLoading = true;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -46,9 +49,9 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      // ScaffoldMessenger.of(
+      //   context,
+      // ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -79,13 +82,16 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       final data = {
         'proveedor_id': _selectedProveedorId,
         'proyecto_id': _selectedProyectoId,
         'fecha': DateFormat('yyyy-MM-dd').format(_fecha),
+        'fecha_vencimiento': _fechaVencimiento != null
+            ? DateFormat('yyyy-MM-dd').format(_fechaVencimiento!)
+            : null,
         'tipo_compra': _tipoCompra,
         'items': _items
             .map(
@@ -98,15 +104,58 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             .toList(),
       };
 
-      await _apiService.createCompra(data);
-      Navigator.pop(context, true);
+      final result = await _apiService.createCompra(data);
+      if (mounted) {
+        final compraId = result['id'];
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Compra registrada con éxito'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(
+              label: 'IMPRIMIR TICKET',
+              textColor: Colors.white,
+              onPressed: () => _openPurchasePdf(compraId),
+            ),
+          ),
+        );
+        _resetForm();
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
+  }
+
+  void _openPurchasePdf(int compraId) async {
+    final url = Uri.parse('${_apiService.baseUrl}/compras/$compraId/pdf');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el PDF')),
+        );
+      }
+    }
+  }
+
+  void _resetForm() {
+    setState(() {
+      _selectedProveedorId = null;
+      _selectedProyectoId = null;
+      _tipoCompra = 'Contado';
+      _fecha = DateTime.now();
+      _fechaVencimiento = null;
+      _items = [
+        {'material_id': null, 'cantidad': 0.0, 'precio_unitario': 0.0},
+      ];
+    });
   }
 
   @override
@@ -123,31 +172,67 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       appBar: AppBar(title: const Text('Nueva Compra de Materiales')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Detalle de Materiales',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+          : Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: AbsorbPointer(
+                    absorbing: _isSubmitting,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 32),
+                          const Text(
+                            'Detalle de Materiales',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildItemsList(),
+                          const SizedBox(height: 24),
+                          _buildTotals(subtotal, itbis, total, f),
+                          const SizedBox(height: 32),
+                          _buildActions(),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _buildItemsList(),
-                    const SizedBox(height: 24),
-                    _buildTotals(subtotal, itbis, total, f),
-                    const SizedBox(height: 32),
-                    _buildActions(),
-                  ],
+                  ),
                 ),
-              ),
+                if (_isSubmitting)
+                  Container(
+                    color: Colors.black.withOpacity(0.1),
+                    child: const Center(
+                      child: Card(
+                        elevation: 4,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 24,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text(
+                                'Registrando Compra...',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF003366),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
     );
   }
@@ -248,6 +333,50 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 ),
               ],
             ),
+            if (_tipoCompra == 'Crédito') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate:
+                              _fechaVencimiento ??
+                              _fecha.add(const Duration(days: 30)),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (date != null)
+                          setState(() => _fechaVencimiento = date);
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Fecha de Vencimiento',
+                          border: OutlineInputBorder(),
+                          hintText: 'Seleccione fecha de vencimiento',
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _fechaVencimiento != null
+                                  ? DateFormat(
+                                      'dd/MM/yyyy',
+                                    ).format(_fechaVencimiento!)
+                                  : 'No seleccionada',
+                            ),
+                            const Icon(Icons.event_note),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -584,7 +713,14 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                   Expanded(
                     child: TextField(
                       controller: precioController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}'),
+                        ),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Precio',
                         border: OutlineInputBorder(),
@@ -699,18 +835,38 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
-        onPressed: _submit,
+        onPressed: _isSubmitting ? null : _submit,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF003366),
           foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey[300],
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: const Text(
-          'REGISTRAR COMPRA',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        child: _isSubmitting
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF003366),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'PROCESANDO...',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              )
+            : const Text(
+                'REGISTRAR COMPRA',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
       ),
     );
   }

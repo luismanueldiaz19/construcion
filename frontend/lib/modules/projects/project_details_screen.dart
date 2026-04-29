@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../services/api_service.dart';
 
-import 'project_documents_screen.dart';
 import 'gasto_proyecto_dialog.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
@@ -1472,7 +1472,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}'),
+                    ),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'Monto a Cobrar',
                     border: OutlineInputBorder(),
@@ -1641,7 +1648,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCantidadController,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                    ],
                                     decoration: const InputDecoration(
                                       labelText: 'Cant.',
                                       border: OutlineInputBorder(),
@@ -1652,7 +1662,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCostoController,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                    ],
                                     decoration: const InputDecoration(
                                       labelText: 'Costo Unit.',
                                       border: OutlineInputBorder(),
@@ -1769,7 +1782,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCantidadController,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                    ],
                                     decoration: const InputDecoration(
                                       labelText: 'Cant.',
                                       border: OutlineInputBorder(),
@@ -1780,7 +1796,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCostoController,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                    ],
                                     decoration: const InputDecoration(
                                       labelText: 'Costo Unit.',
                                       border: OutlineInputBorder(),

@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             CatalogoCuentasSeeder::class,
             ProyectoSeeder::class,
             CategoriaMaterialSeeder::class,
+            ProveedorSeeder::class, 
         ]);
     }
 }

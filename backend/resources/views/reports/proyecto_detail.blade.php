@@ -138,12 +138,18 @@
                 @endif
                 @if($proyecto->otros_costos > 0)
                 <tr>
-                    <td>PAGO DE SOFTWARE:</td>
+                    <td>Otros Costos:</td>
                     <td class="text-right bold">RDS $ {{ number_format($proyecto->otros_costos, 2) }}</td>
                 </tr>
                 @endif
+                @if($proyecto->supervision_tecnica > 0)
+                <tr>
+                    <td>Supervisión Técnica:</td>
+                    <td class="text-right bold">RDS $ {{ number_format($proyecto->supervision_tecnica, 2) }}</td>
+                </tr>
+                @endif
                 <tr class="total-proyecto-row">
-                    <td>TOTAL PROYECTO:</td>
+                    <td>Total Proyecto:</td>
                     <td class="text-right bold">RDS $ {{ number_format($proyecto->total_presupuesto_con_globales, 2) }}</td>
                 </tr>
             </table>

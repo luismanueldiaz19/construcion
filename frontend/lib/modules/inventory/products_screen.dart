@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import 'package:intl/intl.dart';
 
@@ -293,144 +294,422 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
     final unidadController = TextEditingController(text: product?['unidad']);
     int? catId = product?['categoria_id'];
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isEdit ? 'Editar Producto' : 'Nuevo Producto'),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: codigoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Código (SKU)',
-                          border: OutlineInputBorder(),
-                        ),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Cabecera Premium
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF003366),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        value: catId,
-                        decoration: const InputDecoration(
-                          labelText: 'Categoría',
-                          border: OutlineInputBorder(),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isEdit ? Icons.edit_note : Icons.add_business,
+                          color: Colors.white,
+                          size: 28,
                         ),
-                        items: _categorias
-                            .map<DropdownMenuItem<int>>(
-                              (c) => DropdownMenuItem<int>(
-                                value: c['id'],
-                                child: Text(c['nombre']),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEdit ? 'Editar Producto' : 'Nuevo Producto',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            )
-                            .toList(),
-                        onChanged: (v) => catId = v,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nombreController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del Producto *',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: unidadController,
-                        decoration: const InputDecoration(
-                          labelText: 'Unidad de Medida *',
-                          border: OutlineInputBorder(),
+                              const Text(
+                                'Complete la información del catálogo',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        onChanged: (v) =>
-                            unidadController.value = unidadController.value
-                                .copyWith(text: v.toUpperCase()),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: precioController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Precio de Costo',
-                          prefixText: '\$',
-                          border: OutlineInputBorder(),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white70),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Identificación del Producto
+                        const Text(
+                          'Identificación',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextField(
+                                controller: codigoController,
+                                decoration: InputDecoration(
+                                  labelText: 'SKU / Código',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.qr_code,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 3,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      value: catId,
+                                      isExpanded: true,
+                                      decoration: InputDecoration(
+                                        labelText: 'Categoría',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      items: _categorias
+                                          .map<DropdownMenuItem<int>>(
+                                            (c) => DropdownMenuItem<int>(
+                                              value: c['id'],
+                                              child: Text(
+                                                c['nombre'],
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setModalState(() => catId = v),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Botón para nueva categoría
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.blue,
+                                      ),
+                                      tooltip: 'Nueva Categoría',
+                                      onPressed: () => _showNewCategoryDialog(
+                                        onCreated: (newCat) {
+                                          setModalState(() {
+                                            catId = newCat['id'];
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Nombre y Descripción
+                        TextField(
+                          controller: nombreController,
+                          decoration: InputDecoration(
+                            labelText: 'Nombre del Producto *',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.inventory_2_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: descController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            labelText: 'Descripción detallada',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Medidas y Costos
+                        const Text(
+                          'Especificaciones Técnicas',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: unidadController,
+                                decoration: InputDecoration(
+                                  labelText: 'Unidad *',
+                                  hintText: 'UND, PA, M3...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onChanged: (v) =>
+                                    unidadController.value = unidadController
+                                        .value
+                                        .copyWith(text: v.toUpperCase()),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: precioController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d*\.?\d{0,2}'),
+                                  ),
+                                ],
+                                decoration: InputDecoration(
+                                  labelText: 'Precio Costo \$',
+                                  prefixIcon: const Icon(Icons.attach_money),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Botones de Acción
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    if (nombreController.text.isEmpty ||
+                                        unidadController.text.isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Nombre y Unidad son obligatorios',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setModalState(() => isSaving = true);
+                                    final data = {
+                                      'codigo': codigoController.text.isEmpty
+                                          ? null
+                                          : codigoController.text,
+                                      'nombre': nombreController.text,
+                                      'descripcion': descController.text,
+                                      'categoria_id': catId,
+                                      'unidad': unidadController.text
+                                          .toUpperCase(),
+                                      'precio_costo':
+                                          double.tryParse(
+                                            precioController.text,
+                                          ) ??
+                                          0.0,
+                                    };
+
+                                    try {
+                                      if (isEdit) {
+                                        await _apiService.updateMaterial(
+                                          product['id'],
+                                          data,
+                                        );
+                                      } else {
+                                        await _apiService.createMaterial(data);
+                                      }
+                                      if (mounted) {
+                                        Navigator.pop(context);
+                                        _loadData();
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              isEdit
+                                                  ? 'Producto actualizado'
+                                                  : 'Producto creado',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setModalState(() => isSaving = false);
+                                      if (mounted)
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFA000),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: isSaving
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    isEdit
+                                        ? 'GUARDAR CAMBIOS'
+                                        : 'CREAR PRODUCTO',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nombreController.text.isEmpty ||
-                  unidadController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Nombre y Unidad son obligatorios'),
-                  ),
-                );
-                return;
-              }
+      ),
+    );
+  }
 
-              final data = {
-                'codigo': codigoController.text.isEmpty
-                    ? null
-                    : codigoController.text,
-                'nombre': nombreController.text,
-                'descripcion': descController.text,
-                'categoria_id': catId,
-                'unidad': unidadController.text.toUpperCase(),
-                'precio_costo': double.tryParse(precioController.text) ?? 0.0,
-              };
+  void _showNewCategoryDialog({
+    required Function(Map<String, dynamic>) onCreated,
+  }) {
+    final controller = TextEditingController();
+    bool isSaving = false;
 
-              try {
-                if (isEdit) {
-                  await _apiService.updateMaterial(product['id'], data);
-                } else {
-                  await _apiService.createMaterial(data);
-                }
-                if (mounted) Navigator.pop(context);
-                _loadData();
-              } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            child: const Text('Guardar'),
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
-        ],
+          title: const Text('Nueva Categoría'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Nombre de la Categoría',
+              hintText: 'Ej: Pinturas, Aceros...',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (controller.text.isEmpty) return;
+                      setModalState(() => isSaving = true);
+                      try {
+                        final newCat = await _apiService.createCategoria({
+                          'nombre': controller.text,
+                        });
+                        await _loadData(); // Refresca la lista global de categorías
+                        if (mounted) {
+                          onCreated(newCat);
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        setModalState(() => isSaving = false);
+                        if (mounted)
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      height: 15,
+                      width: 15,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Crear'),
+            ),
+          ],
+        ),
       ),
     );
   }

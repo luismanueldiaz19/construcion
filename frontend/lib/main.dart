@@ -4,6 +4,9 @@ import 'core/app_theme.dart';
 import 'modules/dashboard/dashboard_screen.dart';
 import 'modules/projects/projects_screen.dart';
 import 'modules/accounting/accounting_screen.dart';
+import 'modules/accounting/cuentas_por_pagar_screen.dart';
+import 'modules/accounting/cuentas_por_cobrar_screen.dart';
+import 'modules/payments/payments_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
 import 'modules/reports/compras_report_screen.dart';
 import 'modules/reports/gastos_report_screen.dart';
@@ -61,6 +64,9 @@ class _MainLayoutState extends State<MainLayout> {
     const ComprasReportScreen(),
     const GastosReportScreen(),
     const InventoryScreen(),
+    const CuentasPorPagarScreen(),
+    const CuentasPorCobrarScreen(),
+    const PaymentsScreen(),
     const AccountingScreen(),
     const Center(child: Text('Configuración')),
   ];
@@ -127,6 +133,21 @@ class _MainLayoutState extends State<MainLayout> {
                 icon: Icon(Icons.inventory_2_outlined),
                 selectedIcon: Icon(Icons.inventory_2),
                 label: Text('Inventario Proy.'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.money_off_outlined),
+                selectedIcon: Icon(Icons.money_off),
+                label: Text('Cuentas por Pagar'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                selectedIcon: Icon(Icons.account_balance_wallet),
+                label: Text('Cuentas por Cobrar'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.history_outlined),
+                selectedIcon: Icon(Icons.history),
+                label: Text('Historial de Pagos'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.account_balance_outlined),

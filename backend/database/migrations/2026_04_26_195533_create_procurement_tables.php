@@ -25,6 +25,7 @@ return new class extends Migration
             $table->foreignId('proveedor_id')->constrained('proveedores');
             $table->foreignId('proyecto_id')->constrained('proyectos');
             $table->date('fecha');
+            $table->date('fecha_vencimiento')->nullable();
             $table->enum('tipo_compra', ['Contado', 'Crédito']);
             $table->decimal('subtotal', 15, 2);
             $table->decimal('itbis', 15, 2);

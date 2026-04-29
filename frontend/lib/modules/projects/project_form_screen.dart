@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 
@@ -366,7 +367,12 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
           Expanded(
             child: TextFormField(
               initialValue: sub['cantidad'].toString(),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               onChanged: (v) =>
                   setState(() => sub['cantidad'] = double.tryParse(v) ?? 0.0),
               decoration: const InputDecoration(labelText: 'Cant'),
@@ -376,7 +382,12 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
           Expanded(
             child: TextFormField(
               initialValue: sub['costo_unitario'].toString(),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               onChanged: (v) => setState(
                 () => sub['costo_unitario'] = double.tryParse(v) ?? 0.0,
               ),
@@ -518,7 +529,12 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               onChanged: (v) => setState(() {}),
               textAlign: TextAlign.right,
               decoration: const InputDecoration(

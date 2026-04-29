@@ -30,7 +30,18 @@ class PagoClienteController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated) {
-            $proyecto = \App\Models\Proyecto::findOrFail($validated['proyecto_id']);
+            $proyecto = \App\Models\Proyecto::withSum('pagos', 'monto')->findOrFail($validated['proyecto_id']);
+            
+            $totalContrato = $proyecto->presupuesto_estimado;
+            $totalPagado = $proyecto->pagos_sum_monto ?? 0;
+            $saldoPendiente = $totalContrato - $totalPagado;
+
+            if ($validated['monto'] > ($saldoPendiente + 0.01)) { // Allow tiny margin for rounding
+                return response()->json([
+                    'error' => 'El monto excede el saldo pendiente del contrato.',
+                    'saldo_pendiente' => $saldoPendiente
+                ], 422);
+            }
             
             // 1. Determinar cuentas
             $cuentaBancoId = $validated['banco_id'] ?? CatalogoCuenta::where('codigo', '1.1.01.02')->first()->id;

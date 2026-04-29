@@ -270,7 +270,7 @@ class ApiService {
     }
   }
 
-  Future<void> createCompra(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createCompra(Map<String, dynamic> data) async {
     print('POST Request to $baseUrl/compras with data: ${json.encode(data)}');
     final response = await http.post(
       Uri.parse('$baseUrl/compras'),
@@ -281,6 +281,7 @@ class ApiService {
       print('ERROR en createCompra: ${response.body}');
       throw Exception('Error al registrar compra: ${response.body}');
     }
+    return json.decode(response.body);
   }
 
   Future<List<dynamic>> getComprasPendientes() async {
@@ -324,6 +325,23 @@ class ApiService {
     final response = await http.get(Uri.parse('$baseUrl/categorias'));
     if (response.statusCode == 200) return json.decode(response.body);
     throw Exception('Error al cargar categorías');
+  }
+
+  Future<Map<String, dynamic>> createCategoria(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/categorias'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: json.encode(data),
+    );
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Error al crear categoría: ${response.body}');
+    }
+    return json.decode(response.body);
   }
 
   Future<void> createMaterial(Map<String, dynamic> data) async {
@@ -478,5 +496,36 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Error al eliminar documento');
     }
+  }
+
+  // --- CUENTAS POR PAGAR Y PAGOS ---
+
+  Future<List<dynamic>> getCuentasPorPagar() async {
+    final response = await http.get(Uri.parse('$baseUrl/cuentas-por-pagar'));
+    if (response.statusCode == 200) return json.decode(response.body);
+    throw Exception('Error al cargar cuentas por pagar');
+  }
+
+  Future<void> registrarPagoCompra(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/pagos-compras'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(data),
+    );
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Error al registrar pago: ${response.body}');
+    }
+  }
+
+  Future<List<dynamic>> getAllPagosHistorial() async {
+    final response = await http.get(Uri.parse('$baseUrl/pagos-historial'));
+    if (response.statusCode == 200) return json.decode(response.body);
+    throw Exception('Error al cargar historial de pagos');
+  }
+
+  Future<List<dynamic>> getCuentasPorCobrar() async {
+    final response = await http.get(Uri.parse('$baseUrl/cuentas-por-cobrar'));
+    if (response.statusCode == 200) return json.decode(response.body);
+    throw Exception('Error al cargar cuentas por cobrar');
   }
 }
