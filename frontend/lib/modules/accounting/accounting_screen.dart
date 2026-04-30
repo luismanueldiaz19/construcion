@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_theme.dart';
 import 'catalog_view.dart';
 import 'journal_view.dart';
 import 'profit_loss_view.dart';
@@ -11,7 +12,10 @@ class AccountingScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: AppTheme.textPrimary,
           title: const Text('Contabilidad Integrada'),
           bottom: const TabBar(
             tabs: [
@@ -22,11 +26,7 @@ class AccountingScreen extends StatelessWidget {
           ),
         ),
         body: const TabBarView(
-          children: [
-            CatalogView(),
-            JournalView(),
-            ProfitLossView(),
-          ],
+          children: [CatalogView(), JournalView(), ProfitLossView()],
         ),
       ),
     );

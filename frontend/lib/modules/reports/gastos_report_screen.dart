@@ -122,7 +122,10 @@ class _GastosReportScreenState extends State<GastosReportScreen> {
     final f = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Reporte de Gastos / Pagos'),
         // backgroundColor: AppTheme.primaryColor.withValues(alpha: .5),
         // foregroundColor: Colors.white,
@@ -146,8 +149,9 @@ class _GastosReportScreenState extends State<GastosReportScreen> {
                   (g) => g['proveedor']?['nombre'] == _selectedProveedor,
                   orElse: () => null,
                 );
-                if (match != null)
+                if (match != null) {
                   query += 'proveedor_id=${match['proveedor_id']}&';
+                }
               }
               if (_selectedTipo != null && _selectedTipo != 'Todos') {
                 query += 'tipo_gasto=$_selectedTipo&';

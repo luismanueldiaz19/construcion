@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 import 'project_details_screen.dart';
 
@@ -28,7 +29,7 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
     'Activo',
     'Cotización',
     'Terminado',
-    'Cancelado'
+    'Cancelado',
   ];
 
   @override
@@ -76,8 +77,12 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
     final f = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+
       appBar: AppBar(
         title: const Text('Historial de Proyectos'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
       ),
       body: Column(
         children: [
@@ -147,7 +152,9 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                       decoration: InputDecoration(
                         labelText: 'Buscar proyecto o cliente',
                         border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.search),
                           onPressed: _fetchHistorial,
@@ -171,157 +178,144 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text('Error: $_error'))
-                    : _proyectos.isEmpty
-                        ? const Center(child: Text('No se encontraron proyectos.'))
-                        : SizedBox(
-                            width: double.infinity,
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.all(16),
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Theme(
-                                  data: Theme.of(context).copyWith(
-                                    dividerColor: Colors.grey.shade300,
-                                  ),
-                                  child: DataTable(
-                                    headingRowColor: MaterialStateProperty.all(
-                                      Colors.grey.shade100,
-                                    ),
-                                    dataRowMaxHeight: 60,
-                                    columns: const [
-                                      DataColumn(
-                                        label: Text(
-                                          'Proyecto',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Cliente',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Presupuesto',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Estado',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Fecha',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Acciones',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    rows: _proyectos.map((proyecto) {
-                                      final monto = double.tryParse(
-                                        proyecto['presupuesto_estimado']
-                                                ?.toString() ??
-                                            '0',
-                                      ) ?? 0;
-                                      final fecha = proyecto['created_at'] != null
-                                          ? DateFormat('dd/MM/yyyy').format(
-                                            DateTime.parse(proyecto['created_at']),
-                                          )
-                                          : 'N/A';
-
-                                      return DataRow(
-                                        cells: [
-                                          DataCell(
-                                            Text(
-                                              proyecto['nombre'] ?? 'Sin nombre',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                          DataCell(
-                                            Text(proyecto['cliente'] ?? 'N/A'),
-                                          ),
-                                          DataCell(Text(f.format(monto))),
-                                          DataCell(
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: _getStatusColor(
-                                                  proyecto['estado'],
-                                                ).withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: _getStatusColor(
-                                                    proyecto['estado'],
-                                                  ),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                proyecto['estado'] ?? 'N/A',
-                                                style: TextStyle(
-                                                  color: _getStatusColor(
-                                                    proyecto['estado'],
-                                                  ),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          DataCell(Text(fecha)),
-                                          DataCell(
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.visibility,
-                                                color: Colors.blueGrey,
-                                              ),
-                                              onPressed: () => Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      ProjectDetailsScreen(
-                                                        proyecto: proyecto,
-                                                      ),
-                                                ),
-                                              ),
-                                              tooltip: 'Ver Detalles',
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }).toList(),
-                                  ),
+                ? Center(child: Text('Error: $_error'))
+                : _proyectos.isEmpty
+                ? const Center(child: Text('No se encontraron proyectos.'))
+                : SizedBox(
+                    width: double.infinity,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Theme(
+                          data: Theme.of(
+                            context,
+                          ).copyWith(dividerColor: Colors.grey.shade300),
+                          child: DataTable(
+                            headingRowColor: MaterialStateProperty.all(
+                              Colors.grey.shade100,
+                            ),
+                            dataRowMaxHeight: 60,
+                            columns: const [
+                              DataColumn(
+                                label: Text(
+                                  'Proyecto',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
-                            ),
+                              DataColumn(
+                                label: Text(
+                                  'Cliente',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  'Presupuesto',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  'Estado',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  'Fecha',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
+                                  'Acciones',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                            rows: _proyectos.map((proyecto) {
+                              final monto =
+                                  double.tryParse(
+                                    proyecto['presupuesto_estimado']
+                                            ?.toString() ??
+                                        '0',
+                                  ) ??
+                                  0;
+                              final fecha = proyecto['created_at'] != null
+                                  ? DateFormat('dd/MM/yyyy').format(
+                                      DateTime.parse(proyecto['created_at']),
+                                    )
+                                  : 'N/A';
+
+                              return DataRow(
+                                cells: [
+                                  DataCell(
+                                    Text(
+                                      proyecto['nombre'] ?? 'Sin nombre',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Text(proyecto['cliente'] ?? 'N/A')),
+                                  DataCell(Text(f.format(monto))),
+                                  DataCell(
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(
+                                          proyecto['estado'],
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: _getStatusColor(
+                                            proyecto['estado'],
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        proyecto['estado'] ?? 'N/A',
+                                        style: TextStyle(
+                                          color: _getStatusColor(
+                                            proyecto['estado'],
+                                          ),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(Text(fecha)),
+                                  DataCell(
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.visibility,
+                                        color: Colors.blueGrey,
+                                      ),
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ProjectDetailsScreen(
+                                                proyecto: proyecto,
+                                              ),
+                                        ),
+                                      ),
+                                      tooltip: 'Ver Detalles',
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),

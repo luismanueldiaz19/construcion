@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../widgets/search_selector_dialog.dart';
 
@@ -161,15 +162,20 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   @override
   Widget build(BuildContext context) {
     final f = NumberFormat.currency(symbol: '\$');
-    double subtotal = _items.fold(
+    double total = _items.fold(
       0,
       (sum, item) => sum + (item['cantidad'] * item['precio_unitario']),
     );
-    double itbis = subtotal * 0.18;
-    double total = subtotal + itbis;
+    double subtotal = total / 1.18;
+    double itbis = total - subtotal;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva Compra de Materiales')),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text('Nueva Compra de Materiales'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Stack(
@@ -205,7 +211,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 ),
                 if (_isSubmitting)
                   Container(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     child: const Center(
                       child: Card(
                         elevation: 4,
@@ -348,8 +354,9 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                           firstDate: DateTime(2000),
                           lastDate: DateTime(2100),
                         );
-                        if (date != null)
+                        if (date != null) {
                           setState(() => _fechaVencimiento = date);
+                        }
                       },
                       child: InputDecorator(
                         decoration: const InputDecoration(
@@ -488,9 +495,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 prefixText: '\$',
               ),
               child: Text(
-                NumberFormat(
-                  '#,###.##',
-                ).format(item['cantidad'] * item['precio_unitario'] * 0.18),
+                NumberFormat('#,###.##').format(
+                  (item['cantidad'] * item['precio_unitario']) -
+                      (item['cantidad'] * item['precio_unitario'] / 1.18),
+                ),
                 style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
               ),
             ),
@@ -507,7 +515,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
               child: Text(
                 NumberFormat(
                   '#,###.##',
-                ).format((item['cantidad'] * item['precio_unitario']) * 1.18),
+                ).format(item['cantidad'] * item['precio_unitario']),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,

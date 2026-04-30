@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 
 class ReceptionScreen extends StatefulWidget {
@@ -38,7 +39,12 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
     final f = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Recepción de Materiales en Obra')),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text('Recepción de Materiales en Obra'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _comprasPendientes.isEmpty

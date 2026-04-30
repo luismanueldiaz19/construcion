@@ -1,3 +1,4 @@
+import 'package:construccion_erp/core/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,7 +36,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final f = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Gestión de Proyectos'),
         actions: [
           ElevatedButton.icon(

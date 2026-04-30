@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 
 class CuentasPorCobrarScreen extends StatefulWidget {
@@ -55,7 +56,10 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
     final f = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Cuentas por Cobrar (CXC)'),
         actions: [
           IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh)),

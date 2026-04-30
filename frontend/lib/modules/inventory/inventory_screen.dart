@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 import 'purchase_form_screen.dart';
 import 'suppliers_screen.dart';
@@ -42,7 +43,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Inventario por Proyecto'),
         actions: [
           TextButton.icon(

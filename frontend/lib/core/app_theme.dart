@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const primaryColor = Color(0xFF003366); // Deep Construction Blue
-  static const accentColor = Color(0xFFFFA500); // Construction Orange
-  static const backgroundColor = Color(0xFFF5F7FA);
+  static const primaryColor = Color(0xFF1A1C1E); // Dark Grey from logo
+  static const accentColor = Color(0xFFE31E24); // Vibrant Red from logo
+  static const backgroundColor = Color(0xFFF8F9FA);
   static const cardColor = Colors.white;
   static const textPrimary = Color(0xFF1A1A1A);
-  static const textSecondary = Color(0xFF757575);
+  static const textSecondary = Color(0xFF666666);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     primaryColor: primaryColor,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryColor,
-      primary: primaryColor,
-      secondary: accentColor,
+      primary: accentColor, // Use Red as primary for buttons/links
+      secondary: primaryColor, // Dark grey as secondary
       surface: backgroundColor,
     ),
-    scaffoldBackgroundColor: backgroundColor,
+    // scaffoldBackgroundColor: Colors.transparent,
+    appBarTheme: const AppBarTheme(
+      // backgroundColor:
+      //     Colors.transparent, // Also make AppBar transparent by default
+      // foregroundColor: textPrimary,
+      elevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+        color: textPrimary,
+        fontWeight: FontWeight.bold,
+        fontSize: 18,
+      ),
+    ),
     cardTheme: CardThemeData(
       color: cardColor,
       elevation: 2,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 import 'package:intl/intl.dart';
 
@@ -76,8 +77,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Administración de Productos'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         actions: [
           ElevatedButton.icon(
             onPressed: () => _showProductDialog(),

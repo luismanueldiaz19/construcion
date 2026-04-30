@@ -45,14 +45,14 @@ class CompraController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated) {
-            $subtotal = 0;
+            $total = 0;
             foreach ($validated['items'] as $item) {
-                $subtotal += $item['cantidad'] * $item['precio_unitario'];
+                $total += $item['cantidad'] * $item['precio_unitario'];
             }
 
-            // Calculamos ITBIS (asumimos 18% para materiales)
-            $itbis = $subtotal * 0.18;
-            $total = $subtotal + $itbis;
+            // Calculamos Subtotal e ITBIS (asumiendo que el precio ya tiene el 18%)
+            $subtotal = $total / 1.18;
+            $itbis = $total - $subtotal;
 
             // 1. Crear Compra
             $compra = Compra::create([
@@ -69,12 +69,13 @@ class CompraController extends Controller
 
             // 2. Crear Detalles
             foreach ($validated['items'] as $item) {
+                $itemNeto = $item['precio_unitario'] / 1.18;
                 CompraDetalle::create([
                     'compra_id' => $compra->id,
                     'material_id' => $item['material_id'],
                     'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $item['precio_unitario'],
-                    'subtotal' => $item['cantidad'] * $item['precio_unitario'],
+                    'precio_unitario' => $itemNeto,
+                    'subtotal' => $itemNeto * $item['cantidad'],
                 ]);
             }
 

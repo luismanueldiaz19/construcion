@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 import '../accounting/cuentas_por_pagar_screen.dart'; // We'll keep the views but integrate them here
 
@@ -44,12 +45,19 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   List<dynamic> get _filteredHistory {
     return _history.where((item) {
-      final matchesSearch = item['entidad'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          item['proyecto'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          item['concepto'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
-      
+      final matchesSearch =
+          item['entidad'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          item['proyecto'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          item['concepto'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          );
+
       final matchesTipo = _filterTipo == null || item['tipo'] == _filterTipo;
-      
+
       return matchesSearch && matchesTipo;
     }).toList();
   }
@@ -57,13 +65,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Historial de Pagos Realizados'),
         actions: [
-          IconButton(
-            onPressed: _loadHistory,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _loadHistory, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: Column(
@@ -90,7 +98,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   items: const [
                     DropdownMenuItem(value: null, child: Text('Todos')),
                     DropdownMenuItem(value: 'Compra', child: Text('Compra')),
-                    DropdownMenuItem(value: 'Proyecto', child: Text('Proyecto')),
+                    DropdownMenuItem(
+                      value: 'Proyecto',
+                      child: Text('Proyecto'),
+                    ),
                   ],
                   onChanged: (v) => setState(() => _filterTipo = v),
                 ),
@@ -111,15 +122,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       child: _isLoadingHistory
           ? const Center(child: CircularProgressIndicator())
           : filtered.isEmpty
-              ? const Center(child: Text('No se encontraron registros.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final item = filtered[index];
-                    return _buildHistoryCard(item, f);
-                  },
-                ),
+          ? const Center(child: Text('No se encontraron registros.'))
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: filtered.length,
+              itemBuilder: (context, index) {
+                final item = filtered[index];
+                return _buildHistoryCard(item, f);
+              },
+            ),
     );
   }
 
@@ -169,7 +180,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 Expanded(
                   child: Text(
                     'Proyecto: ${item['proyecto']}',
-                    style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.blueGrey),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blueGrey,
+                    ),
                   ),
                 ),
               ],
@@ -206,7 +220,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   void _openPdf(String tipo, int id) async {
-    final url = Uri.parse('${_apiService.baseUrl}/pagos-historial/$tipo/$id/pdf');
+    final url = Uri.parse(
+      '${_apiService.baseUrl}/pagos-historial/$tipo/$id/pdf',
+    );
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

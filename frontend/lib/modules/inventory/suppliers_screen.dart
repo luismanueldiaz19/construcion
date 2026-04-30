@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 
 class SuppliersScreen extends StatefulWidget {
@@ -63,8 +64,11 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Gestión de Proveedores'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         actions: [
           ElevatedButton.icon(
             onPressed: () => _showSupplierDialog(),

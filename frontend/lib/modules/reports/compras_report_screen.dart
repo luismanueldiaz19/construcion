@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/app_theme.dart';
 import '../../core/constants.dart';
 import '../../services/api_service.dart';
 import 'compra_detail_screen.dart';
@@ -119,7 +120,10 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
     final f = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
         title: const Text('Reporte de Compras'),
         // backgroundColor: Colors.indigo,
         // foregroundColor: Colors.white,

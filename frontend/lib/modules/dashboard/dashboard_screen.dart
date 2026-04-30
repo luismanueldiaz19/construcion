@@ -47,64 +47,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
               Expanded(
-                child: GridView.count(
-                  crossAxisCount: MediaQuery.of(context).size.width > 1200
-                      ? 4
-                      : 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    _buildKPICard(
-                      'Proyectos Activos',
-                      '${kpis?['proyectos_activos'] ?? 0}',
-                      Icons.business,
-                      Colors.blue,
-                    ),
-                    _buildKPICard(
-                      'Rentabilidad',
-                      f.format(
-                        double.tryParse(
-                              kpis?['rentabilidad']?.toString() ?? '0',
-                            ) ??
-                            0,
-                      ),
-                      Icons.trending_up,
-                      Colors.green,
-                    ),
-                    _buildKPICard(
-                      'Ingresos Totales',
-                      f.format(
-                        double.tryParse(
-                              kpis?['ingresos_totales']?.toString() ?? '0',
-                            ) ??
-                            0,
-                      ),
-                      Icons.payments,
-                      Colors.teal,
-                    ),
-                    _buildKPICard(
-                      'Costos Totales',
-                      f.format(
-                        double.tryParse(
-                              kpis?['costos_totales']?.toString() ?? '0',
-                            ) ??
-                            0,
-                      ),
-                      Icons.money_off,
-                      Colors.red,
-                    ),
-                    _buildKPICard(
-                      'Impuesto DGII (ITBIS)',
-                      f.format(
-                        double.tryParse(
-                              kpis?['itbis_neto']?.toString() ?? '0',
-                            ) ??
-                            0,
-                      ),
-                      Icons.account_balance,
-                      Colors.orange,
-                    ),
-                  ],
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 350,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                    childAspectRatio:
+                        1.3, // Aspect ratio to avoid vertical overflow
+                  ),
+                  itemCount: 5,
+                  itemBuilder: (context, index) {
+                    final f = NumberFormat.currency(symbol: '\$');
+                    final kpis = provider.data?['kpis'];
+
+                    switch (index) {
+                      case 0:
+                        return _buildKPICard(
+                          'Proyectos Activos',
+                          '${kpis?['proyectos_activos'] ?? 0}',
+                          Icons.business,
+                          Colors.blue,
+                        );
+                      case 1:
+                        return _buildKPICard(
+                          'Rentabilidad',
+                          f.format(
+                            double.tryParse(
+                                  kpis?['rentabilidad']?.toString() ?? '0',
+                                ) ??
+                                0,
+                          ),
+                          Icons.trending_up,
+                          Colors.green,
+                        );
+                      case 2:
+                        return _buildKPICard(
+                          'Ingresos Totales',
+                          f.format(
+                            double.tryParse(
+                                  kpis?['ingresos_totales']?.toString() ?? '0',
+                                ) ??
+                                0,
+                          ),
+                          Icons.payments,
+                          Colors.teal,
+                        );
+                      case 3:
+                        return _buildKPICard(
+                          'Costos Totales',
+                          f.format(
+                            double.tryParse(
+                                  kpis?['costos_totales']?.toString() ?? '0',
+                                ) ??
+                                0,
+                          ),
+                          Icons.money_off,
+                          Colors.red,
+                        );
+                      case 4:
+                        return _buildKPICard(
+                          'Impuesto DGII (ITBIS)',
+                          f.format(
+                            double.tryParse(
+                                  kpis?['itbis_neto']?.toString() ?? '0',
+                                ) ??
+                                0,
+                          ),
+                          Icons.account_balance,
+                          Colors.orange,
+                        );
+                      default:
+                        return const SizedBox();
+                    }
+                  },
                 ),
               ),
             ],
@@ -117,26 +132,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildKPICard(String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: color),
-            const SizedBox(height: 16),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
+            const SizedBox(height: 4),
             Text(
               title,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/app_theme.dart';
 import '../../services/api_service.dart';
 
 class CuentasPorPagarScreen extends StatefulWidget {
@@ -122,7 +123,10 @@ class _CuentasPorPagarScreenState extends State<CuentasPorPagarScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: AppTheme.textPrimary,
           title: const Text('Cuentas por Pagar (CXP)'),
           actions: [
             IconButton(
