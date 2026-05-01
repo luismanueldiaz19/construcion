@@ -1,3 +1,18 @@
+# Etapa 1: Build con Composer
+FROM composer:2 AS build
+
+WORKDIR /app
+
+# Copiar composer.json y composer.lock primero (para cache de dependencias)
+COPY backend/composer.json backend/composer.lock ./
+
+# Instalar dependencias sin dev
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Copiar el resto del proyecto
+COPY backend/ .
+
+# Etapa 2: Runtime con PHP + Apache
 FROM php:8.2-apache
 
 # Dependencias del sistema
@@ -25,16 +40,8 @@ RUN a2enmod rewrite
 
 WORKDIR /var/www/html
 
-# Copiar proyecto Laravel
-COPY backend/ /var/www/html/
-
-# Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-RUN composer install \
-    --no-dev \
-    --optimize-autoloader \
-    --no-interaction
+# Copiar proyecto desde la etapa build (incluye vendor ya instalado)
+COPY --from=build /app /var/www/html
 
 # Permisos Laravel
 RUN mkdir -p storage bootstrap/cache && \
@@ -47,10 +54,9 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' \
 
 EXPOSE 80
 
-CMD php artisan config:clear && \
-    php artisan route:clear && \
-    php artisan view:clear && \
-    (php artisan cache:clear || true) && \
-    (php artisan storage:link || true) && \
-    php artisan migrate --force && \
-    exec apache2-foreground
+# Entrypoint script para limpiar caches y preparar entorno
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["apache2-foreground"]
