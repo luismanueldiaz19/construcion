@@ -55,7 +55,7 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' \
 EXPOSE 80
 
 # Entrypoint script para limpiar caches y preparar entorno
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
