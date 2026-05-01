@@ -6,8 +6,8 @@ WORKDIR /app
 # Copiar composer.json y composer.lock primero (para cache de dependencias)
 COPY backend/composer.json backend/composer.lock ./
 
-# Instalar dependencias sin dev
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Instalar dependencias sin dev y sin scripts
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Copiar el resto del proyecto
 COPY backend/ .
