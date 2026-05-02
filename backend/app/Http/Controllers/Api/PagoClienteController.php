@@ -32,11 +32,15 @@ class PagoClienteController extends Controller
         return DB::transaction(function () use ($validated) {
             $proyecto = \App\Models\Proyecto::withSum('pagos', 'monto')->findOrFail($validated['proyecto_id']);
             
-            $totalContrato = $proyecto->presupuesto_estimado;
+            $totalContrato = $proyecto->presupuesto_estimado 
+                           + ($proyecto->itbis ?? 0)
+                           + ($proyecto->transporte ?? 0)
+                           + ($proyecto->supervision_tecnica ?? 0)
+                           + ($proyecto->otros_costos ?? 0);
             $totalPagado = $proyecto->pagos_sum_monto ?? 0;
             $saldoPendiente = $totalContrato - $totalPagado;
 
-            if ($validated['monto'] > ($saldoPendiente + 0.01)) { // Allow tiny margin for rounding
+            if ($validated['monto'] > ($saldoPendiente + 0.05)) { // Allow tiny margin for rounding
                 return response()->json([
                     'error' => 'El monto excede el saldo pendiente del contrato.',
                     'saldo_pendiente' => $saldoPendiente
@@ -50,7 +54,7 @@ class PagoClienteController extends Controller
 
             // 2. Calcular desglose de ITBIS proporcional
             // Si el proyecto tiene ITBIS, lo extraemos del pago de forma proporcional al total
-            $totalProyecto = $proyecto->presupuesto_estimado; // Ya incluye indirectos en nuestra lógica anterior
+            $totalProyecto = $totalContrato;
             $itbisTotal = $proyecto->itbis;
             
             $montoItbis = 0;
