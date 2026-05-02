@@ -11,7 +11,7 @@ class CuentaPorCobrarController extends Controller
     public function index()
     {
         return Proyecto::withSum('pagos', 'monto')
-            ->where('estado', '!=', 'Cancelado')
+            ->where('estado', 'Activo')
             ->get()
             ->map(function($proyecto) {
                 $total = $proyecto->presupuesto_estimado 

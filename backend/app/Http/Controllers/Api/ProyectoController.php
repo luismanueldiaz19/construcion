@@ -210,10 +210,54 @@ class ProyectoController extends Controller
         return response()->json(['message' => 'Logo eliminado']);
     }
 
-    public function destroy(Proyecto $proyecto)
+    public function destroy($id)
     {
-        $proyecto->delete();
-        return response()->noContent();
+        return DB::transaction(function () use ($id) {
+            $proyecto = Proyecto::findOrFail($id);
+
+            // 1. Eliminar Asientos Contables relacionados con el proyecto
+            // Buscamos asientos donde el proyecto esté como centro de costo o vinculado al pago
+            $pagoIds = \App\Models\PagoCliente::where('proyecto_id', $id)->pluck('id');
+            \App\Models\AsientoContable::where('proyecto_id', $id)
+                ->orWhere(function($q) use ($pagoIds) {
+                    $q->where('origin_type', 'Ingreso')->whereIn('origin_id', $pagoIds);
+                })
+                ->each(function($asiento) {
+                    $asiento->detalles()->delete();
+                    $asiento->delete();
+                });
+
+            // 2. Eliminar Pagos de clientes
+            \App\Models\PagoCliente::where('proyecto_id', $id)->delete();
+
+            // 3. Eliminar Documentos
+            \App\Models\Documento::where('proyecto_id', $id)->delete();
+
+            // 4. Eliminar Gastos del Proyecto
+            \App\Models\GastoProyecto::where('proyecto_id', $id)->delete();
+
+            // 5. Eliminar Inventario y Consumos
+            $inventarioIds = \App\Models\Inventario::where('proyecto_id', $id)->pluck('id');
+            \App\Models\Consumo::whereIn('inventario_id', $inventarioIds)->delete();
+            \App\Models\Inventario::where('proyecto_id', $id)->delete();
+
+            // 6. Eliminar Partidas, Subpartidas y Avances
+            foreach ($proyecto->partidas as $partida) {
+                foreach ($partida->subpartidas as $sub) {
+                    \App\Models\AvanceProyecto::where('subpartida_id', $sub->id)->delete();
+                    $sub->delete();
+                }
+                $partida->delete();
+            }
+
+            // 7. Finalmente eliminar el proyecto
+            if ($proyecto->logo_path) {
+                \Storage::disk('public')->delete($proyecto->logo_path);
+            }
+            $proyecto->delete();
+
+            return response()->json(['message' => 'Proyecto y todos sus datos relacionados eliminados correctamente.']);
+        });
     }
 
     public function partidas($id)
