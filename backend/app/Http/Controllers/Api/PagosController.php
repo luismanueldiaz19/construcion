@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PagoCompra;
 use App\Models\GastoProyecto;
+use App\Models\PagoCliente;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -48,7 +49,25 @@ class PagosController extends Controller
                 ];
             });
 
-        return $pagosCompras->concat($gastosProyectos)->sortByDesc('fecha')->values();
+        // Obtener todos los cobros de clientes
+        $cobrosClientes = PagoCliente::with('proyecto')
+            ->get()
+            ->map(function($pago) {
+                return [
+                    'id' => $pago->id,
+                    'tipo' => 'Cobro',
+                    'fecha' => $pago->fecha,
+                    'monto' => $pago->monto,
+                    'metodo_pago' => $pago->metodo_pago,
+                    'referencia' => $pago->comentario ?? '',
+                    'entidad' => $pago->proyecto->cliente ?? 'N/A',
+                    'proyecto' => $pago->proyecto->nombre ?? 'N/A',
+                    'concepto' => "Abono / Pago de Proyecto",
+                    'original' => $pago
+                ];
+            });
+
+        return $pagosCompras->concat($gastosProyectos)->concat($cobrosClientes)->sortByDesc('fecha')->values();
     }
 
     public function imprimirRecibo($tipo, $id)
@@ -68,6 +87,26 @@ class PagosController extends Controller
                     'BALANCE PENDIENTE' => $pago->cuentaPorPagar->saldo
                 ]
             ];
+        } else if ($tipo === 'Cobro') {
+            $pago = PagoCliente::with('proyecto')->findOrFail($id);
+            $data = [
+                'id' => $pago->id,
+                'fecha' => $pago->fecha,
+                'entidad' => $pago->proyecto->cliente ?? 'N/A',
+                'metodo' => $pago->metodo_pago,
+                'referencia' => '', 
+                'monto' => $pago->monto,
+                'subtitulo' => 'RECIBO DE COBRO - ' . ($pago->proyecto->nombre ?? 'N/A'),
+                'detalles' => [
+                    'Proyecto' => $pago->proyecto->nombre ?? 'N/A',
+                    'Monto Recibido' => $pago->monto
+                ],
+                'proyecto' => $pago->proyecto
+            ];
+            
+            $pdf = Pdf::loadView('pdf.recibo_cobro_full', compact('data'))
+                ->setPaper('letter', 'portrait');
+            return $pdf->stream("recibo_cobro_{$id}.pdf");
         } else {
             $gasto = GastoProyecto::with('proyecto', 'proveedor')->findOrFail($id);
             $data = [

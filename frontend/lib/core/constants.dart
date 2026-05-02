@@ -1,5 +1,4 @@
-// final String host = "http://127.0.0.1:8000";
-
-final String host = "https://neo-proyect.onrender.com";
+final String host = "http://127.0.0.1:8000";
+// final String host = "https://neo-proyect.onrender.com";
 
 final logoPath = "assets/logo.png";

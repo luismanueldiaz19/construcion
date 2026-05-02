@@ -97,10 +97,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   hint: const Text('Tipo'),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('Todos')),
-                    DropdownMenuItem(value: 'Compra', child: Text('Compra')),
+                    DropdownMenuItem(value: 'Compra', child: Text('Compras')),
                     DropdownMenuItem(
                       value: 'Proyecto',
-                      child: Text('Proyecto'),
+                      child: Text('Gastos Proy.'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Cobro',
+                      child: Text('Cobros Clientes'),
                     ),
                   ],
                   onChanged: (v) => setState(() => _filterTipo = v),
@@ -135,7 +139,24 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Widget _buildHistoryCard(dynamic item, NumberFormat f) {
-    final bool isCompra = item['tipo'] == 'Compra';
+    final String tipo = item['tipo'];
+    final bool isCompra = tipo == 'Compra';
+    final bool isCobro = tipo == 'Cobro';
+
+    Color bgColor = Colors.orange[100]!;
+    Color iconColor = Colors.orange[900]!;
+    IconData icon = Icons.construction;
+
+    if (isCompra) {
+      bgColor = Colors.blue[100]!;
+      iconColor = Colors.blue[900]!;
+      icon = Icons.shopping_cart;
+    } else if (isCobro) {
+      bgColor = Colors.green[100]!;
+      iconColor = Colors.green[900]!;
+      icon = Icons.person;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -143,11 +164,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: isCompra ? Colors.blue[100] : Colors.orange[100],
-          child: Icon(
-            isCompra ? Icons.shopping_cart : Icons.construction,
-            color: isCompra ? Colors.blue[900] : Colors.orange[900],
-          ),
+          backgroundColor: bgColor,
+          child: Icon(icon, color: iconColor),
         ),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

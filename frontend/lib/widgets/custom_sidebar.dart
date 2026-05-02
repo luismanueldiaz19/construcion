@@ -103,8 +103,8 @@ class CustomSidebar extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   11,
-                  Icons.account_balance_wallet_outlined,
-                  Icons.account_balance_wallet,
+                  Icons.pending_actions_outlined,
+                  Icons.pending_actions,
                   'Cuentas por Cobrar',
                   accentColor,
                 ),

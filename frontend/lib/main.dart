@@ -7,6 +7,7 @@ import 'modules/accounting/accounting_screen.dart';
 import 'modules/accounting/cuentas_por_pagar_screen.dart';
 import 'modules/accounting/cuentas_por_cobrar_screen.dart';
 import 'modules/payments/payments_screen.dart';
+import 'modules/payments/cobros_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
 import 'modules/reports/compras_report_screen.dart';
 import 'modules/reports/gastos_report_screen.dart';
