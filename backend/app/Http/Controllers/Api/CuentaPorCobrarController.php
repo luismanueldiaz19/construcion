@@ -14,7 +14,11 @@ class CuentaPorCobrarController extends Controller
             ->where('estado', '!=', 'Cancelado')
             ->get()
             ->map(function($proyecto) {
-                $total = $proyecto->presupuesto_estimado;
+                $total = $proyecto->presupuesto_estimado 
+                       + ($proyecto->itbis ?? 0)
+                       + ($proyecto->transporte ?? 0)
+                       + ($proyecto->supervision_tecnica ?? 0)
+                       + ($proyecto->otros_costos ?? 0);
                 $pagado = $proyecto->pagos_sum_monto ?? 0;
                 $saldo = $total - $pagado;
                 

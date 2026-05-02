@@ -34,4 +34,16 @@ class ProjectsProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> deleteProyecto(int id) async {
+    try {
+      await _apiService.deleteProyecto(id);
+      _proyectos.removeWhere((p) => p['id'] == id);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
 }

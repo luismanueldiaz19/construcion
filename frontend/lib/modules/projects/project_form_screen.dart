@@ -115,6 +115,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
         'transporte': double.tryParse(_transporteController.text) ?? 0,
         'supervision_tecnica':
             double.tryParse(_supervisionController.text) ?? 0,
+
         'otros_costos': double.tryParse(_otrosCostosController.text) ?? 0,
         'estado': _estado,
         'notas': _notasController.text,

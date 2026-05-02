@@ -125,6 +125,7 @@ class ProyectoController extends Controller
             'partidas.*.subpartidas.*.descripcion' => 'required|string',
             'partidas.*.subpartidas.*.cantidad' => 'required|numeric',
             'partidas.*.subpartidas.*.costo_unitario' => 'required|numeric',
+            'partidas.*.subpartidas.*.unidad' => 'nullable|string',
         ]);
 
         return DB::transaction(function () use ($validated) {
@@ -154,7 +155,7 @@ class ProyectoController extends Controller
                 }
             }
 
-            // Actualizar el presupuesto total del proyecto automáticamente
+            // Actualizar el presupuesto total del proyecto automáticamente (solo el subtotal directo)
             $proyecto->update(['presupuesto_estimado' => $totalPresupuesto]);
 
             return $proyecto->load('partidas.subpartidas');

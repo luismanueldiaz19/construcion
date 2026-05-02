@@ -235,13 +235,12 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                               ),
                             ],
                             rows: _proyectos.map((proyecto) {
-                              final monto =
-                                  double.tryParse(
-                                    proyecto['presupuesto_estimado']
-                                            ?.toString() ??
-                                        '0',
-                                  ) ??
-                                  0;
+                              final presupuesto = double.tryParse(proyecto['presupuesto_estimado']?.toString() ?? '0') ?? 0;
+                              final itbis = double.tryParse(proyecto['itbis']?.toString() ?? '0') ?? 0;
+                              final transporte = double.tryParse(proyecto['transporte']?.toString() ?? '0') ?? 0;
+                              final supervision = double.tryParse(proyecto['supervision_tecnica']?.toString() ?? '0') ?? 0;
+                              final otros = double.tryParse(proyecto['otros_costos']?.toString() ?? '0') ?? 0;
+                              final monto = presupuesto + itbis + transporte + supervision + otros;
                               final fecha = proyecto['created_at'] != null
                                   ? DateFormat('dd/MM/yyyy').format(
                                       DateTime.parse(proyecto['created_at']),
@@ -291,21 +290,71 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                                   ),
                                   DataCell(Text(fecha)),
                                   DataCell(
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.visibility,
-                                        color: Colors.blueGrey,
-                                      ),
-                                      onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              ProjectDetailsScreen(
-                                                proyecto: proyecto,
-                                              ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.visibility,
+                                            color: Colors.blueGrey,
+                                          ),
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  ProjectDetailsScreen(
+                                                    proyecto: proyecto,
+                                                  ),
+                                            ),
+                                          ),
+                                          tooltip: 'Ver Detalles',
                                         ),
-                                      ),
-                                      tooltip: 'Ver Detalles',
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.redAccent,
+                                          ),
+                                          onPressed: () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('Eliminar Proyecto'),
+                                                content: Text('¿Estás seguro de eliminar "${proyecto['nombre']}"?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context, false),
+                                                    child: const Text('CANCELAR'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context, true),
+                                                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                                    child: const Text('ELIMINAR'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+
+                                            if (confirm == true) {
+                                              try {
+                                                await _apiService.deleteProyecto(proyecto['id']);
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Proyecto eliminado')),
+                                                  );
+                                                  _fetchHistorial(); // Refresh list
+                                                }
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(content: Text('Error: $e')),
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          },
+                                          tooltip: 'Eliminar Proyecto',
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],

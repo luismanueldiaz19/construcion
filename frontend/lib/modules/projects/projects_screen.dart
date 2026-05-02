@@ -183,14 +183,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  f.format(
-                                    double.tryParse(
-                                          proyecto['presupuesto_estimado']
-                                                  ?.toString() ??
-                                              '0',
-                                        ) ??
-                                        0,
-                                  ),
+                                  f.format(_getPresupuestoTotal(proyecto)),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -250,6 +243,63 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       }
                                     }
                                     break;
+                                  case 'eliminar':
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Eliminar Proyecto'),
+                                        content: Text(
+                                          '¿Estás seguro de eliminar "${proyecto['nombre']}"? Esta acción no se puede deshacer.',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('CANCELAR'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red,
+                                            ),
+                                            child: const Text('ELIMINAR'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm == true) {
+                                      try {
+                                        await context
+                                            .read<ProjectsProvider>()
+                                            .deleteProyecto(proyecto['id']);
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Proyecto eliminado correctamente',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Error al eliminar: $e',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                    break;
                                 }
                               },
                               itemBuilder: (context) => [
@@ -270,6 +320,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   Icons.picture_as_pdf_outlined,
                                   'Reporte General (PDF)',
                                   Colors.red.shade700,
+                                ),
+                                const PopupMenuDivider(),
+                                _buildPopupMenuItem(
+                                  'eliminar',
+                                  Icons.delete_outline,
+                                  'Eliminar Proyecto',
+                                  Colors.red,
                                 ),
                               ],
                             ),
@@ -321,5 +378,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  double _getPresupuestoTotal(dynamic proyecto) {
+    final presupuesto =
+        double.tryParse(proyecto['presupuesto_estimado']?.toString() ?? '0') ??
+        0;
+    final itbis = double.tryParse(proyecto['itbis']?.toString() ?? '0') ?? 0;
+    final transporte =
+        double.tryParse(proyecto['transporte']?.toString() ?? '0') ?? 0;
+    final supervision =
+        double.tryParse(proyecto['supervision_tecnica']?.toString() ?? '0') ??
+        0;
+    final otros =
+        double.tryParse(proyecto['otros_costos']?.toString() ?? '0') ?? 0;
+
+    return presupuesto + itbis + transporte + supervision + otros;
   }
 }

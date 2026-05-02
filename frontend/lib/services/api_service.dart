@@ -173,6 +173,16 @@ class ApiService {
     }
   }
 
+  Future<void> deleteProyecto(int id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/proyectos/$id'),
+      headers: {'Accept': 'application/json'},
+    );
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Error al eliminar proyecto');
+    }
+  }
+
   Future<String> uploadLogo(int proyectoId, XFile image) async {
     var request = http.MultipartRequest(
       'POST',
@@ -525,6 +535,9 @@ class ApiService {
 
   Future<List<dynamic>> getCuentasPorCobrar() async {
     final response = await http.get(Uri.parse('$baseUrl/cuentas-por-cobrar'));
+
+    print("QUE DEVUELVE ESTO");
+    print(response.body);
     if (response.statusCode == 200) return json.decode(response.body);
     throw Exception('Error al cargar cuentas por cobrar');
   }
