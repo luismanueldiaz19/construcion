@@ -1,3 +1,5 @@
+import '../../../models/partida.dart';
+
 class DocumentModel {
   final int id;
   final int proyectoId;
@@ -9,7 +11,7 @@ class DocumentModel {
   final String fileExtension;
   final int fileSize;
   final DateTime? createdAt;
-  final dynamic partida; // Could be PartidaModel if it existed
+  final Partida? partida;
 
   DocumentModel({
     required this.id,
@@ -35,9 +37,15 @@ class DocumentModel {
       categoria: json['categoria'],
       filePath: json['file_path'],
       fileExtension: json['file_extension'],
-      fileSize: json['file_size'] is int ? json['file_size'] : int.parse(json['file_size'].toString()),
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
-      partida: json['partida'],
+      fileSize: json['file_size'] is int 
+          ? json['file_size'] 
+          : int.parse(json['file_size'].toString()),
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at']) 
+          : null,
+      partida: json['partida'] != null 
+          ? Partida.fromJson(json['partida']) 
+          : null,
     );
   }
 

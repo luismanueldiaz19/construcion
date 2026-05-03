@@ -3,7 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/project_service.dart';
+import '../../services/inventory_service.dart';
+import '../../services/purchase_service.dart';
+import '../../core/constants.dart';
 import '../../widgets/search_selector_dialog.dart';
 
 class PurchaseFormScreen extends StatefulWidget {
@@ -15,7 +18,9 @@ class PurchaseFormScreen extends StatefulWidget {
 
 class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
+  final InventoryService _inventoryService = InventoryService();
+  final PurchaseService _purchaseService = PurchaseService();
 
   int? _selectedProveedorId;
   int? _selectedProyectoId;
@@ -40,12 +45,12 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
   Future<void> _loadData() async {
     try {
-      final materials = await _apiService.getMateriales();
-      final projects = await _apiService.getProyectos(estado: 'Activo');
-      final suppliers = await _apiService.getProveedores();
+      final materials = await _inventoryService.getMateriales();
+      final projects = await _projectService.getProyectos(estado: 'Activo');
+      final suppliers = await _purchaseService.getProveedores();
       setState(() {
         _materiales = materials;
-        _proyectos = projects;
+        _proyectos = projects.map((p) => p.toJson()).toList(); // Convertir a Map para compatibilidad con el resto del código
         _proveedores = suppliers;
         _isLoading = false;
       });
@@ -105,7 +110,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             .toList(),
       };
 
-      final result = await _apiService.createCompra(data);
+      final result = await _purchaseService.createCompra(data);
       if (mounted) {
         final compraId = result['id'];
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,7 +141,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   }
 
   void _openPurchasePdf(int compraId) async {
-    final url = Uri.parse('${_apiService.baseUrl}/compras/$compraId/pdf');
+    final url = Uri.parse('$host/api/v1/compras/$compraId/pdf');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -641,11 +646,11 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             onPressed: () async {
               if (nombreController.text.isEmpty) return;
               try {
-                await _apiService.createProveedor({
+                await _purchaseService.createProveedor({
                   'nombre': nombreController.text,
                   'rnc': rncController.text,
                 });
-                final updatedList = await _apiService.getProveedores();
+                final updatedList = await _purchaseService.getProveedores();
                 setState(() => _proveedores = updatedList);
                 if (mounted) Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -668,7 +673,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     final nombreController = TextEditingController();
     final unidadController = TextEditingController();
     final precioController = TextEditingController();
-    final categorias = await _apiService.getCategorias();
+    final categorias = await _inventoryService.getCategorias();
     int? selectedCatId;
 
     if (!mounted) return;
@@ -750,7 +755,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                     unidadController.text.isEmpty)
                   return;
                 try {
-                  await _apiService.createMaterial({
+                  await _inventoryService.createMaterial({
                     'nombre': nombreController.text,
                     'unidad': unidadController.text.toUpperCase(),
                     'precio_costo':
@@ -759,7 +764,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                     'codigo':
                         'GEN-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
                   });
-                  final updatedList = await _apiService.getMateriales();
+                  final updatedList = await _inventoryService.getMateriales();
                   setState(() => _materiales = updatedList);
                   if (mounted) Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(

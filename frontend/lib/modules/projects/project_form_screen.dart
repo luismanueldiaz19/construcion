@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
+import '../../services/project_service.dart';
+import '../../models/proyecto.dart';
+import '../../models/partida.dart';
+import '../../models/subpartida.dart';
 
 class ProjectFormScreen extends StatefulWidget {
   const ProjectFormScreen({super.key});
@@ -12,7 +15,7 @@ class ProjectFormScreen extends StatefulWidget {
 
 class _ProjectFormScreenState extends State<ProjectFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
 
   final _nombreController = TextEditingController();
   final _clienteController = TextEditingController();
@@ -107,22 +110,37 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final data = {
-        'nombre': _nombreController.text,
-        'cliente': _clienteController.text,
-        'ubicacion': _ubicacionController.text,
-        'itbis': double.tryParse(_itbisController.text) ?? 0,
-        'transporte': double.tryParse(_transporteController.text) ?? 0,
-        'supervision_tecnica':
-            double.tryParse(_supervisionController.text) ?? 0,
+      final subtotal = _calculateSubtotal();
+      
+      final proyecto = Proyecto(
+        nombre: _nombreController.text,
+        cliente: _clienteController.text,
+        ubicacion: _ubicacionController.text,
+        presupuestoEstimado: subtotal,
+        itbis: double.tryParse(_itbisController.text) ?? 0,
+        transporte: double.tryParse(_transporteController.text) ?? 0,
+        supervisionTecnica: double.tryParse(_supervisionController.text) ?? 0,
+        otrosCostos: double.tryParse(_otrosCostosController.text) ?? 0,
+        estado: _estado,
+        notas: _notasController.text,
+        partidas: _partidas.map((p) {
+          return Partida(
+            codigo: '', // Opcional o autogenerado
+            descripcion: p['descripcion'],
+            subpartidas: (p['subpartidas'] as List).map((s) {
+              return Subpartida(
+                descripcion: s['descripcion'],
+                unidad: s['unidad'],
+                cantidad: s['cantidad'],
+                costoUnitario: s['costo_unitario'],
+                totalPresupuestado: s['cantidad'] * s['costo_unitario'],
+              );
+            }).toList(),
+          );
+        }).toList(),
+      );
 
-        'otros_costos': double.tryParse(_otrosCostosController.text) ?? 0,
-        'estado': _estado,
-        'notas': _notasController.text,
-        'partidas': _partidas,
-      };
-
-      await _apiService.createProyecto(data);
+      await _projectService.createProyecto(proyecto);
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(

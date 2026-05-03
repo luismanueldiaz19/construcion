@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
+import '../../services/inventory_service.dart';
+import '../../services/project_service.dart';
+import '../../core/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProjectInventoryDetailsScreen extends StatefulWidget {
@@ -21,7 +23,8 @@ class ProjectInventoryDetailsScreen extends StatefulWidget {
 
 class _ProjectInventoryDetailsScreenState
     extends State<ProjectInventoryDetailsScreen> {
-  final ApiService _apiService = ApiService();
+  final InventoryService _inventoryService = InventoryService();
+  final ProjectService _projectService = ProjectService();
   bool _isLoading = true;
   Map<String, dynamic>? _data;
 
@@ -34,7 +37,7 @@ class _ProjectInventoryDetailsScreenState
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiService.getInventarioDetalleProyecto(
+      final data = await _inventoryService.getInventarioDetalleProyecto(
         widget.proyectoId,
       );
       setState(() {
@@ -62,7 +65,7 @@ class _ProjectInventoryDetailsScreenState
             PopupMenuButton<String>(
               onSelected: (value) async {
                 final url = Uri.parse(
-                  '${_apiService.baseUrl}/inventario-proyectos/${widget.proyectoId}/pdf?tipo=$value',
+                  '$host/api/v1/inventario-proyectos/${widget.proyectoId}/pdf?tipo=$value',
                 );
                 if (await canLaunchUrl(url)) {
                   await launchUrl(url);
@@ -267,9 +270,10 @@ class _ProjectInventoryDetailsScreenState
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           if (loading) {
-            _apiService.getPartidas(widget.proyectoId).then((partidas) {
+            _projectService.getPartidas(widget.proyectoId).then((partidasData) {
               // Aplanamos subpartidas para el dropdown
               List<dynamic> allSub = [];
+              final List<dynamic> partidas = partidasData.map((p) => p.toJson()).toList();
               for (var p in partidas) {
                 if (p['subpartidas'] != null) {
                   for (var s in p['subpartidas']) {
@@ -357,7 +361,7 @@ class _ProjectInventoryDetailsScreenState
                         }
 
                         try {
-                          await _apiService.registrarConsumo({
+                          await _inventoryService.registrarConsumo({
                             'proyecto_id': widget.proyectoId,
                             'material_id': material['material_id'],
                             'subpartida_id': selectedSubpartidaId,

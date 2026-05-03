@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/inventory_service.dart';
 import 'package:intl/intl.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -12,7 +12,7 @@ class ProductsScreen extends StatefulWidget {
 }
 
 class _ProductsScreenState extends State<ProductsScreen> {
-  final ApiService _apiService = ApiService();
+  final InventoryService _inventoryService = InventoryService();
   List<dynamic> _materiales = [];
   List<dynamic> _filteredMateriales = [];
   List<dynamic> _categorias = [];
@@ -37,8 +37,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final materials = await _apiService.getMateriales();
-      final categories = await _apiService.getCategorias();
+      final materials = await _inventoryService.getMateriales();
+      final categories = await _inventoryService.getCategorias();
       setState(() {
         _materiales = materials;
         _categorias = categories;
@@ -279,7 +279,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Future<void> _toggleEstado(int id) async {
     try {
-      await _apiService.toggleMaterialEstado(id);
+      await _inventoryService.toggleMaterialEstado(id);
       _loadData();
     } catch (e) {
       ScaffoldMessenger.of(
@@ -576,15 +576,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                           0.0,
                                     };
 
-                                    try {
-                                      if (isEdit) {
-                                        await _apiService.updateMaterial(
-                                          product['id'],
-                                          data,
-                                        );
-                                      } else {
-                                        await _apiService.createMaterial(data);
-                                      }
+                                      try {
+                                        if (isEdit) {
+                                          await _inventoryService.updateMaterial(
+                                            product['id'],
+                                            data,
+                                          );
+                                        } else {
+                                          await _inventoryService.createMaterial(data);
+                                        }
                                       if (mounted) {
                                         Navigator.pop(context);
                                         _loadData();
@@ -688,7 +688,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       if (controller.text.isEmpty) return;
                       setModalState(() => isSaving = true);
                       try {
-                        final newCat = await _apiService.createCategoria({
+                        final newCat = await _inventoryService.createCategoria({
                           'nombre': controller.text,
                         });
                         await _loadData(); // Refresca la lista global de categorías

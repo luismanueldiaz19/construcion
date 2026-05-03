@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
+import '../../services/project_service.dart';
+import '../../services/accounting_service.dart';
+import '../../services/purchase_service.dart';
+import '../../models/gasto_proyecto.dart';
+
+import '../../models/proyecto.dart';
 
 class GastoProyectoDialog extends StatefulWidget {
-  final Map<String, dynamic> proyecto;
+  final Proyecto proyecto;
   const GastoProyectoDialog({super.key, required this.proyecto});
 
   @override
@@ -12,7 +17,9 @@ class GastoProyectoDialog extends StatefulWidget {
 }
 
 class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
+  final AccountingService _accountingService = AccountingService();
+  final PurchaseService _purchaseService = PurchaseService();
   final _montoController = TextEditingController();
   final _descController = TextEditingController();
   final _searchController = TextEditingController();
@@ -35,12 +42,12 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
   void initState() {
     super.initState();
     _loadData();
-    _subpartidas = (widget.proyecto['partidas'] as List? ?? []).expand((p) {
-      final sList = p['subpartidas'] as List? ?? [];
-      return sList.map(
+    _subpartidas = widget.proyecto.partidas.expand((p) {
+      return p.subpartidas.map(
         (s) => {
-          ...s as Map<String, dynamic>,
-          'partida_nombre': p['nombre'] ?? p['descripcion'] ?? 'Partida',
+          'id': s.id,
+          'descripcion': s.descripcion,
+          'partida_nombre': p.descripcion,
         },
       );
     }).toList();
@@ -49,9 +56,9 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
-        _apiService.getCatalogo(),
-        _apiService.getProveedores(),
-        _apiService.getBancos(),
+        _accountingService.getCatalogo(),
+        _purchaseService.getProveedores(),
+        _accountingService.getBancos(),
       ]);
       setState(() {
         // Filtramos para mostrar solo cuentas que empiezan con '5' (Costos)
@@ -105,20 +112,20 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
 
     setState(() => _isSaving = true);
     try {
-      await _apiService.createGastoProyecto({
-        'proyecto_id': widget.proyecto['id'],
-        'subpartida_id': _subpartidaId,
-        'proveedor_id': _proveedorId,
-        'cuenta_costo_id': _cuentaCostoId,
-        'monto': double.parse(_montoController.text),
-        'tipo_gasto': _cuentasCostos.firstWhere(
+      await _projectService.createGastoProyecto(GastoProyecto(
+        proyectoId: widget.proyecto.id!,
+        subpartidaId: _subpartidaId,
+        proveedorId: _proveedorId,
+        cuentaCostoId: _cuentaCostoId,
+        monto: double.parse(_montoController.text),
+        tipoGasto: _cuentasCostos.firstWhere(
           (c) => c['id'] == _cuentaCostoId,
         )['nombre'],
-        'descripcion': _descController.text,
-        'fecha': DateTime.now().toIso8601String(),
-        'metodo_pago': _metodoPago,
-        'banco_id': _metodoPago == 'Crédito' ? null : _bancoId,
-      });
+        descripcion: _descController.text,
+        fecha: DateTime.now(),
+        metodoPago: _metodoPago,
+        bancoId: _metodoPago == 'Crédito' ? null : _bancoId,
+      ));
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -183,7 +190,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
                                 ),
                               ),
                               Text(
-                                widget.proyecto['nombre'] ?? 'Proyecto',
+                                widget.proyecto.nombre,
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,

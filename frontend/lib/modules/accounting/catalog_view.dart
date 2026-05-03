@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
 
 class CatalogView extends StatefulWidget {
   const CatalogView({super.key});
@@ -10,7 +10,7 @@ class CatalogView extends StatefulWidget {
 }
 
 class _CatalogViewState extends State<CatalogView> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
   List<dynamic> _catalogo = [];
   bool _isLoading = true;
 
@@ -22,7 +22,7 @@ class _CatalogViewState extends State<CatalogView> {
 
   Future<void> _loadCatalogo() async {
     try {
-      final data = await _apiService.getCatalogo();
+      final data = await _accountingService.getCatalogo();
       setState(() {
         _catalogo = data;
         _isLoading = false;

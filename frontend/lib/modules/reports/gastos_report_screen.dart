@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
-import '../../services/api_service.dart';
+import '../../services/purchase_service.dart';
 import 'gasto_detail_screen.dart';
 
 class GastosReportScreen extends StatefulWidget {
@@ -14,7 +14,7 @@ class GastosReportScreen extends StatefulWidget {
 }
 
 class _GastosReportScreenState extends State<GastosReportScreen> {
-  final ApiService _apiService = ApiService();
+  final PurchaseService _purchaseService = PurchaseService();
   bool _isLoading = true;
   List<dynamic> _allGastos = [];
   List<dynamic> _filteredGastos = [];
@@ -39,7 +39,7 @@ class _GastosReportScreenState extends State<GastosReportScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final gastos = await _apiService.getAllGastos();
+      final gastos = await _purchaseService.getAllGastos();
 
       final proySet = <String>{};
       final tipoSet = <String>{};

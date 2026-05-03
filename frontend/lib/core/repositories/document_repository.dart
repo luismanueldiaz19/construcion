@@ -1,11 +1,11 @@
-import '../../services/api_service.dart';
+import '../../services/document_service.dart';
 import '../models/document_model.dart';
 
 class DocumentRepository {
-  final ApiService _apiService = ApiService();
+  final DocumentService _documentService = DocumentService();
 
   Future<List<DocumentModel>> getDocumentsByProject(int proyectoId) async {
-    final List<dynamic> data = await _apiService.getDocumentosProyecto(proyectoId);
+    final List<dynamic> data = await _documentService.getDocumentosProyecto(proyectoId);
     return data.map((json) => DocumentModel.fromJson(json)).toList();
   }
 
@@ -17,7 +17,7 @@ class DocumentRepository {
     int? partidaId,
     required String filePath,
   }) async {
-    await _apiService.uploadDocumento(
+    await _documentService.uploadDocumento(
       proyectoId: proyectoId,
       nombre: nombre,
       tipo: tipo,
@@ -28,6 +28,6 @@ class DocumentRepository {
   }
 
   Future<void> deleteDocument(int id) async {
-    await _apiService.deleteDocumento(id);
+    await _documentService.deleteDocumento(id);
   }
 }

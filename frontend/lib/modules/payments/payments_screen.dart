@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
 import '../accounting/cuentas_por_pagar_screen.dart'; // We'll keep the views but integrate them here
+import '../../core/constants.dart';
 
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
@@ -13,7 +14,7 @@ class PaymentsScreen extends StatefulWidget {
 }
 
 class _PaymentsScreenState extends State<PaymentsScreen> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
   List<dynamic> _history = [];
   bool _isLoadingHistory = true;
   String _searchQuery = '';
@@ -28,7 +29,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   Future<void> _loadHistory() async {
     setState(() => _isLoadingHistory = true);
     try {
-      final data = await _apiService.getAllPagosHistorial();
+      final data = await _accountingService.getAllPagosHistorial();
       setState(() {
         _history = data;
         _isLoadingHistory = false;
@@ -238,9 +239,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   void _openPdf(String tipo, int id) async {
-    final url = Uri.parse(
-      '${_apiService.baseUrl}/pagos-historial/$tipo/$id/pdf',
-    );
+    final url = Uri.parse('$host/api/v1/pagos-historial/$tipo/$id/pdf');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

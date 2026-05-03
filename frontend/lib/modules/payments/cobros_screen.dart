@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
+import '../../core/constants.dart';
 
 class CobrosScreen extends StatefulWidget {
   const CobrosScreen({super.key});
@@ -12,7 +13,7 @@ class CobrosScreen extends StatefulWidget {
 }
 
 class _CobrosScreenState extends State<CobrosScreen> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
   List<dynamic> _history = [];
   bool _isLoading = true;
   String _searchQuery = '';
@@ -27,7 +28,7 @@ class _CobrosScreenState extends State<CobrosScreen> {
     setState(() => _isLoading = true);
     try {
       // Usamos el mismo endpoint pero filtramos solo 'Cobro'
-      final data = await _apiService.getAllPagosHistorial();
+      final data = await _accountingService.getAllPagosHistorial();
       setState(() {
         _history = data.where((item) => item['tipo'] == 'Cobro').toList();
         _isLoading = false;
@@ -45,8 +46,12 @@ class _CobrosScreenState extends State<CobrosScreen> {
   List<dynamic> get _filteredHistory {
     if (_searchQuery.isEmpty) return _history;
     return _history.where((item) {
-      return item['entidad'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             item['proyecto'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
+      return item['entidad'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          item['proyecto'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          );
     }).toList();
   }
 
@@ -82,15 +87,17 @@ class _CobrosScreenState extends State<CobrosScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredHistory.isEmpty
-                      ? const Center(child: Text('No se encontraron cobros registrados.'))
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _filteredHistory.length,
-                          itemBuilder: (context, index) {
-                            final item = _filteredHistory[index];
-                            return _buildCobroCard(item);
-                          },
-                        ),
+                  ? const Center(
+                      child: Text('No se encontraron cobros registrados.'),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _filteredHistory.length,
+                      itemBuilder: (context, index) {
+                        final item = _filteredHistory[index];
+                        return _buildCobroCard(item);
+                      },
+                    ),
             ),
           ),
         ],
@@ -133,7 +140,10 @@ class _CobrosScreenState extends State<CobrosScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text('Proyecto: ${item['proyecto']}', style: const TextStyle(color: Colors.blueGrey)),
+            Text(
+              'Proyecto: ${item['proyecto']}',
+              style: const TextStyle(color: Colors.blueGrey),
+            ),
             const SizedBox(height: 4),
             Text(item['concepto'] ?? 'Abono de Proyecto'),
             const SizedBox(height: 8),
@@ -141,11 +151,17 @@ class _CobrosScreenState extends State<CobrosScreen> {
               children: [
                 const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(item['fecha'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  item['fecha'],
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 const SizedBox(width: 12),
                 const Icon(Icons.payment, size: 12, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(item['metodo_pago'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  item['metodo_pago'],
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ],
@@ -160,7 +176,7 @@ class _CobrosScreenState extends State<CobrosScreen> {
   }
 
   void _openPdf(int id) async {
-    final url = Uri.parse('${_apiService.baseUrl}/pagos-historial/Cobro/$id/pdf');
+    final url = Uri.parse('$host/api/v1/pagos-historial/Cobro/$id/pdf');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_theme.dart';
 import '../../core/constants.dart';
-import '../../services/api_service.dart';
+import '../../services/purchase_service.dart';
 import 'compra_detail_screen.dart';
 
 class ComprasReportScreen extends StatefulWidget {
@@ -14,7 +14,7 @@ class ComprasReportScreen extends StatefulWidget {
 }
 
 class _ComprasReportScreenState extends State<ComprasReportScreen> {
-  final ApiService _apiService = ApiService();
+  final PurchaseService _purchaseService = PurchaseService();
   bool _isLoading = true;
   List<dynamic> _allCompras = [];
   List<dynamic> _filteredCompras = [];
@@ -39,7 +39,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final compras = await _apiService.getAllCompras();
+      final compras = await _purchaseService.getAllCompras();
 
       final proySet = <String>{};
       final provSet = <String>{};

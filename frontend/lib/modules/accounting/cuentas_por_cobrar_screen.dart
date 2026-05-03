@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
 
 class CuentasPorCobrarScreen extends StatefulWidget {
   const CuentasPorCobrarScreen({super.key});
@@ -12,7 +12,7 @@ class CuentasPorCobrarScreen extends StatefulWidget {
 }
 
 class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
   List<dynamic> _cuentas = [];
   bool _isLoading = true;
   String _filter = '';
@@ -26,7 +26,7 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiService.getCuentasPorCobrar();
+      final data = await _accountingService.getCuentasPorCobrar();
       setState(() {
         _cuentas = data;
         _isLoading = false;
@@ -300,7 +300,7 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
 
     // Precarga de bancos
     try {
-      bancos = await _apiService.getBancos();
+      bancos = await _accountingService.getBancos();
       if (bancos.isNotEmpty) {
         final primerBanco = bancos.firstWhere(
           (b) => b['nombre'].toString().toLowerCase().contains('banco'),
@@ -630,7 +630,7 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
 
                                     setModalState(() => isSubmitting = true);
                                     try {
-                                      await _apiService.createPago({
+                                      await _accountingService.createPago({
                                         'proyecto_id': cuenta['id'],
                                         'monto': monto,
                                         'fecha': DateFormat(

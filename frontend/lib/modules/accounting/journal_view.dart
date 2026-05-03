@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
 
 class JournalView extends StatefulWidget {
   const JournalView({super.key});
@@ -10,7 +10,7 @@ class JournalView extends StatefulWidget {
 }
 
 class _JournalViewState extends State<JournalView> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
   List<dynamic> _asientos = [];
   bool _isLoading = true;
 
@@ -22,7 +22,7 @@ class _JournalViewState extends State<JournalView> {
 
   Future<void> _loadAsientos() async {
     try {
-      final data = await _apiService.getAsientos();
+      final data = await _accountingService.getAsientos();
       setState(() {
         _asientos = data;
         _isLoading = false;

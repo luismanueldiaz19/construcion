@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/api_service.dart';
+import '../../services/project_service.dart';
+import '../../models/partida.dart';
 import '../../core/models/document_model.dart';
 import '../../core/repositories/document_repository.dart';
 import '../../core/app_theme.dart';
@@ -28,11 +29,11 @@ class ProjectDocumentsScreen extends StatefulWidget {
 
 class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
   final DocumentRepository _repository = DocumentRepository();
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
 
   bool _isLoading = true;
   List<DocumentModel> _documentos = [];
-  List<dynamic> _partidas = [];
+  List<Partida> _partidas = [];
 
   // Filtros y Vista
   String _searchQuery = '';
@@ -50,7 +51,7 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final docs = await _repository.getDocumentsByProject(widget.proyectoId);
-      final parts = await _apiService.getPartidas(widget.proyectoId);
+      final parts = await _projectService.getPartidas(widget.proyectoId);
 
       if (mounted) {
         setState(() {
@@ -113,7 +114,9 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (stfContext, setDialogState) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
             child: SingleChildScrollView(
@@ -132,7 +135,11 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.cloud_upload_outlined, color: Colors.white, size: 32),
+                        const Icon(
+                          Icons.cloud_upload_outlined,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Column(
@@ -140,11 +147,18 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                             children: [
                               Text(
                                 'Subir Documento',
-                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 'Planos, evidencias y anexos del proyecto',
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -173,55 +187,87 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                               if (result.files.first.size > 15 * 1024 * 1024) {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('El archivo supera los 15MB'), backgroundColor: Colors.red),
+                                    const SnackBar(
+                                      content: Text(
+                                        'El archivo supera los 15MB',
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
                                   );
                                 }
                                 return;
                               }
-                              setDialogState(() => pickedFile = result.files.first);
+                              setDialogState(
+                                () => pickedFile = result.files.first,
+                              );
                             }
                           },
                           child: Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 24,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: pickedFile == null ? Colors.blue.withOpacity(0.3) : Colors.green.withOpacity(0.5),
+                                color: pickedFile == null
+                                    ? Colors.blue.withOpacity(0.3)
+                                    : Colors.green.withOpacity(0.5),
                                 width: 2,
                                 style: BorderStyle.solid,
                               ),
                               borderRadius: BorderRadius.circular(15),
-                              color: pickedFile == null ? Colors.blue.withOpacity(0.02) : Colors.green.withOpacity(0.05),
+                              color: pickedFile == null
+                                  ? Colors.blue.withOpacity(0.02)
+                                  : Colors.green.withOpacity(0.05),
                             ),
                             child: Column(
                               children: [
                                 Icon(
-                                  pickedFile == null ? Icons.file_present_rounded : Icons.check_circle,
+                                  pickedFile == null
+                                      ? Icons.file_present_rounded
+                                      : Icons.check_circle,
                                   size: 48,
-                                  color: pickedFile == null ? Colors.blue.shade300 : Colors.green,
+                                  color: pickedFile == null
+                                      ? Colors.blue.shade300
+                                      : Colors.green,
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  pickedFile == null ? 'Seleccionar Archivo' : pickedFile!.name,
+                                  pickedFile == null
+                                      ? 'Seleccionar Archivo'
+                                      : pickedFile!.name,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: pickedFile == null ? Colors.blue.shade700 : Colors.green.shade700,
+                                    color: pickedFile == null
+                                        ? Colors.blue.shade700
+                                        : Colors.green.shade700,
                                   ),
                                 ),
                                 if (pickedFile == null)
                                   const Text(
                                     'PDF, JPG o PNG (Máx. 15MB)',
-                                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 11,
+                                    ),
                                   ),
                               ],
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        const Text('Detalles del Documento', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 13)),
+                        const Text(
+                          'Detalles del Documento',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 16),
 
                         TextField(
@@ -229,7 +275,9 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                           decoration: InputDecoration(
                             labelText: 'Nombre descriptivo *',
                             prefixIcon: const Icon(Icons.title),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -242,14 +290,26 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'Tipo',
                                   prefixIcon: const Icon(Icons.category),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'plano', child: Text('Plano')),
-                                  DropdownMenuItem(value: 'evidencia', child: Text('Evidencia')),
-                                  DropdownMenuItem(value: 'otro', child: Text('Otro')),
+                                  DropdownMenuItem(
+                                    value: 'plano',
+                                    child: Text('Plano'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'evidencia',
+                                    child: Text('Evidencia'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'otro',
+                                    child: Text('Otro'),
+                                  ),
                                 ],
-                                onChanged: (v) => setDialogState(() => selectedTipo = v!),
+                                onChanged: (v) =>
+                                    setDialogState(() => selectedTipo = v!),
                               ),
                             ),
                           ],
@@ -262,7 +322,9 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                             labelText: 'Área / Categoría',
                             hintText: 'Ej: Estructura, Terminación...',
                             prefixIcon: const Icon(Icons.layers),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -273,20 +335,29 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                           decoration: InputDecoration(
                             labelText: 'Vincular a Partida (Opcional)',
                             prefixIcon: const Icon(Icons.link),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           items: [
-                            const DropdownMenuItem(value: null, child: Text('Ninguna')),
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('Ninguna'),
+                            ),
                             ..._partidas.map(
                               (p) => DropdownMenuItem(
-                                value: p['id'],
-                                child: Text(p['descripcion'] ?? 'Partida #${p['id']}', overflow: TextOverflow.ellipsis),
+                                value: p.id,
+                                child: Text(
+                                  p.descripcion,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                           ],
-                          onChanged: (v) => setDialogState(() => selectedPartidaId = v),
+                          onChanged: (v) =>
+                              setDialogState(() => selectedPartidaId = v),
                         ),
-                        
+
                         const SizedBox(height: 32),
 
                         // Botón de Acción
@@ -294,49 +365,89 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                           width: double.infinity,
                           height: 55,
                           child: ElevatedButton(
-                            onPressed: isUploading ? null : () async {
-                              if (nombreController.text.isEmpty || pickedFile == null) {
-                                ScaffoldMessenger.of(stfContext).showSnackBar(
-                                  const SnackBar(content: Text('Nombre y archivo son obligatorios'), backgroundColor: Colors.orange),
-                                );
-                                return;
-                              }
+                            onPressed: isUploading
+                                ? null
+                                : () async {
+                                    if (nombreController.text.isEmpty ||
+                                        pickedFile == null) {
+                                      ScaffoldMessenger.of(
+                                        stfContext,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Nombre y archivo son obligatorios',
+                                          ),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+                                      return;
+                                    }
 
-                              setDialogState(() => isUploading = true);
-                              try {
-                                await _apiService.uploadDocumento(
-                                  proyectoId: widget.proyectoId,
-                                  nombre: nombreController.text,
-                                  tipo: selectedTipo,
-                                  categoria: categoriaController.text.isNotEmpty ? categoriaController.text : null,
-                                  partidaId: selectedPartidaId,
-                                  filePath: pickedFile!.path!,
-                                );
-                                if (mounted) {
-                                  Navigator.pop(dialogContext);
-                                  _loadData();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Documento subido con éxito'), backgroundColor: Colors.green),
-                                  );
-                                }
-                              } catch (e) {
-                                setDialogState(() => isUploading = false);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(stfContext).showSnackBar(
-                                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                                  );
-                                }
-                              }
-                            },
+                                    setDialogState(() => isUploading = true);
+                                    try {
+                                      await _repository.uploadDocument(
+                                        proyectoId: widget.proyectoId,
+                                        nombre: nombreController.text,
+                                        tipo: selectedTipo,
+                                        categoria:
+                                            categoriaController.text.isNotEmpty
+                                            ? categoriaController.text
+                                            : null,
+                                        partidaId: selectedPartidaId,
+                                        filePath: pickedFile!.path!,
+                                      );
+                                      if (mounted) {
+                                        Navigator.pop(dialogContext);
+                                        _loadData();
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Documento subido con éxito',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setDialogState(() => isUploading = false);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          stfContext,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFFA000),
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               elevation: 0,
                             ),
                             child: isUploading
-                                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('SUBIR DOCUMENTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'SUBIR DOCUMENTO',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
@@ -713,7 +824,7 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    'Partida: ${doc.partida['descripcion'] ?? doc.partida['nombre']}',
+                    'Partida: ${doc.partida!.descripcion}',
                     style: TextStyle(
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
@@ -836,8 +947,7 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
         IconButton(
           icon: const Icon(Icons.open_in_new, color: Colors.blue, size: 18),
           onPressed: () async {
-            final baseUrl = _apiService.baseUrl.replaceFirst('/api/v1', '');
-            final url = Uri.parse('$baseUrl/storage/${doc.filePath}');
+            final url = Uri.parse('$host/storage/${doc.filePath}');
             if (await canLaunchUrl(url)) {
               await launchUrl(url, mode: LaunchMode.externalApplication);
             }

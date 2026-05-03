@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
-import '../../services/api_service.dart';
+import '../../services/purchase_service.dart';
 
 class CompraDetailScreen extends StatefulWidget {
   final int compraId;
@@ -14,7 +14,7 @@ class CompraDetailScreen extends StatefulWidget {
 }
 
 class _CompraDetailScreenState extends State<CompraDetailScreen> {
-  final ApiService _apiService = ApiService();
+  final PurchaseService _purchaseService = PurchaseService();
   bool _isLoading = true;
   Map<String, dynamic>? _compra;
   String? _errorMessage;
@@ -32,7 +32,7 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
     });
 
     try {
-      final data = await _apiService.getCompra(widget.compraId);
+      final data = await _purchaseService.getCompra(widget.compraId);
       setState(() {
         _compra = data;
         _isLoading = false;

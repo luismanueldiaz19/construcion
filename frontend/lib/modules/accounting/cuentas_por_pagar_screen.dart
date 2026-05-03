@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
+import '../../core/constants.dart';
 
 class CuentasPorPagarScreen extends StatefulWidget {
   const CuentasPorPagarScreen({super.key});
@@ -13,7 +14,7 @@ class CuentasPorPagarScreen extends StatefulWidget {
 }
 
 class _CuentasPorPagarScreenState extends State<CuentasPorPagarScreen> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
   List<dynamic> _cuentas = [];
   bool _isLoading = true;
   String _filter = '';
@@ -36,7 +37,7 @@ class _CuentasPorPagarScreenState extends State<CuentasPorPagarScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiService.getCuentasPorPagar();
+      final data = await _accountingService.getCuentasPorPagar();
       setState(() {
         _cuentas = data;
         _isLoading = false;
@@ -551,7 +552,7 @@ class _CuentasPorPagarScreenState extends State<CuentasPorPagarScreen> {
   }
 
   void _openPdf(int pagoId) async {
-    final url = Uri.parse('${_apiService.baseUrl}/pagos-compras/$pagoId/pdf');
+    final url = Uri.parse('$host/api/v1/pagos-compras/$pagoId/pdf');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -605,7 +606,7 @@ class _CuentasPorPagarScreenState extends State<CuentasPorPagarScreen> {
     bool isSubmitting = false;
 
     try {
-      bancos = await _apiService.getBancos();
+      bancos = await _accountingService.getBancos();
     } catch (e) {
       print('Error al cargar bancos: $e');
     }
@@ -720,7 +721,7 @@ class _CuentasPorPagarScreenState extends State<CuentasPorPagarScreen> {
                       }
                       setDialogState(() => isSubmitting = true);
                       try {
-                        await _apiService.registrarPagoCompra({
+                        await _accountingService.registrarPagoCompra({
                           'cuenta_por_pagar_id': cuenta['id'],
                           'monto': double.parse(montoController.text),
                           'fecha': DateFormat('yyyy-MM-dd').format(fechaPago),

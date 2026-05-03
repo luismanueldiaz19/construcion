@@ -4,12 +4,19 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
-import '../../services/api_service.dart';
-
+import '../../models/partida.dart';
+import '../../models/proyecto.dart';
+import '../../models/subpartida.dart';
+import '../../services/project_service.dart';
+import '../../services/inventory_service.dart';
+import '../../services/accounting_service.dart';
 import 'gasto_proyecto_dialog.dart';
+import '../../models/avance_proyecto.dart';
+import '../../models/gasto_proyecto.dart';
+import '../../models/consumo_proyecto.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
-  final Map<String, dynamic> proyecto;
+  final Proyecto proyecto;
   const ProjectDetailsScreen({super.key, required this.proyecto});
 
   @override
@@ -17,11 +24,13 @@ class ProjectDetailsScreen extends StatefulWidget {
 }
 
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
+  final InventoryService _inventoryService = InventoryService();
+  final AccountingService _accountingService = AccountingService();
   final ImagePicker _picker = ImagePicker();
-  late Map<String, dynamic> _proyecto = {};
-  List<dynamic> _gastos = [];
-  List<dynamic> _consumos = [];
+  late Proyecto _proyecto;
+  List<GastoProyecto> _gastos = [];
+  List<ConsumoProyecto> _consumos = [];
   bool _isLoading = true;
 
   @override
@@ -33,11 +42,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Future<void> _refresh() async {
     try {
-      final proyectos = await _apiService.getProyectos();
-      final gastos = await _apiService.getGastosProyecto(_proyecto['id']);
-      final consumos = await _apiService.getConsumosProyecto(_proyecto['id']);
+      final updatedProyecto = await _projectService.getProyecto(_proyecto.id!);
+      final gastos = await _projectService.getGastosProyecto(_proyecto.id!);
+      final consumos = await _inventoryService.getConsumosProyecto(
+        _proyecto.id!,
+      );
+
       setState(() {
-        _proyecto = proyectos.firstWhere((p) => p['id'] == _proyecto['id']);
+        _proyecto = updatedProyecto;
         _gastos = gastos;
         _consumos = consumos;
         _isLoading = false;
@@ -50,7 +62,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Future<void> _provisionarTodo100() async {
     setState(() => _isLoading = true);
     try {
-      await _apiService.provisionarTodo100(_proyecto['id']);
+      await _projectService.provisionarTodo100(_proyecto.id!);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('¡Proyecto provisionado al 100%!')),
       );
@@ -68,7 +80,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (image != null) {
       try {
         setState(() => _isLoading = true);
-        await _apiService.uploadLogo(_proyecto['id'], image);
+        await _projectService.uploadLogo(_proyecto.id!, image);
         await _refresh();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -90,7 +102,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Future<void> _removeLogo() async {
     try {
       setState(() => _isLoading = true);
-      await _apiService.removeLogo(_proyecto['id']);
+      await _projectService.removeLogo(_proyecto.id!);
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(
@@ -110,7 +122,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Future<void> _cambiarEstado() async {
     List<String> opciones = [];
-    String estadoActual = _proyecto['estado'];
+    String estadoActual = _proyecto.estado;
 
     if (estadoActual == 'Cotización') {
       opciones = ['Activo', 'Cancelado'];
@@ -146,7 +158,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (nuevoEstado != null) {
       try {
         setState(() => _isLoading = true);
-        await _apiService.updateProyectoEstado(_proyecto['id'], nuevoEstado);
+        await _projectService.updateProyectoEstado(_proyecto.id!, nuevoEstado);
         await _refresh();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -166,7 +178,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Future<void> _editNotas() async {
-    final controller = TextEditingController(text: _proyecto['notas']);
+    final controller = TextEditingController(text: _proyecto.notas);
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -195,9 +207,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (result == true) {
       try {
         setState(() => _isLoading = true);
-        await _apiService.updateProyecto(_proyecto['id'], {
-          'notas': controller.text,
-        });
+        await _projectService.updateProyecto(
+          _proyecto.id!,
+          Proyecto(
+            id: _proyecto.id,
+            nombre: _proyecto.nombre,
+            cliente: _proyecto.cliente,
+            ubicacion: _proyecto.ubicacion,
+            presupuestoEstimado: _proyecto.presupuestoEstimado,
+            estado: _proyecto.estado,
+            notas: controller.text,
+          ),
+        );
         await _refresh();
       } catch (e) {
         if (mounted) {
@@ -238,32 +259,26 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   bool get _isReadonly {
-    return _proyecto['estado'] == 'Terminado' ||
-        _proyecto['estado'] == 'Cancelado';
+    return _proyecto.estado == 'Terminado' || _proyecto.estado == 'Cancelado';
   }
 
   @override
   Widget build(BuildContext context) {
     final f = NumberFormat.currency(symbol: '\$');
-    final partidas = _proyecto['partidas'] as List? ?? [];
+    final partidas = _proyecto.partidas;
 
-    final totalConImpuestos =
-        double.tryParse(
-          _proyecto['total_presupuesto_con_globales']?.toString() ?? '0',
-        ) ??
-        0;
-    final cobrado =
-        double.tryParse(_proyecto['total_cobrado']?.toString() ?? '0') ?? 0;
+    final totalConImpuestos = _proyecto.totalPresupuestoConGlobales ?? 0;
+    final cobrado = _proyecto.totalCobrado ?? 0;
     final saldoPendiente = totalConImpuestos - cobrado;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_proyecto['nombre']),
+        title: Text(_proyecto.nombre),
         actions: [
           IconButton(
             onPressed: () async {
               final url = Uri.parse(
-                '$host/reports/proyecto/${_proyecto['id']}/pdf',
+                '$host/reports/proyecto/${_proyecto.id}/pdf',
               );
               if (await canLaunchUrl(url)) {
                 await launchUrl(url);
@@ -406,18 +421,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ..._gastos.map((g) {
           IconData icon = Icons.payments;
           Color color = Colors.blue;
-          if (g['tipo_gasto'].toString().contains('Mano de Obra')) {
+          if (g.tipoGasto.contains('Mano de Obra')) {
             icon = Icons.engineering;
             color = Colors.orange;
-          } else if (g['tipo_gasto'].toString().contains('Alquiler')) {
+          } else if (g.tipoGasto.contains('Alquiler')) {
             icon = Icons.construction;
             color = Colors.purple;
-          } else if (g['tipo_gasto'].toString().contains('Transporte')) {
+          } else if (g.tipoGasto.contains('Transporte')) {
             icon = Icons.local_shipping;
             color = Colors.cyan;
           }
 
-          final fechaStr = g['fecha'].toString().split('T')[0];
+          final fechaStr = g.fecha.toIso8601String().split('T')[0];
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
@@ -431,18 +446,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 child: Icon(icon, color: color),
               ),
               title: Text(
-                g['descripcion'] ?? 'Gasto sin descripción',
+                g.descripcion ?? 'Gasto sin descripción',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                "${g['proveedor']?['nombre'] ?? 'Sin proveedor'} • $fechaStr",
+                "${g.proveedor?['nombre'] ?? 'Sin proveedor'} • $fechaStr",
               ),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    f.format(double.tryParse(g['monto'].toString()) ?? 0),
+                    f.format(g.monto),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -450,7 +465,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     ),
                   ),
                   Text(
-                    g['metodo_pago'] ?? '',
+                    g.metodoPago,
                     style: const TextStyle(fontSize: 10, color: Colors.grey),
                   ),
                 ],
@@ -481,32 +496,59 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white24,
                       borderRadius: BorderRadius.circular(8),
-                      image: _proyecto['logo_path'] != null
-                          ? DecorationImage(
-                              image: NetworkImage(
-                                '$host/storage/${_proyecto['logo_path']}',
-                              ),
-                              fit: BoxFit.contain,
-                            )
-                          : null,
                     ),
-                    child: _proyecto['logo_path'] == null
+                    child: _proyecto.logoPath == null
                         ? const Icon(Icons.add_a_photo, color: Colors.white54)
-                        : Stack(
-                            children: [
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
-                                  onPressed: _removeLogo,
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  '$host/storage/${_proyecto.logoPath}',
+                                  fit: BoxFit.contain,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        }
+                                        return const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: Colors.redAccent,
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            ],
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black26,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: _removeLogo,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                   ),
                 ),
@@ -519,7 +561,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              _proyecto['nombre'] ?? '',
+                              _proyecto.nombre ?? '',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 24,
@@ -537,12 +579,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                           ),
                         ],
                       ),
-                      if (_proyecto['notas'] != null &&
-                          _proyecto['notas'].toString().isNotEmpty)
+                      if (_proyecto.notas != null &&
+                          _proyecto.notas.toString().isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            _proyecto['notas'],
+                            _proyecto.notas!,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 12,
@@ -565,14 +607,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 Expanded(
                   child: _buildInfoColumn(
                     'Cliente',
-                    _proyecto['cliente'] ?? 'N/A',
+                    _proyecto.cliente ?? 'N/A',
                     Colors.white,
                   ),
                 ),
                 Expanded(
                   child: _buildInfoColumn(
                     'Ubicación',
-                    _proyecto['ubicacion'] ?? 'N/A',
+                    _proyecto.ubicacion ?? 'N/A',
                     Colors.white,
                   ),
                 ),
@@ -607,17 +649,17 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: _getEstadoColor(
-                              _proyecto['estado'],
-                            ).withOpacity(0.2),
+                              _proyecto.estado,
+                            ).withValues(alpha: 0.2),
                             border: Border.all(
-                              color: _getEstadoColor(_proyecto['estado']),
+                              color: _getEstadoColor(_proyecto.estado),
                             ),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            _proyecto['estado'] ?? '',
+                            _proyecto.estado ?? '',
                             style: TextStyle(
-                              color: _getEstadoColor(_proyecto['estado']),
+                              color: _getEstadoColor(_proyecto.estado),
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
@@ -641,8 +683,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     'Presupuesto Total',
                     f.format(
                       double.tryParse(
-                            _proyecto['total_presupuesto_con_globales']
-                                    ?.toString() ??
+                            _proyecto.totalPresupuestoConGlobales?.toString() ??
                                 '0',
                           ) ??
                           0,
@@ -653,7 +694,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 Expanded(
                   child: _buildInfoColumn(
                     'Avance Físico',
-                    '${_proyecto['porcentaje_avance_total'] ?? 0}%',
+                    '${_proyecto.porcentajeAvanceTotal ?? 0}%',
                     Colors.blueAccent,
                   ),
                 ),
@@ -662,8 +703,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     'Ejecutado',
                     f.format(
                       double.tryParse(
-                            _proyecto['monto_ejecutado_total']?.toString() ??
-                                '0',
+                            _proyecto.montoEjecutadoTotal?.toString() ?? '0',
                           ) ??
                           0,
                     ),
@@ -700,16 +740,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             Builder(
               builder: (context) {
                 final totalConImpuestos =
-                    double.tryParse(
-                      _proyecto['total_presupuesto_con_globales']?.toString() ??
-                          '0',
-                    ) ??
-                    0;
-                final cobrado =
-                    double.tryParse(
-                      _proyecto['total_cobrado']?.toString() ?? '0',
-                    ) ??
-                    0;
+                    _proyecto.totalPresupuestoConGlobales ?? 0;
+                final cobrado = _proyecto.totalCobrado ?? 0;
                 final saldoPendiente = totalConImpuestos - cobrado;
 
                 return Padding(
@@ -717,7 +749,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   child: Wrap(
                     spacing: 8,
                     children: [
-                      if (_proyecto['estado'] == 'Activo') ...[
+                      if (_proyecto.estado == 'Activo') ...[
                         ElevatedButton.icon(
                           onPressed: () => _showGastoDialog(context),
                           icon: const Icon(Icons.add_shopping_cart, size: 18),
@@ -770,12 +802,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const SizedBox(height: 8),
           _buildIndirectRow(
             'Supervisión Técnica',
-            _proyecto['supervision_tecnica'],
+            _proyecto.supervisionTecnica,
             f,
           ),
-          _buildIndirectRow('ITBIS', _proyecto['itbis'], f),
-          _buildIndirectRow('Transporte', _proyecto['transporte'], f),
-          _buildIndirectRow('Otros Gastos', _proyecto['otros_costos'], f),
+          _buildIndirectRow('ITBIS', _proyecto.itbis, f),
+          _buildIndirectRow('Transporte', _proyecto.transporte, f),
+          _buildIndirectRow('Otros Gastos', _proyecto.otrosCostos, f),
         ],
       ),
     );
@@ -807,16 +839,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Widget _buildProfitabilityCard(NumberFormat f) {
-    final ingresoNeto =
-        double.tryParse(_proyecto['ingreso_neto_real']?.toString() ?? '0') ?? 0;
+    final ingresoNeto = _proyecto.ingresoNetoReal ?? 0;
 
-    final double gastosEfectivo = _gastos.fold(
-      0,
-      (sum, g) => sum + (double.tryParse(g['monto'].toString()) ?? 0),
-    );
+    final double gastosEfectivo = _gastos.fold(0, (sum, g) => sum + g.monto);
     final double costosMateriales = _consumos.fold(
       0,
-      (sum, c) => sum + (double.tryParse(c['total'].toString()) ?? 0),
+      (sum, c) => sum + c.total,
     );
     final costoReal = gastosEfectivo + costosMateriales;
 
@@ -889,13 +917,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Widget _buildCashFlowCard(NumberFormat f) {
-    final cobrado =
-        double.tryParse(_proyecto['total_cobrado']?.toString() ?? '0') ?? 0;
-    final ejecutado =
-        double.tryParse(
-          _proyecto['monto_ejecutado_total']?.toString() ?? '0',
-        ) ??
-        0;
+    final cobrado = _proyecto.totalCobrado ?? 0;
+    final ejecutado = _proyecto.montoEjecutadoTotal ?? 0;
     final balance = cobrado - ejecutado;
 
     return Container(
@@ -1057,55 +1080,34 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
-  Widget _buildPartidaCard(Map<String, dynamic> partida, NumberFormat f) {
-    final subpartidas = partida['subpartidas'] as List? ?? [];
-
-    final subpartidasIds = subpartidas.map((s) => s['id']).toList();
+  Widget _buildPartidaCard(Partida partida, NumberFormat f) {
+    final subpartidas = partida.subpartidas;
+    final subpartidasIds = subpartidas.map((s) => s.id).toList();
 
     // Calcular el total de la partida sumando sus subpartidas
-    final double totalPartida = subpartidas.fold(
-      0,
-      (sum, item) =>
-          sum +
-          (double.tryParse(item['total_presupuestado']?.toString() ?? '0') ??
-              0),
-    );
+    final double totalPartida = partida.totalPresupuestado;
 
     // Calcular el costo real para esta partida (Gastos directos + Consumo de materiales)
     final double gastosPartida = _gastos
         .where(
           (g) =>
-              g['subpartida_id'] != null &&
-              subpartidasIds.contains(g['subpartida_id']),
+              g.subpartidaId != null && subpartidasIds.contains(g.subpartidaId),
         )
-        .fold(
-          0.0,
-          (sum, g) =>
-              sum + (double.tryParse(g['monto']?.toString() ?? '0') ?? 0),
-        );
+        .fold(0.0, (sum, g) => sum + g.monto);
 
     final double consumosPartida = _consumos
         .where(
           (c) =>
-              c['subpartida_id'] != null &&
-              subpartidasIds.contains(c['subpartida_id']),
+              c.subpartidaId != null && subpartidasIds.contains(c.subpartidaId),
         )
-        .fold(
-          0.0,
-          (sum, c) =>
-              sum + (double.tryParse(c['total']?.toString() ?? '0') ?? 0),
-        );
+        .fold(0.0, (sum, c) => sum + c.total);
 
     final double costoRealPartida = gastosPartida + consumosPartida;
 
     // Verificar si todas las subpartidas están al 100%
     final bool allCompleted =
         subpartidas.isNotEmpty &&
-        subpartidas.every(
-          (s) =>
-              (double.tryParse(s['avance_actual']?.toString() ?? '0') ?? 0) >=
-              100,
-        );
+        subpartidas.every((s) => s.avanceActual >= 100);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1133,7 +1135,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           children: [
             Expanded(
               child: Text(
-                partida['descripcion'],
+                partida.descripcion,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: allCompleted
@@ -1167,7 +1169,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                       tooltip: 'Imprimir Reporte de Partida',
                       onPressed: () async {
                         final url = Uri.parse(
-                          '$host/reports/partida/${partida['id']}/pdf',
+                          '$host/reports/partida/${partida.id}/pdf',
                         );
                         if (await canLaunchUrl(url)) {
                           await launchUrl(url);
@@ -1217,30 +1219,20 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             : Text('Partida con ${subpartidas.length} Sub-Partidas'),
         children: [
           ...subpartidas.map((s) => _buildSubpartidaTile(s, f)).toList(),
-          // if (!_isReadonly)
-          //   Padding(
-          //     padding: const EdgeInsets.symmetric(vertical: 8.0),
-          //     child: TextButton.icon(
-          //       onPressed: () => _showAddSubpartidaDialog(partida['id']),
-          //       icon: const Icon(Icons.add, size: 18),
-          //       label: const Text('Añadir Sub-partida'),
-          //     ),
-          //   ),
         ],
       ),
     );
   }
 
-  Widget _buildSubpartidaTile(Map<String, dynamic> sub, NumberFormat f) {
-    final avance =
-        double.tryParse(sub['avance_actual']?.toString() ?? '0') ?? 0;
+  Widget _buildSubpartidaTile(Subpartida sub, NumberFormat f) {
+    final avance = sub.avanceActual;
     return ListTile(
-      title: Text(sub['descripcion']),
+      title: Text(sub.descripcion),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Presupuesto: ${f.format(double.tryParse(sub['total_presupuestado']?.toString() ?? '0') ?? 0)} (${sub['unidad']})',
+            'Presupuesto: ${f.format(sub.totalPresupuestado)} (${sub.unidad})',
           ),
           const SizedBox(height: 8),
           Row(
@@ -1289,7 +1281,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ],
               ),
             )
-          : (_proyecto['estado'] == 'Activo'
+          : (_proyecto.estado == 'Activo'
                 ? ElevatedButton(
                     onPressed: () => _showAvanceDialog(sub),
                     child: const Text('Registrar Avance'),
@@ -1298,57 +1290,39 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
-  void _showAvanceDialog(Map<String, dynamic> sub) {
-    final controller = TextEditingController();
+  void _showAvanceDialog(Subpartida sub) {
+    final initialValue = (sub.avanceActual + 5.0 <= 100)
+        ? sub.avanceActual + 5.0
+        : 100.0;
+    final controller = TextEditingController(text: initialValue.toString());
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Registrar Avance: ${sub['descripcion']}'),
+        title: Text('Registrar Avance: ${sub.descripcion}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('Ingresa el nuevo porcentaje de avance físico (%):'),
             DropdownButtonFormField<double>(
-              value:
-                  (double.tryParse(sub['avance_actual']?.toString() ?? '0') ??
-                              0) +
-                          5.0 <=
-                      100
-                  ? (double.tryParse(sub['avance_actual']?.toString() ?? '0') ??
-                            0) +
-                        5.0
-                  : 100.0,
+              value: initialValue,
               decoration: const InputDecoration(
                 labelText: 'Nuevo Porcentaje Total (%)',
                 border: OutlineInputBorder(),
               ),
               items:
-                  List.generate(
-                        ((100 -
-                                        (double.tryParse(
-                                              sub['avance_actual']
-                                                      ?.toString() ??
-                                                  '0',
-                                            ) ??
-                                            0)) /
-                                    5)
-                                .floor() +
-                            1,
-                        (index) =>
-                            (double.tryParse(
-                                  sub['avance_actual']?.toString() ?? '0',
-                                ) ??
-                                0) +
-                            (index) * 5.0,
-                      )
-                      .where(
-                        (val) =>
-                            val >
-                            (double.tryParse(
-                                  sub['avance_actual']?.toString() ?? '0',
-                                ) ??
-                                0),
-                      )
+                  [
+                        ...[
+                          for (
+                            double v = sub.avanceActual + 5.0;
+                            v < 100;
+                            v += 5.0
+                          )
+                            v,
+                        ],
+                        100.0,
+                      ]
+                      .toSet() // Eliminar duplicados si 100 ya estaba
                       .map(
                         (val) => DropdownMenuItem(
                           value: val,
@@ -1369,16 +1343,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             onPressed: () async {
               try {
                 final porc = double.tryParse(controller.text) ?? 0;
-                final total =
-                    double.tryParse(sub['total_presupuestado'].toString()) ?? 0;
-                await _apiService.createAvance({
-                  'partida_id':
-                      sub['partida_id'], // Corregido: el campo en BD es partida_id (referencia a subpartida en este contexto de UI)
-                  'subpartida_id': sub['id'],
-                  'fecha': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                  'porcentaje': porc,
-                  'valor_ejecutado': (porc / 100) * total,
-                });
+                final total = sub.totalPresupuestado;
+                await _projectService.createAvance(
+                  AvanceProyecto(
+                    partidaId: sub.partidaId,
+                    subpartidaId: sub.id!,
+                    fecha: DateTime.now(),
+                    porcentaje: porc,
+                    valorEjecutado: (porc / 100) * total,
+                  ),
+                );
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -1410,13 +1384,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   void _showPagoDialog() {
-    final totalConImpuestos =
-        double.tryParse(
-          _proyecto['total_presupuesto_con_globales']?.toString() ?? '0',
-        ) ??
-        0;
-    final cobrado =
-        double.tryParse(_proyecto['total_cobrado']?.toString() ?? '0') ?? 0;
+    final totalConImpuestos = _proyecto.totalPresupuestoConGlobales ?? 0;
+    final cobrado = _proyecto.totalCobrado ?? 0;
     final saldoPendiente = totalConImpuestos - cobrado;
 
     final controller = TextEditingController(
@@ -1432,7 +1401,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           if (bancos.isEmpty) {
-            _apiService.getBancos().then((value) {
+            _accountingService.getBancos().then((value) {
               setDialogState(() {
                 bancos = value;
                 if (bancos.isNotEmpty) {
@@ -1545,14 +1514,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                       throw 'El monto no puede exceder el saldo pendiente (${f.format(saldoPendiente)})';
                     }
 
-                    await _apiService.createPago({
-                      'proyecto_id': _proyecto['id'],
+                    await _accountingService.createPago({
+                      'proyecto_id': _proyecto.id,
                       'monto': monto,
                       'metodo_pago': metodoPago,
                       'banco_id': bancoId,
                       'fecha': DateTime.now().toIso8601String(),
                       'glosa':
-                          'Pago de cliente - Proyecto: ${_proyecto['nombre']}',
+                          'Pago de cliente - Proyecto: ${_proyecto.nombre}',
                     });
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1648,9 +1617,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCantidadController,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     inputFormatters: [
-                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'^\d*\.?\d{0,2}'),
+                                      ),
                                     ],
                                     decoration: const InputDecoration(
                                       labelText: 'Cant.',
@@ -1662,9 +1636,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCostoController,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     inputFormatters: [
-                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'^\d*\.?\d{0,2}'),
+                                      ),
                                     ],
                                     decoration: const InputDecoration(
                                       labelText: 'Costo Unit.',
@@ -1691,7 +1670,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                         if (!formKey.currentState!.validate()) return;
                         setDialogState(() => isSaving = true);
                         try {
-                          await _apiService.addPartida(_proyecto['id'], {
+                          await _projectService.addPartida(_proyecto.id!, {
                             'descripcion': descripcionController.text,
                             'subpartidas': [
                               {
@@ -1782,9 +1761,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCantidadController,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     inputFormatters: [
-                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'^\d*\.?\d{0,2}'),
+                                      ),
                                     ],
                                     decoration: const InputDecoration(
                                       labelText: 'Cant.',
@@ -1796,9 +1780,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 Expanded(
                                   child: TextFormField(
                                     controller: subCostoController,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     inputFormatters: [
-                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'^\d*\.?\d{0,2}'),
+                                      ),
                                     ],
                                     decoration: const InputDecoration(
                                       labelText: 'Costo Unit.',
@@ -1825,7 +1814,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                         if (!formKey.currentState!.validate()) return;
                         setDialogState(() => isSaving = true);
                         try {
-                          await _apiService.addSubpartida(partidaId, {
+                          await _projectService.addSubpartida(partidaId, {
                             'descripcion': subDescripcionController.text,
                             'unidad': subUnidadController.text,
                             'cantidad':

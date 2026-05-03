@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
-import '../../services/api_service.dart';
+import '../../services/purchase_service.dart';
 
 class GastoDetailScreen extends StatefulWidget {
   final int gastoId;
@@ -14,7 +14,7 @@ class GastoDetailScreen extends StatefulWidget {
 }
 
 class _GastoDetailScreenState extends State<GastoDetailScreen> {
-  final ApiService _apiService = ApiService();
+  final PurchaseService _purchaseService = PurchaseService();
   bool _isLoading = true;
   Map<String, dynamic>? _gasto;
   String? _errorMessage;
@@ -32,7 +32,7 @@ class _GastoDetailScreenState extends State<GastoDetailScreen> {
     });
 
     try {
-      final data = await _apiService.getGasto(widget.gastoId);
+      final data = await _purchaseService.getGasto(widget.gastoId);
       setState(() {
         _gasto = data;
         _isLoading = false;

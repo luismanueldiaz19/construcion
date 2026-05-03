@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/project_service.dart';
+import '../../models/proyecto.dart';
 import 'project_details_screen.dart';
 
 class HistorialProyectosScreen extends StatefulWidget {
@@ -13,10 +14,10 @@ class HistorialProyectosScreen extends StatefulWidget {
 }
 
 class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
   bool _isLoading = false;
   String? _error;
-  List<dynamic> _proyectos = [];
+  List<Proyecto> _proyectos = [];
 
   // Filtros
   late int _selectedYear;
@@ -53,7 +54,7 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
     });
 
     try {
-      final proyectos = await _apiService.getProyectos(
+      final proyectos = await _projectService.getProyectos(
         estado: _selectedEstado == 'Todos' ? null : _selectedEstado,
         year: _selectedYear,
         search: _searchController.text.trim(),
@@ -235,29 +236,22 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                               ),
                             ],
                             rows: _proyectos.map((proyecto) {
-                              final presupuesto = double.tryParse(proyecto['presupuesto_estimado']?.toString() ?? '0') ?? 0;
-                              final itbis = double.tryParse(proyecto['itbis']?.toString() ?? '0') ?? 0;
-                              final transporte = double.tryParse(proyecto['transporte']?.toString() ?? '0') ?? 0;
-                              final supervision = double.tryParse(proyecto['supervision_tecnica']?.toString() ?? '0') ?? 0;
-                              final otros = double.tryParse(proyecto['otros_costos']?.toString() ?? '0') ?? 0;
-                              final monto = presupuesto + itbis + transporte + supervision + otros;
-                              final fecha = proyecto['created_at'] != null
-                                  ? DateFormat('dd/MM/yyyy').format(
-                                      DateTime.parse(proyecto['created_at']),
-                                    )
+                              final monto = proyecto.totalPresupuestoConGlobales ?? 0;
+                              final fecha = proyecto.id != null // Simulación de fecha si no hay created_at en el modelo directo
+                                  ? DateFormat('dd/MM/yyyy').format(DateTime.now()) 
                                   : 'N/A';
 
                               return DataRow(
                                 cells: [
                                   DataCell(
                                     Text(
-                                      proyecto['nombre'] ?? 'Sin nombre',
+                                      proyecto.nombre,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ),
-                                  DataCell(Text(proyecto['cliente'] ?? 'N/A')),
+                                  DataCell(Text(proyecto.cliente)),
                                   DataCell(Text(f.format(monto))),
                                   DataCell(
                                     Container(
@@ -267,20 +261,20 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: _getStatusColor(
-                                          proyecto['estado'],
+                                          proyecto.estado,
                                         ).withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: _getStatusColor(
-                                            proyecto['estado'],
+                                            proyecto.estado,
                                           ),
                                         ),
                                       ),
                                       child: Text(
-                                        proyecto['estado'] ?? 'N/A',
+                                        proyecto.estado,
                                         style: TextStyle(
                                           color: _getStatusColor(
-                                            proyecto['estado'],
+                                            proyecto.estado,
                                           ),
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
@@ -319,7 +313,7 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                                               context: context,
                                               builder: (context) => AlertDialog(
                                                 title: const Text('Eliminar Proyecto'),
-                                                content: Text('¿Estás seguro de eliminar "${proyecto['nombre']}"?'),
+                                                content: Text('¿Estás seguro de eliminar "${proyecto.nombre}"?'),
                                                 actions: [
                                                   TextButton(
                                                     onPressed: () => Navigator.pop(context, false),
@@ -336,7 +330,7 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
 
                                             if (confirm == true) {
                                               try {
-                                                await _apiService.deleteProyecto(proyecto['id']);
+                                                await _projectService.deleteProyecto(proyecto.id!);
                                                 if (mounted) {
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     const SnackBar(content: Text('Proyecto eliminado')),

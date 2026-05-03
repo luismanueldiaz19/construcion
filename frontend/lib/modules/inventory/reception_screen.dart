@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/purchase_service.dart';
 
 class ReceptionScreen extends StatefulWidget {
   const ReceptionScreen({super.key});
@@ -11,7 +11,7 @@ class ReceptionScreen extends StatefulWidget {
 }
 
 class _ReceptionScreenState extends State<ReceptionScreen> {
-  final ApiService _apiService = ApiService();
+  final PurchaseService _purchaseService = PurchaseService();
   List<dynamic> _comprasPendientes = [];
   bool _isLoading = true;
 
@@ -24,7 +24,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiService.getComprasPendientes();
+      final data = await _purchaseService.getComprasPendientes();
       setState(() {
         _comprasPendientes = data;
         _isLoading = false;
@@ -162,7 +162,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
           ElevatedButton(
             onPressed: () async {
               if (personController.text.isEmpty) return;
-              await _apiService.registrarRecepcion({
+              await _purchaseService.registrarRecepcion({
                 'compra_id': compraId,
                 'fecha': DateFormat('yyyy-MM-dd').format(DateTime.now()),
                 'recibido_por': personController.text,

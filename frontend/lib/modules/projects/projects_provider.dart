@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../services/project_service.dart';
+import '../../models/proyecto.dart';
 
 class ProjectsProvider extends ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final ProjectService _projectService = ProjectService();
   
-  List<dynamic> _proyectos = [];
+  List<Proyecto> _proyectos = [];
   bool _isLoading = false;
   String? _error;
 
-  List<dynamic> get proyectos => _proyectos;
+  List<Proyecto> get proyectos => _proyectos;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -22,7 +23,7 @@ class ProjectsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _proyectos = await _apiService.getProyectos(
+      _proyectos = await _projectService.getProyectos(
         estado: estado,
         year: year,
         search: search,
@@ -37,8 +38,8 @@ class ProjectsProvider extends ChangeNotifier {
 
   Future<void> deleteProyecto(int id) async {
     try {
-      await _apiService.deleteProyecto(id);
-      _proyectos.removeWhere((p) => p['id'] == id);
+      await _projectService.deleteProyecto(id);
+      _proyectos.removeWhere((p) => p.id == id);
       notifyListeners();
     } catch (e) {
       _error = e.toString();

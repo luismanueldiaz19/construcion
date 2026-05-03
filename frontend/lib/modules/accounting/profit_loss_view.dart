@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../services/api_service.dart';
+import '../../services/accounting_service.dart';
+import '../../services/project_service.dart';
 
 class ProfitLossView extends StatefulWidget {
   const ProfitLossView({super.key});
@@ -10,7 +11,8 @@ class ProfitLossView extends StatefulWidget {
 }
 
 class _ProfitLossViewState extends State<ProfitLossView> {
-  final ApiService _apiService = ApiService();
+  final AccountingService _accountingService = AccountingService();
+  final ProjectService _projectService = ProjectService();
   Map<String, dynamic>? _data;
   bool _isLoading = true;
   int? _selectedProyectoId;
@@ -24,8 +26,8 @@ class _ProfitLossViewState extends State<ProfitLossView> {
 
   Future<void> _loadInitialData() async {
     try {
-      final proyectosData = await _apiService.getProyectos();
-      setState(() => _proyectos = proyectosData);
+      final proyectosData = await _projectService.getProyectos();
+      setState(() => _proyectos = proyectosData.map((p) => p.toJson()).toList());
       await _loadData();
     } catch (e) {
       setState(() => _isLoading = false);
@@ -35,7 +37,7 @@ class _ProfitLossViewState extends State<ProfitLossView> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiService.getEstadoResultados(proyectoId: _selectedProyectoId);
+      final data = await _accountingService.getEstadoResultados(proyectoId: _selectedProyectoId);
       setState(() {
         _data = data;
         _isLoading = false;

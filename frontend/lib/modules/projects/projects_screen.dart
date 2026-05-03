@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
+import 'package:intl/intl.dart';
+import '../../models/proyecto.dart';
 import 'project_documents_screen.dart';
 import 'projects_provider.dart';
-import 'package:intl/intl.dart';
 import 'project_form_screen.dart';
 import 'project_details_screen.dart';
 
@@ -60,6 +61,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       ),
       body: Consumer<ProjectsProvider>(
         builder: (context, provider, child) {
+          print('.................................');
+          print(provider.error.toString());
           if (provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -119,17 +122,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: _getStatusColor(
-                                  proyecto['estado'],
+                                  proyecto.estado,
                                 ).withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: _getStatusColor(proyecto['estado']),
+                                  color: _getStatusColor(proyecto.estado),
                                 ),
                               ),
                               child: Text(
-                                proyecto['estado'] ?? 'Pendiente',
+                                proyecto.estado,
                                 style: TextStyle(
-                                  color: _getStatusColor(proyecto['estado']),
+                                  color: _getStatusColor(proyecto.estado),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -139,7 +142,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          proyecto['nombre'] ?? 'Sin nombre',
+                          proyecto.nombre,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -158,7 +161,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                proyecto['ubicacion'] ?? 'No especificada',
+                                proyecto.ubicacion ?? 'No especificada',
                                 style: const TextStyle(color: Colors.grey),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -215,17 +218,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             ProjectDocumentsScreen(
-                                              proyectoId: proyecto['id'],
-                                              proyectoNombre:
-                                                  proyecto['nombre'],
-                                              logoPath: proyecto['logo_path'],
+                                              proyectoId: proyecto.id!,
+                                              proyectoNombre: proyecto.nombre,
+                                              logoPath: proyecto.logoPath,
                                             ),
                                       ),
                                     );
                                     break;
                                   case 'Pdf':
                                     final url = Uri.parse(
-                                      '$host/reports/proyecto/${proyecto['id']}/pdf',
+                                      '$host/reports/proyecto/${proyecto.id}/pdf',
                                     );
                                     if (await canLaunchUrl(url)) {
                                       await launchUrl(url);
@@ -249,7 +251,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       builder: (context) => AlertDialog(
                                         title: const Text('Eliminar Proyecto'),
                                         content: Text(
-                                          '¿Estás seguro de eliminar "${proyecto['nombre']}"? Esta acción no se puede deshacer.',
+                                          '¿Estás seguro de eliminar "${proyecto.nombre}"? Esta acción no se puede deshacer.',
                                         ),
                                         actions: [
                                           TextButton(
@@ -273,7 +275,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       try {
                                         await context
                                             .read<ProjectsProvider>()
-                                            .deleteProyecto(proyecto['id']);
+                                            .deleteProyecto(proyecto.id!);
                                         if (mounted) {
                                           ScaffoldMessenger.of(
                                             context,
@@ -380,19 +382,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  double _getPresupuestoTotal(dynamic proyecto) {
-    final presupuesto =
-        double.tryParse(proyecto['presupuesto_estimado']?.toString() ?? '0') ??
-        0;
-    final itbis = double.tryParse(proyecto['itbis']?.toString() ?? '0') ?? 0;
-    final transporte =
-        double.tryParse(proyecto['transporte']?.toString() ?? '0') ?? 0;
-    final supervision =
-        double.tryParse(proyecto['supervision_tecnica']?.toString() ?? '0') ??
-        0;
-    final otros =
-        double.tryParse(proyecto['otros_costos']?.toString() ?? '0') ?? 0;
-
-    return presupuesto + itbis + transporte + supervision + otros;
+  double _getPresupuestoTotal(Proyecto proyecto) {
+    return proyecto.presupuestoEstimado +
+        proyecto.itbis +
+        proyecto.transporte +
+        proyecto.supervisionTecnica +
+        proyecto.otrosCostos;
   }
 }

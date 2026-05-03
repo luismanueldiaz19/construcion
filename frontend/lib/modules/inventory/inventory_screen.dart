@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/inventory_service.dart';
 import 'purchase_form_screen.dart';
 import 'suppliers_screen.dart';
 import 'reception_screen.dart';
@@ -15,7 +15,7 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  final ApiService _apiService = ApiService();
+  final InventoryService _inventoryService = InventoryService();
   List<dynamic> _inventarioProyectos = [];
   bool _isLoading = true;
 
@@ -28,7 +28,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final proyectos = await _apiService.getInventarioPorProyecto();
+      final proyectos = await _inventoryService.getInventarioPorProyecto();
       setState(() {
         _inventarioProyectos = proyectos;
         _isLoading = false;

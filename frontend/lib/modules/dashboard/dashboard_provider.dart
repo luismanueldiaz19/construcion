@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../services/dashboard_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final DashboardService _dashboardService = DashboardService();
 
   Map<String, dynamic>? _data;
   bool _isLoading = false;
@@ -18,7 +18,7 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _data = await _apiService.getDashboardData();
+      _data = await _dashboardService.getDashboardData();
     } catch (e) {
       _error = e.toString();
     } finally {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/purchase_service.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -10,7 +10,7 @@ class SuppliersScreen extends StatefulWidget {
 }
 
 class _SuppliersScreenState extends State<SuppliersScreen> {
-  final ApiService _apiService = ApiService();
+  final PurchaseService _purchaseService = PurchaseService();
   List<dynamic> _proveedores = [];
   List<dynamic> _filteredProveedores = [];
   bool _isLoading = true;
@@ -50,7 +50,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiService.getProveedores();
+      final data = await _purchaseService.getProveedores();
       setState(() {
         _proveedores = data;
         _filteredProveedores = data;
@@ -306,12 +306,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
 
                                     try {
                                       if (isEdit) {
-                                        await _apiService.updateProveedor(
+                                        await _purchaseService.updateProveedor(
                                           supplier['id'],
                                           data,
                                         );
                                       } else {
-                                        await _apiService.createProveedor(data);
+                                        await _purchaseService.createProveedor(data);
                                       }
                                       if (mounted) {
                                         Navigator.pop(context);
