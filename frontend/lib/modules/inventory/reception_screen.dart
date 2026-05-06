@@ -99,9 +99,16 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                         ),
                         ...(c['detalles'] as List)
                             .map(
-                              (d) => Text(
-                                "• ${d['cantidad']} ${d['material']['unidad']} de ${d['material']['nombre']}",
-                              ),
+                              (d) {
+                                double total = double.parse(d['cantidad'].toString());
+                                double recibido = double.parse((d['cantidad_recibida'] ?? 0).toString());
+                                return Text(
+                                  "• ${d['material']['nombre']}: $recibido / $total ${d['material']['unidad']}",
+                                  style: TextStyle(
+                                    color: recibido >= total ? Colors.green : (recibido > 0 ? Colors.orange : Colors.black87),
+                                  ),
+                                );
+                              }
                             )
                             .toList(),
                         const SizedBox(height: 16),
@@ -115,7 +122,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                               ),
                             ),
                             ElevatedButton.icon(
-                              onPressed: () => _confirmarRecepcion(c['id']),
+                              onPressed: () => _confirmarRecepcion(c),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
@@ -134,25 +141,92 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
     );
   }
 
-  void _confirmarRecepcion(int compraId) {
+  void _confirmarRecepcion(Map<String, dynamic> compra) {
     final personController = TextEditingController();
+    final Map<int, TextEditingController> itemControllers = {};
+
+    for (var d in compra['detalles']) {
+      double pendiente = double.parse(d['cantidad'].toString()) -
+          double.parse((d['cantidad_recibida'] ?? 0).toString());
+      if (pendiente > 0) {
+        itemControllers[d['id']] = TextEditingController(text: pendiente.toString());
+      }
+    }
+
+    if (itemControllers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Todos los materiales ya han sido recibidos')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar Recepción'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('¿Quién recibe los materiales en el proyecto?'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: personController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del Receptor',
-                border: OutlineInputBorder(),
-              ),
+        title: Text('Recibir Materiales - Factura #${compra['id']}'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('¿Quién recibe los materiales?'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: personController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del Receptor',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Cantidades Recibidas:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const Divider(),
+                ...itemControllers.entries.map((entry) {
+                  final d = (compra['detalles'] as List)
+                      .firstWhere((element) => element['id'] == entry.key);
+                  double total = double.parse(d['cantidad'].toString());
+                  double yaRecibido = double.parse((d['cantidad_recibida'] ?? 0).toString());
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(d['material']['nombre'], 
+                                style: const TextStyle(fontWeight: FontWeight.w500)),
+                              Text('Pendiente: ${total - yaRecibido} ${d['material']['unidad']}',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: entry.value,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Cantidad',
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -161,20 +235,46 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (personController.text.isEmpty) return;
-              await _purchaseService.registrarRecepcion({
-                'compra_id': compraId,
-                'fecha': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                'recibido_por': personController.text,
+              if (personController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Por favor ingrese quién recibe')),
+                );
+                return;
+              }
+
+              List<Map<String, dynamic>> items = [];
+              itemControllers.forEach((id, controller) {
+                double qty = double.tryParse(controller.text) ?? 0;
+                if (qty > 0) {
+                  items.add({
+                    'compra_detalle_id': id,
+                    'cantidad': qty,
+                  });
+                }
               });
-              Navigator.pop(context);
-              _loadData();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Inventario actualizado correctamente'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+
+              if (items.isEmpty) return;
+
+              try {
+                await _purchaseService.registrarRecepcion({
+                  'compra_id': compra['id'],
+                  'fecha': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                  'recibido_por': personController.text,
+                  'items': items,
+                });
+                Navigator.pop(context);
+                _loadData();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Inventario actualizado correctamente'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                );
+              }
             },
             child: const Text('Dar Entrada'),
           ),

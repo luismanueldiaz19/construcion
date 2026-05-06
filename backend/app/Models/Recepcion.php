@@ -10,4 +10,14 @@ class Recepcion extends Model
     protected $table = 'recepciones';
     
     protected $fillable = ['compra_id', 'fecha', 'recibido_por', 'observaciones'];
+
+    public function detalles()
+    {
+        return $this->hasMany(RecepcionDetalle::class);
+    }
+
+    public function compra()
+    {
+        return $this->belongsTo(Compra::class);
+    }
 }

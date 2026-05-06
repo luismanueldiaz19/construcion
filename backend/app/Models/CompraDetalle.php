@@ -10,6 +10,7 @@ class CompraDetalle extends Model
         'compra_id', 
         'material_id', 
         'cantidad', 
+        'cantidad_recibida',
         'precio_unitario', 
         'subtotal'
     ];

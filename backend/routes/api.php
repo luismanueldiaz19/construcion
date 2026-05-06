@@ -37,7 +37,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/inventario-proyectos', [InventarioController::class, 'index']);
     Route::get('/inventario-proyectos/{id}', [InventarioController::class, 'show']);
     Route::get('/inventario-proyectos/{id}/pdf', [InventarioController::class, 'downloadPdf']);
-    Route::apiResource('compras', \App\Http\Controllers\Api\CompraController::class);
+    Route::apiResource('compras', CompraController::class);
+    Route::get('compras-pendientes', [CompraController::class, 'pendientes']);
     Route::post('/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'store']);
     Route::post('/pagos', [\App\Http\Controllers\Api\PagoClienteController::class, 'store']);
     Route::get('/subpartidas/{id}/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'history']);
@@ -48,7 +49,6 @@ Route::prefix('v1')->group(function () {
 
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);
-    Route::apiResource('compras', CompraController::class);
     Route::get('compras/{id}/pdf', [CompraController::class, 'imprimirTicket']);
     Route::post('recepciones', [RecepcionController::class, 'store']);
     Route::apiResource('consumos', ConsumoController::class);

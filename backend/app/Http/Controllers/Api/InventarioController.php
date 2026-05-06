@@ -27,11 +27,15 @@ class InventarioController extends Controller
                 ->where('proyecto_id', $id)
                 ->get()
                 ->map(function($inv) use ($id) {
-                    $totalEntradas = \App\Models\CompraDetalle::whereHas('compra', function($q) use ($id) {
-                            $q->where('proyecto_id', $id)->where('estado', 'Recibido');
+                    $totalEntradas = \App\Models\RecepcionDetalle::whereHas('recepcion', function($q) use ($id) {
+                            $q->whereHas('compra', function($c) use ($id) {
+                                $c->where('proyecto_id', $id);
+                            });
                         })
-                        ->where('material_id', $inv->material_id)
-                        ->sum('cantidad');
+                        ->whereHas('compraDetalle', function($cd) use ($inv) {
+                            $cd->where('material_id', $inv->material_id);
+                        })
+                        ->sum('cantidad_entregada');
 
                     $totalSalidas = \App\Models\Consumo::where('proyecto_id', $id)
                         ->where('material_id', $inv->material_id)
@@ -50,23 +54,22 @@ class InventarioController extends Controller
                     ];
                 });
 
-            // Entradas (Compras recibidas)
-            $entradas = \App\Models\Compra::with(['detalles.material', 'proveedor'])
-                ->where('proyecto_id', $id)
-                ->where('estado', 'Recibido')
+            // Entradas (Historial de recepciones reales)
+            $entradas = \App\Models\RecepcionDetalle::with(['recepcion.compra.proveedor', 'compraDetalle.material'])
+                ->whereHas('recepcion.compra', function($q) use ($id) {
+                    $q->where('proyecto_id', $id);
+                })
                 ->get()
-                ->flatMap(function($compra) {
-                    return $compra->detalles->map(function($det) use ($compra) {
-                        return [
-                            'tipo' => 'Entrada',
-                            'fecha' => $compra->fecha,
-                            'referencia' => "Compra #{$compra->id} - " . (optional($compra->proveedor)->nombre ?? 'N/A'),
-                            'material' => optional($det->material)->nombre ?? 'N/A',
-                            'cantidad' => $det->cantidad,
-                            'costo' => $det->precio_unitario,
-                            'total' => $det->total
-                        ];
-                    });
+                ->map(function($det) {
+                    return [
+                        'tipo' => 'Entrada',
+                        'fecha' => optional($det->recepcion)->fecha ?? now()->toDateString(),
+                        'referencia' => "Recibido por: " . (optional($det->recepcion)->recibido_por ?? 'N/A') . " (Factura #" . (optional($det->recepcion)->compra_id ?? 'N/A') . ")",
+                        'material' => optional($det->compraDetalle->material)->nombre ?? 'Material Desconocido',
+                        'cantidad' => $det->cantidad_entregada,
+                        'costo' => optional($det->compraDetalle)->precio_unitario ?? 0,
+                        'total' => $det->cantidad_entregada * (optional($det->compraDetalle)->precio_unitario ?? 0)
+                    ];
                 });
 
             // Salidas (Consumos registrados)

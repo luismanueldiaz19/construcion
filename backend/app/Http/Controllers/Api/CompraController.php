@@ -26,6 +26,14 @@ class CompraController extends Controller
         return Compra::with('proveedor', 'proyecto', 'detalles.material')->latest()->get();
     }
 
+    public function pendientes()
+    {
+        return Compra::with('proveedor', 'proyecto', 'detalles.material')
+            ->where('estado', '!=', 'Recibido')
+            ->latest()
+            ->get();
+    }
+
     public function show($id){
         return Compra::with('proveedor', 'proyecto', 'detalles.material')->findOrFail($id);
     }
