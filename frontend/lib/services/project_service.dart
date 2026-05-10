@@ -74,28 +74,17 @@ class ProjectService {
   }
 
   Future<String> uploadLogo(int proyectoId, XFile image) async {
-    var request = http.MultipartRequest(
-      'POST',
-      Uri.parse('${_http.baseUrl}/proyectos/$proyectoId/logo'),
-    );
-    request.headers['Accept'] = 'application/json';
-
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'logo',
-        image.path,
-        contentType: MediaType('image', image.path.split('.').last),
-      ),
+    final file = await http.MultipartFile.fromPath(
+      'logo',
+      image.path,
+      contentType: MediaType('image', image.path.split('.').last),
     );
 
-    var streamedResponse = await request.send();
-    var response = await http.Response.fromStream(streamedResponse);
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data['logo_url'];
-    } else {
-      throw Exception('Error al subir logo: ${response.body}');
-    }
+    final data = await _http.multipart(
+      'proyectos/$proyectoId/logo',
+      files: [file],
+    );
+    return data['logo_url'];
   }
 
   Future<void> provisionarTodo100(int proyectoId) async {
