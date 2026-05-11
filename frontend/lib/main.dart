@@ -58,7 +58,8 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const DashboardScreen(),
+    // const DashboardScreen(),
+    const Center(child: Text('No se implementara')),
     const ProjectsScreen(),
     const HistorialProyectosScreen(),
     const SuppliersScreen(),
