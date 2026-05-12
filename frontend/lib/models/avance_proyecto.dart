@@ -21,8 +21,8 @@ class AvanceProyecto {
       id: json['id'],
       subpartidaId: json['subpartida_id'],
       fecha: DateTime.parse(json['fecha']),
-      porcentaje: (json['porcentaje'] ?? 0).toDouble(),
-      valorEjecutado: (json['valor_ejecutado'] ?? 0).toDouble(),
+      porcentaje: double.tryParse(json['porcentaje']?.toString() ?? '0') ?? 0.0,
+      valorEjecutado: double.tryParse(json['valor_ejecutado']?.toString() ?? '0') ?? 0.0,
       evidenciasUrl: json['evidencias_url'],
     );
   }

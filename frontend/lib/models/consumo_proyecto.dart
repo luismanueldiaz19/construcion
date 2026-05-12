@@ -23,8 +23,8 @@ class ConsumoProyecto {
       proyectoId: json['proyecto_id'],
       subpartidaId: json['subpartida_id'],
       materialId: json['material_id'],
-      cantidad: (json['cantidad'] ?? 0).toDouble(),
-      total: (json['total'] ?? 0).toDouble(),
+      cantidad: double.tryParse(json['cantidad']?.toString() ?? '0') ?? 0.0,
+      total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,
       fecha: DateTime.parse(json['fecha']),
     );
   }

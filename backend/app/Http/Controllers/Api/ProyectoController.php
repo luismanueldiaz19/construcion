@@ -84,25 +84,23 @@ class ProyectoController extends Controller
         $proyecto->monto_ejecutado_total = $totalEjecutado * $factorGlobal;
         $proyecto->total_presupuesto_con_globales = $totalConGlobales;
         
-        // Calcular COSTOS REALES desde la contabilidad
-        $proyecto->costo_real = \DB::table('asiento_detalles')
+        // Calcular COSTOS E INGRESOS REALES desde la contabilidad en una sola consulta
+        $stats = \DB::table('asiento_detalles')
             ->join('catalogo_cuentas', 'asiento_detalles.cuenta_id', '=', 'catalogo_cuentas.id')
             ->where('asiento_detalles.centro_costo_id', $proyecto->id)
-            ->where(function($q) {
-                $q->where('catalogo_cuentas.codigo', 'like', '5%') // Costos
-                  ->orWhere('catalogo_cuentas.codigo', 'like', '6%'); // Gastos
-            })
-            ->sum('asiento_detalles.debe');
+            ->selectRaw("
+                SUM(CASE WHEN catalogo_cuentas.codigo LIKE '5%' OR catalogo_cuentas.codigo LIKE '6%' THEN asiento_detalles.debe ELSE 0 END) as costo_real,
+                SUM(CASE WHEN catalogo_cuentas.codigo LIKE '4%' THEN asiento_detalles.haber ELSE 0 END) as ingreso_neto_real
+            ")
+            ->first();
+        
+        $proyecto->costo_real = $stats->costo_real ?? 0;
+        $proyecto->ingreso_neto_real = $stats->ingreso_neto_real ?? 0;
 
         // Calcular total cobrado al cliente
-        $proyecto->total_cobrado = \App\Models\PagoCliente::where('proyecto_id', $proyecto->id)->sum('monto');
-
-        // Calcular INGRESO NETO REAL (Cuentas de Ingreso 4.x)
-        $proyecto->ingreso_neto_real = \DB::table('asiento_detalles')
-            ->join('catalogo_cuentas', 'asiento_detalles.cuenta_id', '=', 'catalogo_cuentas.id')
-            ->where('asiento_detalles.centro_costo_id', $proyecto->id)
-            ->where('catalogo_cuentas.codigo', 'like', '4%')
-            ->sum('asiento_detalles.haber');
+        $proyecto->total_cobrado = \DB::table('pagos_clientes')
+            ->where('proyecto_id', $proyecto->id)
+            ->sum('monto');
     }
 
     public function store(Request $request)

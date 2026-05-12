@@ -126,17 +126,24 @@
                 <td class="text-right budget-vs-real">${{ number_format($totalReal, 2) }}</td>
             </tr>
             <tr>
-                <td>Presupuesto Estimado:</td>
-                <td class="text-right">${{ number_format($partida->subpartidas->sum('total_presupuestado'), 2) }}</td>
+                <td class="budget-vs-real">Presupuesto Estimado:</td>
+                <td class="text-right budget-vs-real">${{ number_format($partida->subpartidas->sum('total_presupuestado'), 2) }}</td>
             </tr>
             <tr>
-                <td style="border-top: 1px solid white;">Diferencia (Ahorro/Exceso):</td>
+                <td style="border-top: 1px solid white;" class="budget-vs-real">Diferencia (Ahorro/Exceso):</td>
                 @php
                     $presupuesto = $partida->subpartidas->sum('total_presupuestado');
                     $dif = $presupuesto - $totalReal;
+                    $porcentajeConsumido = $presupuesto > 0 ? ($totalReal / $presupuesto) * 100 : 0;
                 @endphp
-                <td class="text-right" style="border-top: 1px solid white; color: {{ $dif >= 0 ? '#4caf50' : '#ff5252' }};">
-                    ${{ number_format($dif, 2) }} ({{ $dif >= 0 ? 'AHORRO' : 'EXCESO' }})
+                <td class="text-right budget-vs-real" style="border-top: 1px solid white; color: {{ $dif >= 0 ? '#b9f6ca' : '#ff8a80' }};">
+                    ${{ number_format($dif, 2) }}
+                </td>
+            </tr>
+            <tr>
+                <td class="budget-vs-real">Porcentaje Consumido:</td>
+                <td class="text-right budget-vs-real">
+                    {{ number_format($porcentajeConsumido, 1) }}%
                 </td>
             </tr>
         </table>

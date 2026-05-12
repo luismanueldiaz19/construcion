@@ -56,6 +56,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       });
     } catch (e) {
       print("Error refreshing project: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cargar detalles: $e')));
+      }
     }
   }
 
@@ -1134,70 +1140,128 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                partida.descripcion,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: allCompleted
-                      ? Colors.green.shade700
-                      : const Color(0xFF003366),
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      f.format(totalPartida),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.print_outlined,
-                        size: 18,
-                        color: Colors.blueGrey,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Imprimir Reporte de Partida',
-                      onPressed: () async {
-                        final url = Uri.parse(
-                          '$host/reports/partida/${partida.id}/pdf',
-                        );
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url);
-                        } else {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'No se pudo abrir el reporte de partida',
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                if (costoRealPartida > 0)
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
                   Text(
-                    'Gasto Real: ${f.format(costoRealPartida)}',
-                    style: const TextStyle(
+                    partida.descripcion,
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.redAccent,
+                      color: allCompleted
+                          ? Colors.green.shade700
+                          : const Color(0xFF003366),
                     ),
                   ),
-              ],
+                  const SizedBox(width: 8),
+                  if (totalPartida > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (costoRealPartida / totalPartida) > 1
+                            ? const Color(0xFFFFF3E0) // Orange 50
+                            : const Color(0xFFE0F2F1), // Teal 50
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: (costoRealPartida / totalPartida) > 1
+                              ? const Color(0xFFFFB74D) // Orange 300
+                              : const Color(0xFF4DB6AC), // Teal 300
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        '${(costoRealPartida / totalPartida * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: (costoRealPartida / totalPartida) > 1
+                              ? const Color(0xFFE65100) // Orange 900
+                              : const Color(0xFF00695C), // Teal 800
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        f.format(totalPartida),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF2E7D32), // Green darken-3
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.print_outlined,
+                          size: 20,
+                          color: Color(0xFF003366),
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () async {
+                          final url = Uri.parse(
+                            '$host/reports/partida/${partida.id}/pdf',
+                          );
+                          if (await canLaunchUrl(url)) await launchUrl(url);
+                        },
+                      ),
+                    ],
+                  ),
+                  if (costoRealPartida > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      f.format(costoRealPartida),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFFC62828), // Red darken-3
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (totalPartida - costoRealPartida) >= 0
+                            ? const Color(0xFFE3F2FD) // Light blue background
+                            : const Color(
+                                0xFFFFF3E0,
+                              ), // Light orange background
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Dif: ${f.format(totalPartida - costoRealPartida)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: (totalPartida - costoRealPartida) >= 0
+                              ? const Color(0xFF1565C0) // Blue darken-3
+                              : const Color(0xFFE65100), // Orange darken-4
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
