@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../models/proveedor.dart';
+
 class SearchSelectorDialog extends StatefulWidget {
   final String title;
   final List<dynamic> items;
@@ -36,10 +38,16 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
       _filteredItems = widget.items.where((item) {
         final text = widget.displayMapper(item).toLowerCase();
         final subtitle = widget.subtitleMapper?.call(item)?.toLowerCase() ?? '';
-        final code = item['codigo']?.toString().toLowerCase() ?? '';
-        return text.contains(query.toLowerCase()) || 
-               subtitle.contains(query.toLowerCase()) ||
-               code.contains(query.toLowerCase());
+
+        // Handle both Map and Object for 'codigo' if it exists
+        String code = '';
+        if (item is Map) {
+          code = item['codigo']?.toString().toLowerCase() ?? '';
+        }
+
+        return text.contains(query.toLowerCase()) ||
+            subtitle.contains(query.toLowerCase()) ||
+            code.contains(query.toLowerCase());
       }).toList();
     });
   }
@@ -97,11 +105,18 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: Colors.grey[300],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'No se encontraron resultados',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 16),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 16,
+                            ),
                           ),
                           if (widget.onAdd != null) ...[
                             const SizedBox(height: 24),
@@ -126,22 +141,46 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
                         Expanded(
                           child: ListView.separated(
                             itemCount: _filteredItems.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1),
+                            separatorBuilder: (context, index) =>
+                                const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final item = _filteredItems[index];
                               final title = widget.displayMapper(item);
-                              final subtitle = widget.subtitleMapper?.call(item);
+                              final subtitle = widget.subtitleMapper?.call(
+                                item,
+                              );
 
                               return ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                                 title: Text(
                                   title,
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)) : null,
-                                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                                onTap: () => Navigator.pop(context, item['id']),
+                                subtitle: subtitle != null
+                                    ? Text(
+                                        subtitle,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
+                                      )
+                                    : null,
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  color: Colors.grey,
+                                ),
+                                onTap: () => Navigator.pop(
+                                  context,
+                                  item is Proveedor ? item.id : item['id'],
+                                ),
                                 hoverColor: Colors.blue[50],
                               );
                             },

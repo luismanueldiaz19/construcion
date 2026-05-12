@@ -1,18 +1,20 @@
+import '../models/proveedor.dart';
 import 'http_service.dart';
 
 class PurchaseService {
   final HttpService _http = HttpService();
 
-  Future<List<dynamic>> getProveedores() async {
-    return await _http.get('proveedores');
+  Future<List<Proveedor>> getProveedores() async {
+    final List<dynamic> data = await _http.get('proveedores');
+    return data.map((json) => Proveedor.fromJson(json)).toList().cast<Proveedor>();
   }
 
-  Future<void> createProveedor(Map<String, dynamic> data) async {
-    await _http.post('proveedores', data);
+  Future<void> createProveedor(Proveedor proveedor) async {
+    await _http.post('proveedores', proveedor.toJson());
   }
 
-  Future<void> updateProveedor(int id, Map<String, dynamic> data) async {
-    await _http.put('proveedores/$id', data);
+  Future<void> updateProveedor(int id, Proveedor proveedor) async {
+    await _http.put('proveedores/$id', proveedor.toJson());
   }
 
   Future<Map<String, dynamic>> createCompra(Map<String, dynamic> data) async {

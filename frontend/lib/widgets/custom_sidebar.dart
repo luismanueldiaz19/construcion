@@ -37,16 +37,22 @@ class _CustomSidebarState extends State<CustomSidebar> {
   void _updateExpandedSection() {
     // Determine which section should be open based on selectedIndex
     if (widget.selectedIndex >= 0 && widget.selectedIndex <= 2) {
-      _expandedSection = 'GESTIÓN';
-    } else if ((widget.selectedIndex >= 3 && widget.selectedIndex <= 6) ||
+      _expandedSection = 'GESTIÓN PROYECTOS';
+    } else if (widget.selectedIndex == 3 || widget.selectedIndex == 10) {
+      _expandedSection = 'PROVEEDORES';
+    } else if (widget.selectedIndex == 5 || widget.selectedIndex == 7) {
+      _expandedSection = 'COMPRAS';
+    } else if (widget.selectedIndex == 4 ||
+        widget.selectedIndex == 6 ||
         widget.selectedIndex == 9) {
       _expandedSection = 'INVENTARIO';
-    } else if (widget.selectedIndex >= 10 && widget.selectedIndex <= 13) {
+    } else if (widget.selectedIndex == 11 ||
+        widget.selectedIndex == 12 ||
+        widget.selectedIndex == 13 ||
+        widget.selectedIndex == 8) {
       _expandedSection = 'FINANZAS';
-    } else if (widget.selectedIndex == 7 || widget.selectedIndex == 8) {
-      _expandedSection = 'REPORTES';
     } else if (widget.selectedIndex == 14) {
-      _expandedSection = 'SISTEMA';
+      _expandedSection = 'CONFIGURACIÓN';
     }
   }
 
@@ -92,69 +98,88 @@ class _CustomSidebarState extends State<CustomSidebar> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               children: [
                 _buildExpansionSection(
-                  'GESTIÓN',
+                  'GESTIÓN PROYECTOS',
                   Icons.business_center_outlined,
                   [
                     _buildMenuItem(
                       0,
-                      Icons.dashboard_outlined,
-                      Icons.dashboard,
-                      'Dashboard',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      1,
                       Icons.business_outlined,
                       Icons.business,
                       'Proyectos',
                       accentColor,
                     ),
                     _buildMenuItem(
+                      1,
+                      Icons.dashboard_outlined,
+                      Icons.dashboard,
+                      'Dashboard Principal',
+                      accentColor,
+                    ),
+
+                    _buildMenuItem(
                       2,
-                      Icons.calendar_today_outlined,
-                      Icons.calendar_today,
-                      'Historial Proyectos',
+                      Icons.history_outlined,
+                      Icons.history,
+                      'Historial de Proyectos',
                       accentColor,
                     ),
                   ],
                 ),
+                _buildExpansionSection('PROVEEDORES', Icons.people_outline, [
+                  _buildMenuItem(
+                    3,
+                    Icons.contact_phone_outlined,
+                    Icons.contact_phone,
+                    'Directorio de Proveedores',
+                    accentColor,
+                  ),
+                  _buildMenuItem(
+                    10,
+                    Icons.money_off_outlined,
+                    Icons.money_off,
+                    'Cuentas por Pagar',
+                    accentColor,
+                  ),
+                ]),
+                _buildExpansionSection('COMPRAS', Icons.shopping_bag_outlined, [
+                  _buildMenuItem(
+                    5,
+                    Icons.add_shopping_cart_outlined,
+                    Icons.add_shopping_cart,
+                    'Nueva Orden de Compra',
+                    accentColor,
+                  ),
+                  _buildMenuItem(
+                    7,
+                    Icons.receipt_long_outlined,
+                    Icons.receipt_long,
+                    'Registro de Compras',
+                    accentColor,
+                  ),
+                ]),
                 _buildExpansionSection(
                   'INVENTARIO',
                   Icons.inventory_2_outlined,
                   [
                     _buildMenuItem(
-                      3,
-                      Icons.people_outline,
-                      Icons.people,
-                      'Proveedores',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
                       4,
-                      Icons.inventory_outlined,
-                      Icons.inventory,
-                      'Productos',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      5,
-                      Icons.add_shopping_cart_outlined,
-                      Icons.add_shopping_cart,
-                      'Nueva Compra',
+                      Icons.category_outlined,
+                      Icons.category,
+                      'Catálogo de Productos',
                       accentColor,
                     ),
                     _buildMenuItem(
                       6,
                       Icons.local_shipping_outlined,
                       Icons.local_shipping,
-                      'Recepción',
+                      'Recepción de Material',
                       accentColor,
                     ),
                     _buildMenuItem(
                       9,
                       Icons.storage_outlined,
                       Icons.storage,
-                      'Inventario Proy.',
+                      'Stock por Proyecto',
                       accentColor,
                     ),
                   ],
@@ -164,13 +189,6 @@ class _CustomSidebarState extends State<CustomSidebar> {
                   Icons.account_balance_wallet_outlined,
                   [
                     _buildMenuItem(
-                      10,
-                      Icons.money_off_outlined,
-                      Icons.money_off,
-                      'Cuentas por Pagar',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
                       11,
                       Icons.pending_actions_outlined,
                       Icons.pending_actions,
@@ -179,45 +197,40 @@ class _CustomSidebarState extends State<CustomSidebar> {
                     ),
                     _buildMenuItem(
                       12,
-                      Icons.history_outlined,
-                      Icons.history,
-                      'Historial de Pagos',
+                      Icons.payments_outlined,
+                      Icons.payments,
+                      'Control de Pagos',
                       accentColor,
                     ),
                     _buildMenuItem(
                       13,
                       Icons.account_balance_outlined,
                       Icons.account_balance,
-                      'Contabilidad',
+                      'Libro Contable',
+                      accentColor,
+                    ),
+                    _buildMenuItem(
+                      8,
+                      Icons.money_outlined,
+                      Icons.money,
+                      'Control de Gastos',
                       accentColor,
                     ),
                   ],
                 ),
-                _buildExpansionSection('REPORTES', Icons.bar_chart_outlined, [
-                  _buildMenuItem(
-                    7,
-                    Icons.shopping_cart_outlined,
-                    Icons.shopping_cart,
-                    'Compras',
-                    accentColor,
-                  ),
-                  _buildMenuItem(
-                    8,
-                    Icons.receipt_long_outlined,
-                    Icons.receipt_long,
-                    'Gastos',
-                    accentColor,
-                  ),
-                ]),
-                _buildExpansionSection('SISTEMA', Icons.settings_outlined, [
-                  _buildMenuItem(
-                    14,
-                    Icons.settings_outlined,
-                    Icons.settings,
-                    'Configuración',
-                    accentColor,
-                  ),
-                ]),
+                _buildExpansionSection(
+                  'CONFIGURACIÓN',
+                  Icons.settings_outlined,
+                  [
+                    _buildMenuItem(
+                      14,
+                      Icons.admin_panel_settings_outlined,
+                      Icons.admin_panel_settings,
+                      'Ajustes del Sistema',
+                      accentColor,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

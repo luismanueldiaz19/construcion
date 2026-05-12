@@ -46,6 +46,10 @@ class CompraController extends Controller
             'fecha' => 'required|date',
             'fecha_vencimiento' => 'nullable|date',
             'tipo_compra' => 'required|in:Contado,Crédito',
+            'orden' => 'nullable|string',
+            'codigo' => 'nullable|string',
+            'comprobante' => 'nullable|string|unique:compras,comprobante',
+            'nota' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.material_id' => 'required|exists:materiales,id',
             'items.*.cantidad' => 'required|numeric|min:0.01',
@@ -62,6 +66,12 @@ class CompraController extends Controller
             $subtotal = $total / 1.18;
             $itbis = $total - $subtotal;
 
+            // Generar comprobante único si no se envió uno
+            $comprobante = $validated['comprobante'];
+            if (empty($comprobante)) {
+                $comprobante = 'CP-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
+            }
+
             // 1. Crear Compra
             $compra = Compra::create([
                 'proveedor_id' => $validated['proveedor_id'],
@@ -73,6 +83,10 @@ class CompraController extends Controller
                 'total' => $total,
                 'fecha_vencimiento' => $validated['fecha_vencimiento'] ?? null,
                 'estado' => 'Pendiente',
+                'orden' => $validated['orden'] ?? null,
+                'codigo' => $validated['codigo'] ?? null,
+                'comprobante' => $comprobante,
+                'nota' => $validated['nota'] ?? null,
             ]);
 
             // 2. Crear Detalles

@@ -61,6 +61,22 @@
             <td class="bold">Proyecto:</td>
             <td>{{ $compra->proyecto->nombre }}</td>
         </tr>
+        @if($compra->orden)
+        <tr>
+            <td class="bold">Orden #:</td>
+            <td>{{ $compra->orden }}</td>
+        </tr>
+        @endif
+        @if($compra->codigo)
+        <tr>
+            <td class="bold">Código Ref:</td>
+            <td>{{ $compra->codigo }}</td>
+        </tr>
+        @endif
+        <tr>
+            <td class="bold">Comprobante:</td>
+            <td>{{ $compra->comprobante }}</td>
+        </tr>
         <tr>
             <td class="bold">Tipo:</td>
             <td>{{ $compra->tipo_compra }}</td>
@@ -112,6 +128,14 @@
     </table>
 
     <div class="divider"></div>
+
+    @if($compra->nota)
+    <div style="margin: 10px 0;">
+        <span class="bold">Notas:</span><br>
+        {{ $compra->nota }}
+    </div>
+    <div class="divider"></div>
+    @endif
 
     <div class="footer">
         <p>Generado por Sistema ERP</p>

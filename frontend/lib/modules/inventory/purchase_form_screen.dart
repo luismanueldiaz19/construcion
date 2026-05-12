@@ -7,6 +7,8 @@ import '../../services/project_service.dart';
 import '../../services/inventory_service.dart';
 import '../../services/purchase_service.dart';
 import '../../core/constants.dart';
+import '../../widgets/proveedor_dialog.dart';
+import '../../models/proveedor.dart';
 import '../../widgets/search_selector_dialog.dart';
 
 class PurchaseFormScreen extends StatefulWidget {
@@ -30,8 +32,14 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
   List<dynamic> _materiales = [];
   List<dynamic> _proyectos = [];
-  List<dynamic> _proveedores = [];
+  List<Proveedor> _proveedores = [];
   List<Map<String, dynamic>> _items = [];
+
+  final _ordenController = TextEditingController();
+  final _codigoController = TextEditingController();
+  final _comprobanteController = TextEditingController();
+  final _notaController = TextEditingController();
+  final _horizontalScrollController = ScrollController();
 
   bool _isLoading = true;
   bool _isSubmitting = false;
@@ -50,7 +58,9 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       final suppliers = await _purchaseService.getProveedores();
       setState(() {
         _materiales = materials;
-        _proyectos = projects.map((p) => p.toJson()).toList(); // Convertir a Map para compatibilidad con el resto del código
+        _proyectos = projects
+            .map((p) => p.toJson())
+            .toList(); // Convertir a Map para compatibilidad con el resto del código
         _proveedores = suppliers;
         _isLoading = false;
       });
@@ -62,6 +72,24 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   }
 
   void _addItem() {
+    // Validar que el último ítem agregado esté completo antes de permitir agregar otro
+    if (_items.isNotEmpty) {
+      final lastItem = _items.last;
+      if (lastItem['material_id'] == null ||
+          (lastItem['cantidad'] ?? 0) <= 0 ||
+          (lastItem['precio_unitario'] ?? 0) <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Por favor complete el material actual antes de agregar otro',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       _items.add({
         'material_id': null,
@@ -90,6 +118,19 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
     setState(() => _isSubmitting = true);
 
+    // Validar que todos los ítems tengan un material seleccionado
+    bool allItemsValid = _items.every((item) => item['material_id'] != null);
+    if (!allItemsValid) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hay materiales sin seleccionar en el detalle'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     try {
       final data = {
         'proveedor_id': _selectedProveedorId,
@@ -99,6 +140,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             ? DateFormat('yyyy-MM-dd').format(_fechaVencimiento!)
             : null,
         'tipo_compra': _tipoCompra,
+        'orden': _ordenController.text,
+        'codigo': _codigoController.text,
+        'comprobante': _comprobanteController.text,
+        'nota': _notaController.text,
         'items': _items
             .map(
               (item) => {
@@ -151,6 +196,16 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _ordenController.dispose();
+    _codigoController.dispose();
+    _comprobanteController.dispose();
+    _notaController.dispose();
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
+
   void _resetForm() {
     setState(() {
       _selectedProveedorId = null;
@@ -158,6 +213,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       _tipoCompra = 'Contado';
       _fecha = DateTime.now();
       _fechaVencimiento = null;
+      _ordenController.clear();
+      _codigoController.clear();
+      _comprobanteController.clear();
+      _notaController.clear();
       _items = [
         {'material_id': null, 'cantidad': 0.0, 'precio_unitario': 0.0},
       ];
@@ -177,9 +236,14 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('Nueva Compra de Materiales'),
+        title: const Text('Nueva Compra de Materiales'),
         backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.textPrimary,
+        actions: [
+          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
+          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+          const SizedBox(width: 8),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -192,23 +256,13 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                     child: Form(
                       key: _formKey,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildHeader(),
-                          const SizedBox(height: 32),
-                          const Text(
-                            'Detalle de Materiales',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildItemsList(),
+                          _buildHeaderCard(),
                           const SizedBox(height: 24),
-                          _buildTotals(subtotal, itbis, total, f),
-                          const SizedBox(height: 32),
-                          _buildActions(),
+                          _buildItemsSection(),
+                          const SizedBox(height: 24),
+                          _buildFooterSection(subtotal, itbis, total, f),
                         ],
                       ),
                     ),
@@ -216,7 +270,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 ),
                 if (_isSubmitting)
                   Container(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(alpha: 0.3),
                     child: const Center(
                       child: Card(
                         elevation: 4,
@@ -229,7 +283,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CircularProgressIndicator(),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
                               Text(
                                 'Registrando Compra...',
                                 style: TextStyle(
@@ -248,292 +302,475 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeaderCard() {
     return Card(
-      elevation: 0,
-      color: Colors.grey[50],
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[200]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSearchableSelector(
-                    label: 'Proveedor',
-                    value: _selectedProveedorId,
-                    items: _proveedores,
-                    onChanged: (v) => setState(() => _selectedProveedorId = v),
-                    displayMapper: (p) => p['nombre'],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: _selectedProyectoId,
-                    decoration: const InputDecoration(
-                      labelText: 'Proyecto Destino',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _proyectos
-                        .map(
-                          (p) => DropdownMenuItem<int>(
-                            value: p['id'],
-                            child: Text(p['nombre']),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedProyectoId = v),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _tipoCompra,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipo de Compra',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Contado',
-                        child: Text('Contado (Pago Inmediato)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Crédito',
-                        child: Text('Crédito (Cuenta por Pagar)'),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => _tipoCompra = v!),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _fecha,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (date != null) setState(() => _fecha = date);
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Fecha de Factura',
-                        border: OutlineInputBorder(),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd/MM/yyyy').format(_fecha)),
-                          const Icon(Icons.calendar_today),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (_tipoCompra == 'Crédito') ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate:
-                              _fechaVencimiento ??
-                              _fecha.add(const Duration(days: 30)),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
-                        if (date != null) {
-                          setState(() => _fechaVencimiento = date);
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Fecha de Vencimiento',
-                          border: OutlineInputBorder(),
-                          hintText: 'Seleccione fecha de vencimiento',
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _fechaVencimiento != null
-                                  ? DateFormat(
-                                      'dd/MM/yyyy',
-                                    ).format(_fechaVencimiento!)
-                                  : 'No seleccionada',
-                            ),
-                            const Icon(Icons.event_note),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                ],
+      clipBehavior: Clip.antiAlias,
+      elevation: 2,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: const Color(0xFF1E4D7B), // Color azul oscuro del modelo
+            child: const Text(
+              'Detalles de Compra',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
-            ],
-          ],
-        ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: 350,
+                      child: _buildSearchableSelector(
+                        label: 'Proveedor',
+                        value: _selectedProveedorId,
+                        items: _proveedores,
+                        onChanged: (v) => setState(() => _selectedProveedorId = v),
+                        displayMapper: (p) => p.nombre,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 350,
+                      child: DropdownButtonFormField<int>(
+                        value: _selectedProyectoId,
+                        decoration: const InputDecoration(
+                          labelText: 'Proyecto Destino',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _proyectos
+                            .map(
+                              (p) => DropdownMenuItem<int>(
+                                value: p['id'],
+                                child: Text(p['nombre']),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() => _selectedProyectoId = v),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 350,
+                      child: DropdownButtonFormField<String>(
+                        value: _tipoCompra,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de Compra',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Contado',
+                            child: Text('Contado (Pago Inmediato)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Crédito',
+                            child: Text('Crédito (Cuenta por Pagar)'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => _tipoCompra = v!),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 350,
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _fecha,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) setState(() => _fecha = date);
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Fecha de Factura',
+                            border: OutlineInputBorder(),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(DateFormat('dd/MM/yyyy').format(_fecha)),
+                              const Icon(Icons.calendar_today, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_tipoCompra == 'Crédito') ...[
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 350,
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate:
+                                _fechaVencimiento ??
+                                _fecha.add(const Duration(days: 30)),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) {
+                            setState(() => _fechaVencimiento = date);
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Fecha de Vencimiento',
+                            border: OutlineInputBorder(),
+                            hintText: 'Seleccione fecha de vencimiento',
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _fechaVencimiento != null
+                                    ? DateFormat('dd/MM/yyyy').format(_fechaVencimiento!)
+                                    : 'No seleccionada',
+                              ),
+                              const Icon(Icons.event_note, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: 228,
+                      child: TextField(
+                        controller: _ordenController,
+                        decoration: const InputDecoration(
+                          labelText: 'Orden #',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.receipt_long, size: 18),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 228,
+                      child: TextField(
+                        controller: _codigoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Código Ref.',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.qr_code, size: 18),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 228,
+                      child: TextField(
+                        controller: _comprobanteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Comprobante',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.confirmation_number, size: 18),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey[50],
+              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 20, color: Color(0xFF1E4D7B)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _notaController,
+                    decoration: const InputDecoration(
+                      hintText: 'Notas / Observaciones del material...',
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: _addItem,
+                  icon: const Icon(Icons.add_shopping_cart, size: 16),
+                  label: const Text('Agregar Material'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E4D7B),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildItemsList() {
+  Widget _buildItemsSection() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...List.generate(_items.length, (index) => _buildItemRow(index)),
-        const SizedBox(height: 12),
-        TextButton.icon(
-          onPressed: _addItem,
-          icon: const Icon(Icons.add_circle_outline),
-          label: const Text('Agregar otro material'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Detalle de Materiales',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003366),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: _addItem,
+              icon: const Icon(Icons.add_shopping_cart, size: 18),
+              label: const Text('Agregar Material'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF003366),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey[200]!),
+          ),
+          child: Scrollbar(
+            controller: _horizontalScrollController,
+            child: SingleChildScrollView(
+              controller: _horizontalScrollController,
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: 900,
+                  child: Table(
+                    columnWidths: const {
+                      0: FixedColumnWidth(350), // Material
+                      1: FixedColumnWidth(80),  // Cant
+                      2: FixedColumnWidth(120), // Precio
+                      3: FixedColumnWidth(120), // ITBIS
+                      4: FixedColumnWidth(150), // Total
+                      5: FixedColumnWidth(50),  // Delete
+                    },
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      // Header Row
+                      TableRow(
+                        children: [
+                          _buildTableHeader('Descripción del Material'),
+                          _buildTableHeader('Cant.'),
+                          _buildTableHeader('Precio Unit.'),
+                          _buildTableHeader('ITBIS (18%)'),
+                          _buildTableHeader('Importe Total'),
+                          const SizedBox(), // Empty for delete button
+                        ],
+                      ),
+                      // Data Rows
+                      ...List.generate(
+                        _items.length,
+                        (index) => _buildItemTableRow(index),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildItemRow(int index) {
-    final item = _items[index];
+  Widget _buildTableHeader(String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: _buildSearchableSelector(
-              label: 'Material',
-              value: item['material_id'],
-              items: _materiales,
-              onChanged: (v) {
-                setState(() {
-                  item['material_id'] = v;
-                  final selectedMaterial = _materiales.firstWhere(
-                    (m) => m['id'] == v,
-                    orElse: () => null,
-                  );
-                  if (selectedMaterial != null) {
-                    item['precio_unitario'] =
-                        double.tryParse(
-                          selectedMaterial['precio_costo']?.toString() ?? '0',
-                        ) ??
-                        0.0;
-                  }
-                });
-              },
-              displayMapper: (m) => "${m['nombre']} (${m['unidad']})",
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 1,
-            child: TextFormField(
-              initialValue: item['cantidad'] == 0
-                  ? ''
-                  : item['cantidad'].toString(),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,4}')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Cant.',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) =>
-                  (double.tryParse(v ?? '') ?? 0) <= 0 ? '!' : null,
-              onChanged: (v) =>
-                  setState(() => item['cantidad'] = double.tryParse(v) ?? 0.0),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 1,
-            child: TextFormField(
-              key: Key("price_${item['material_id']}_$index"),
-              initialValue: item['precio_unitario'] == 0
-                  ? ''
-                  : item['precio_unitario'].toString(),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Precio Unit.',
-                border: OutlineInputBorder(),
-                prefixText: '\$',
-              ),
-              validator: (v) =>
-                  (double.tryParse(v ?? '') ?? 0) <= 0 ? '!' : null,
-              onChanged: (v) => setState(
-                () => item['precio_unitario'] = double.tryParse(v) ?? 0.0,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 1,
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'ITBIS',
-                border: OutlineInputBorder(),
-                prefixText: '\$',
-              ),
-              child: Text(
-                NumberFormat('#,###.##').format(
-                  (item['cantidad'] * item['precio_unitario']) -
-                      (item['cantidad'] * item['precio_unitario'] / 1.18),
-                ),
-                style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 1,
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Importe',
-                border: OutlineInputBorder(),
-                prefixText: '\$',
-              ),
-              child: Text(
-                NumberFormat(
-                  '#,###.##',
-                ).format(item['cantidad'] * item['precio_unitario']),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () => _removeItem(index),
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-          ),
-        ],
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[700],
+          fontSize: 13,
+        ),
       ),
+    );
+  }
+
+  TableRow _buildItemTableRow(int index) {
+    final item = _items[index];
+    return TableRow(
+      children: [
+        // Material Selector
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: _buildSearchableSelector(
+            label: 'Material',
+            value: item['material_id'],
+            items: _materiales,
+            onChanged: (v) {
+              // Verificar si el material ya ha sido seleccionado en otra fila
+              bool isDuplicate = _items.any(
+                (element) => element['material_id'] == v,
+              );
+              if (isDuplicate) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Este material ya ha sido agregado a la lista'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return;
+              }
+
+              setState(() {
+                item['material_id'] = v;
+                final selectedMaterial = _materiales.cast<dynamic>().firstWhere(
+                  (m) => m['id'] == v,
+                  orElse: () => null,
+                );
+                if (selectedMaterial != null) {
+                  item['precio_unitario'] =
+                      double.tryParse(
+                        selectedMaterial['precio_costo']?.toString() ?? '0',
+                      ) ??
+                      0.0;
+                }
+              });
+            },
+            displayMapper: (m) => "${m['nombre']} (${m['unidad']})",
+          ),
+        ),
+        // Cantidad
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: TextFormField(
+            initialValue: item['cantidad'] == 0
+                ? ''
+                : item['cantidad'].toString(),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,4}')),
+            ],
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 12,
+              ),
+            ),
+            validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0 ? '!' : null,
+            onChanged: (v) =>
+                setState(() => item['cantidad'] = double.tryParse(v) ?? 0.0),
+          ),
+        ),
+        // Precio Unitario
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: TextFormField(
+            key: Key("price_${item['material_id']}_$index"),
+            initialValue: item['precio_unitario'] == 0
+                ? ''
+                : item['precio_unitario'].toString(),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+            ],
+            decoration: const InputDecoration(
+              prefixText: '\$',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 12,
+              ),
+            ),
+            validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0 ? '!' : null,
+            onChanged: (v) => setState(
+              () => item['precio_unitario'] = double.tryParse(v) ?? 0.0,
+            ),
+          ),
+        ),
+        // ITBIS
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              NumberFormat('#,###.##').format(
+                (item['cantidad'] * item['precio_unitario']) -
+                    (item['cantidad'] * item['precio_unitario'] / 1.18),
+              ),
+              style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+            ),
+          ),
+        ),
+        // Total
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              border: Border.all(color: Colors.blue[100]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              NumberFormat(
+                '#,###.##',
+              ).format(item['cantidad'] * item['precio_unitario']),
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF003366),
+              ),
+            ),
+          ),
+        ),
+        // Delete Action
+        IconButton(
+          onPressed: () => _removeItem(index),
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          tooltip: 'Eliminar ítem',
+        ),
+      ],
     );
   }
 
@@ -544,8 +781,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     required Function(dynamic) onChanged,
     required String Function(dynamic) displayMapper,
   }) {
-    final selectedItem = items.firstWhere(
-      (i) => i['id'] == value,
+    final selectedItem = items.cast<dynamic>().firstWhere(
+      (i) => (i is Proveedor ? i.id : i['id']) == value,
       orElse: () => null,
     );
     final displayText = selectedItem != null
@@ -589,7 +826,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             return "Código: ${item['codigo'] ?? 'N/A'} | Unidad: ${item['unidad']}";
           }
           if (title == 'Proveedor') {
-            return "RNC: ${item['rnc'] ?? 'N/A'}";
+            return "RNC: ${(item as Proveedor).rnc ?? 'N/A'}";
           }
           return null;
         },
@@ -610,61 +847,14 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   }
 
   void _quickAddProveedor() {
-    final nombreController = TextEditingController();
-    final rncController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Proveedor Rápido'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nombreController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre *',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: rncController,
-              decoration: const InputDecoration(
-                labelText: 'RNC/Cédula',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nombreController.text.isEmpty) return;
-              try {
-                await _purchaseService.createProveedor({
-                  'nombre': nombreController.text,
-                  'rnc': rncController.text,
-                });
-                final updatedList = await _purchaseService.getProveedores();
-                setState(() => _proveedores = updatedList);
-                if (mounted) Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Proveedor creado')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => ProveedorDialog(
+        onSaved: () async {
+          final updatedList = await _purchaseService.getProveedores();
+          setState(() => _proveedores = updatedList);
+        },
       ),
     );
   }
@@ -784,34 +974,57 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     );
   }
 
+  Widget _buildFooterSection(double subtotal, double itbis, double total, NumberFormat f) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 24),
+                child: Text(
+                  'Detalle compra de Materiales editor\n- mas campos de nota',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ),
+            _buildTotals(subtotal, itbis, total, f),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildActions(),
+      ],
+    );
+  }
+
   Widget _buildTotals(
     double subtotal,
     double itbis,
     double total,
     NumberFormat f,
   ) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        width: 300,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.blueGrey[50],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            _buildTotalRow('Sub-total:', f.format(subtotal)),
-            _buildTotalRow('ITBIS (18%):', f.format(itbis)),
-            const Divider(height: 24),
-            _buildTotalRow(
-              'TOTAL GENERAL:',
-              f.format(total),
-              isBold: true,
-              color: Colors.green[800],
-            ),
-          ],
-        ),
+    return Container(
+      width: 400,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey[50]?.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _buildTotalRow('Sub-total:', f.format(subtotal)),
+          const SizedBox(height: 8),
+          _buildTotalRow('ITBIS (18%):', f.format(itbis)),
+          const Divider(height: 32),
+          _buildTotalRow(
+            'TOTAL GENERAL:',
+            f.format(total),
+            isBold: true,
+            color: Colors.green[700],
+            fontSize: 22,
+          ),
+        ],
       ),
     );
   }
@@ -821,6 +1034,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     String value, {
     bool isBold = false,
     Color? color,
+    double fontSize = 14,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -829,14 +1043,15 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
           label,
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: isBold ? Colors.black87 : Colors.grey[700],
           ),
         ),
         Text(
           value,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: isBold ? 18 : 14,
-            color: color,
+            fontSize: isBold ? fontSize : 14,
+            color: color ?? (isBold ? Colors.black87 : Colors.black),
           ),
         ),
       ],
@@ -846,15 +1061,16 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   Widget _buildActions() {
     return SizedBox(
       width: double.infinity,
-      height: 55,
+      height: 60,
       child: ElevatedButton(
         onPressed: _isSubmitting ? null : _submit,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF003366),
+          backgroundColor: const Color(0xFF1E4D7B),
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.grey[300],
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
         child: _isSubmitting
@@ -865,7 +1081,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                      color: Color(0xFF003366),
+                      color: Colors.white,
                       strokeWidth: 2,
                     ),
                   ),
@@ -878,7 +1094,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
               )
             : const Text(
                 'REGISTRAR COMPRA',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2),
               ),
       ),
     );

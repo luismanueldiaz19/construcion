@@ -15,26 +15,31 @@ class ProveedorSeeder extends Seeder
      */
     public function run(): void
     {
-
-       Proveedor::create([
-    'nombre' => 'Bellon',
-    'rnc' => '0-5959985-5',
+Proveedor::create([
+    'nombre' => 'Ing. Edgar Martinez SRL',
+    'rnc' => '105044031',
+    'telefono' => '808-586-4303',
+    'direccion' => 'Puerto plata',
+]);
+Proveedor::create([
+    'nombre' => 'Capiteria Jose',
+    'rnc' => '6253199-5',
     'telefono' => '809-555-5555',
-    'direccion' => 'Santiago',
+    'direccion' => 'Puerto plata',
 ]);
 
 Proveedor::create([
-    'nombre' => 'Ochoa',
-    'rnc' => '0-58262-5',
+    'nombre' => 'Pedro (Albañir)',
+    'rnc' => '8595',
     'telefono' => '809-555-6352',
     'direccion' => 'Santiago',
 ]);
 
 Proveedor::create([
-    'nombre' => 'Ferreteria Papo',
-    'rnc' => '0-8965-5',
-    'telefono' => '809-555-6352',
-    'direccion' => 'Santiago',
+    'nombre' => 'IMCA Cat Rentals',
+    'rnc' => '5888859-9',
+    'telefono' => '809-560-4622',
+    'direccion' => 'Autopista Duarte KM 11 ½, Villa Peravia, Santo Domingo, Rep. Dom',
 ]);
     }
 }

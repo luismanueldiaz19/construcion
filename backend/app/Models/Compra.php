@@ -15,7 +15,11 @@ class Compra extends Model
         'itbis', 
         'total', 
         'fecha_vencimiento',
-        'estado'
+        'estado',
+        'orden',
+        'codigo',
+        'comprobante',
+        'nota'
     ];
 
     public function detalles()

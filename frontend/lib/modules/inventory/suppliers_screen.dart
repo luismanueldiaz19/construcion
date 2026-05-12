@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
+import '../../models/proveedor.dart';
+import '../../widgets/proveedor_dialog.dart';
 import '../../services/purchase_service.dart';
 
 class SuppliersScreen extends StatefulWidget {
@@ -11,8 +13,8 @@ class SuppliersScreen extends StatefulWidget {
 
 class _SuppliersScreenState extends State<SuppliersScreen> {
   final PurchaseService _purchaseService = PurchaseService();
-  List<dynamic> _proveedores = [];
-  List<dynamic> _filteredProveedores = [];
+  List<Proveedor> _proveedores = [];
+  List<Proveedor> _filteredProveedores = [];
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
 
@@ -35,10 +37,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       _filteredProveedores = _proveedores
           .where(
             (p) =>
-                p['nombre'].toString().toLowerCase().contains(
+                p.nombre.toLowerCase().contains(
                   _searchController.text.toLowerCase(),
                 ) ||
-                (p['rnc']?.toString().toLowerCase().contains(
+                (p.rnc?.toLowerCase().contains(
                       _searchController.text.toLowerCase(),
                     ) ??
                     false),
@@ -58,6 +60,14 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar proveedores: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -74,6 +84,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
             onPressed: () => _showSupplierDialog(),
             icon: const Icon(Icons.person_add),
             label: const Text('Nuevo Proveedor'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF003366),
+              foregroundColor: Colors.white,
+            ),
           ),
           const SizedBox(width: 16),
         ],
@@ -93,47 +107,116 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       filled: true,
-                      fillColor: Colors.grey[50],
+                      fillColor: Colors.white,
                     ),
                   ),
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    child: SizedBox(
-                      width: double.infinity,
+                  child: Container(
+                    margin: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(
-                            Colors.grey[100],
-                          ),
-                          columns: const [
-                            DataColumn(label: Text('Nombre / Empresa')),
-                            DataColumn(label: Text('RNC')),
-                            DataColumn(label: Text('Teléfono')),
-                            DataColumn(label: Text('Acciones')),
-                          ],
-                          rows: _filteredProveedores.map((p) {
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(p['nombre'] ?? '')),
-                                DataCell(Text(p['rnc'] ?? 'N/A')),
-                                DataCell(Text(p['telefono'] ?? 'N/A')),
-                                DataCell(
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
+                        scrollDirection: Axis.vertical,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(
+                                const Color(0xFFF8F9FA),
+                              ),
+                              columns: const [
+                                DataColumn(
+                                  label: Text(
+                                    'Nombre / Empresa',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    onPressed: () =>
-                                        _showSupplierDialog(supplier: p),
-                                    tooltip: 'Editar',
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'RNC',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Teléfono',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Dirección',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Acciones',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
-                            );
-                          }).toList(),
+                              rows: _filteredProveedores.map((p) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(p.nombre)),
+                                    DataCell(Text(p.rnc ?? 'N/A')),
+                                    DataCell(Text(p.telefono ?? 'N/A')),
+                                    DataCell(
+                                      SizedBox(
+                                        width: 200,
+                                        child: Text(
+                                          p.direccion ?? 'N/A',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              color: Colors.blue,
+                                            ),
+                                            onPressed: () =>
+                                                _showSupplierDialog(
+                                                  supplier: p,
+                                                ),
+                                            tooltip: 'Editar',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -144,241 +227,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     );
   }
 
-  void _showSupplierDialog({Map<String, dynamic>? supplier}) {
-    final bool isEdit = supplier != null;
-    final nameController = TextEditingController(text: supplier?['nombre']);
-    final rncController = TextEditingController(text: supplier?['rnc']);
-    final phoneController = TextEditingController(text: supplier?['telefono']);
-    bool isSaving = false;
-
+  void _showSupplierDialog({Proveedor? supplier}) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 450),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Cabecera Premium
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF003366),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isEdit ? Icons.edit_note : Icons.person_add_alt_1,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isEdit ? 'Editar Proveedor' : 'Nuevo Proveedor',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Text(
-                                'Registre la información fiscal y de contacto',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white70),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Información General',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueGrey,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        TextField(
-                          controller: nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Nombre / Razón Social *',
-                            prefixIcon: const Icon(Icons.business),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        TextField(
-                          controller: rncController,
-                          decoration: InputDecoration(
-                            labelText: 'RNC / Cédula',
-                            prefixIcon: const Icon(Icons.badge_outlined),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            hintText: 'Ej: 131-XXXXX-X',
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        const Text(
-                          'Contacto',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueGrey,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        TextField(
-                          controller: phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            labelText: 'Teléfono de Contacto',
-                            prefixIcon: const Icon(Icons.phone),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Botón de Acción
-                        SizedBox(
-                          width: double.infinity,
-                          height: 55,
-                          child: ElevatedButton(
-                            onPressed: isSaving
-                                ? null
-                                : () async {
-                                    if (nameController.text.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'El nombre es obligatorio',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    setModalState(() => isSaving = true);
-                                    final data = {
-                                      'nombre': nameController.text,
-                                      'rnc': rncController.text,
-                                      'telefono': phoneController.text,
-                                    };
-
-                                    try {
-                                      if (isEdit) {
-                                        await _purchaseService.updateProveedor(
-                                          supplier['id'],
-                                          data,
-                                        );
-                                      } else {
-                                        await _purchaseService.createProveedor(data);
-                                      }
-                                      if (mounted) {
-                                        Navigator.pop(context);
-                                        _loadData();
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              isEdit
-                                                  ? 'Proveedor actualizado'
-                                                  : 'Proveedor registrado con éxito',
-                                            ),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      setModalState(() => isSaving = false);
-                                      if (mounted)
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                    }
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFA000),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: isSaving
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    isEdit
-                                        ? 'ACTUALIZAR PROVEEDOR'
-                                        : 'REGISTRAR PROVEEDOR',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      builder: (context) =>
+          ProveedorDialog(supplier: supplier, onSaved: _loadData),
     );
   }
 }

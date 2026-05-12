@@ -58,9 +58,9 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    // const DashboardScreen(),
-    const Center(child: Text('No se implementara')),
     const ProjectsScreen(),
+    const Center(child: Text('No se implementara')),
+
     const HistorialProyectosScreen(),
     const SuppliersScreen(),
     const ProductsScreen(),
@@ -82,7 +82,7 @@ class _MainLayoutState extends State<MainLayout> {
       body: Row(
         children: [
           CustomSidebar(
-            extended: MediaQuery.of(context).size.width > 1200,
+            extended: MediaQuery.of(context).size.width > 850,
             selectedIndex: _selectedIndex,
             onDestinationSelected: (int index) {
               setState(() {
