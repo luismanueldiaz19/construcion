@@ -1,17 +1,14 @@
 import 'package:construccion_erp/modules/projects/historial_proyectos_screen.dart';
 import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
-import 'modules/dashboard/dashboard_screen.dart';
 import 'modules/projects/projects_screen.dart';
 import 'modules/accounting/accounting_screen.dart';
 import 'modules/accounting/cuentas_por_pagar_screen.dart';
 import 'modules/accounting/cuentas_por_cobrar_screen.dart';
 import 'modules/payments/payments_screen.dart';
-import 'modules/payments/cobros_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
 import 'modules/reports/compras_report_screen.dart';
 import 'modules/reports/gastos_report_screen.dart';
-
 import 'modules/inventory/suppliers_screen.dart';
 import 'modules/inventory/purchase_form_screen.dart';
 import 'modules/inventory/products_screen.dart';
