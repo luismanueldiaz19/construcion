@@ -36,4 +36,9 @@ class Compra extends Model
     {
         return $this->belongsTo(Proyecto::class);
     }
+
+    public function documentos()
+    {
+        return $this->hasMany(CompraDocumento::class);
+    }
 }

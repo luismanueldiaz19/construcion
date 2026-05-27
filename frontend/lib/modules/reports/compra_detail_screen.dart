@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/constants.dart';
 import '../../services/purchase_service.dart';
 
@@ -81,7 +82,10 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Detalle de Compra #${_compra!['id']}'),
+        title: Text(
+          'Detalle de Compra #${_compra!['id']}',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         actions: [
@@ -123,6 +127,8 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
                 _buildItemsTable(detalles, f),
                 const SizedBox(height: 24),
                 _buildTotalsCard(f),
+                const SizedBox(height: 24),
+                _buildDocumentosSection(primaryColor),
               ],
             ),
           ),
@@ -207,6 +213,57 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildInfoItem(
+                    'Comprobante',
+                    _compra!['comprobante'] ?? 'N/A',
+                    Icons.confirmation_number,
+                  ),
+                ),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Orden #',
+                    _compra!['orden'] ?? 'N/A',
+                    Icons.receipt_long,
+                  ),
+                ),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Código Ref.',
+                    _compra!['codigo'] ?? 'N/A',
+                    Icons.qr_code,
+                  ),
+                ),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Vencimiento',
+                    _compra!['fecha_vencimiento']?.toString().split('T')[0] ??
+                        'N/A',
+                    Icons.event_note,
+                  ),
+                ),
+              ],
+            ),
+            if (_compra!['nota'] != null &&
+                _compra!['nota'].toString().isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildInfoItem(
+                      'Notas / Observaciones',
+                      _compra!['nota'] ?? 'N/A',
+                      Icons.info_outline,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -381,5 +438,181 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildDocumentosSection(Color primaryColor) {
+    final documentos = _compra!['documentos'] as List? ?? [];
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Evidencias y Documentos',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _uploadDocumento,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Subir Evidencia'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (documentos.isEmpty)
+              const Text(
+                'No hay documentos adjuntos.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            if (documentos.isNotEmpty)
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: documentos.length,
+                itemBuilder: (context, index) {
+                  final doc = documentos[index];
+                  return ListTile(
+                    leading: const Icon(
+                      Icons.insert_drive_file,
+                      color: Colors.blueGrey,
+                    ),
+                    title: Text(doc['original_name'] ?? 'Documento'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.open_in_new,
+                            color: Colors.blue,
+                          ),
+                          onPressed: () async {
+                            final url = Uri.parse(
+                              '$host/storage/${doc['file_path']}',
+                            );
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No se pudo abrir el documento',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _confirmDeleteDocumento(doc['id']),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadDocumento() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        setState(() => _isLoading = true);
+        await _purchaseService.uploadDocumentoCompra(
+          widget.compraId,
+          result.files.single.path!,
+        );
+        await _loadCompra(); // Recargar para ver el nuevo documento
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Documento subido correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir documento: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteDocumento(int docId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Documento'),
+        content: const Text('¿Está seguro que desea eliminar este documento?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        await _purchaseService.deleteDocumentoCompra(docId);
+        await _loadCompra();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Documento eliminado correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }

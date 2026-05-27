@@ -21,9 +21,55 @@ class CompraController extends Controller
         $this->asientoService = $asientoService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return Compra::with('proveedor', 'proyecto', 'detalles.material')->latest()->get();
+        $query = Compra::with('proveedor', 'proyecto', 'detalles.material')->latest();
+
+        if ($request->has('proyecto_id') && $request->proyecto_id !== 'null') {
+            $query->where('proyecto_id', $request->proyecto_id);
+        }
+        if ($request->has('proveedor_id') && $request->proveedor_id !== 'null') {
+            $query->where('proveedor_id', $request->proveedor_id);
+        }
+        if ($request->has('estado') && $request->estado !== 'null') {
+            $query->where('estado', $request->estado);
+        }
+        if ($request->has('fecha_inicio') && $request->fecha_inicio !== 'null') {
+            $query->whereDate('fecha', '>=', $request->fecha_inicio);
+        }
+        if ($request->has('fecha_fin') && $request->fecha_fin !== 'null') {
+            $query->whereDate('fecha', '<=', $request->fecha_fin);
+        }
+        if ($request->has('search') && !empty($request->search)) {
+            $search = strtolower($request->search);
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'like', "%$search%")
+                  ->orWhere('comprobante', 'like', "%$search%")
+                  ->orWhere('orden', 'like', "%$search%")
+                  ->orWhere('codigo', 'like', "%$search%");
+            });
+        }
+
+        // Sumarize the filtered query before pagination
+        $summaryQuery = clone $query;
+        $subtotal = $summaryQuery->sum('subtotal');
+        $itbis = $summaryQuery->sum('itbis');
+        $total = $summaryQuery->sum('total');
+
+        $perPage = $request->get('per_page', 10);
+        $paginated = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $paginated->items(),
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
+            'summary' => [
+                'subtotal' => $subtotal,
+                'itbis' => $itbis,
+                'total' => $total
+            ]
+        ]);
     }
 
     public function pendientes()
@@ -35,7 +81,7 @@ class CompraController extends Controller
     }
 
     public function show($id){
-        return Compra::with('proveedor', 'proyecto', 'detalles.material')->findOrFail($id);
+        return Compra::with('proveedor', 'proyecto', 'detalles.material', 'documentos')->findOrFail($id);
     }
 
     public function store(Request $request)
@@ -180,5 +226,42 @@ class CompraController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.compra_ticket', compact('compra'))
             ->setPaper([0, 0, 226.77, 600]);
         return $pdf->stream("ticket_compra_{$compra->id}.pdf");
+    }
+
+    public function uploadDocumento(Request $request, $id)
+    {
+        $compra = Compra::findOrFail($id);
+
+        $request->validate([
+            'documento' => 'required|file|mimes:pdf,jpeg,png,jpg|max:15360',
+        ]);
+
+        if ($request->hasFile('documento')) {
+            $file = $request->file('documento');
+            $originalName = $file->getClientOriginalName();
+            $path = $file->store('compras_documentos', 'public');
+
+            $compra->documentos()->create([
+                'file_path' => $path,
+                'file_type' => $file->getClientMimeType(),
+                'original_name' => $originalName,
+            ]);
+
+            return response()->json(['message' => 'Documento subido correctamente']);
+        }
+
+        return response()->json(['message' => 'No se ha proporcionado ningún archivo'], 400);
+    }
+
+    public function deleteDocumento($documentoId)
+    {
+        $documento = \App\Models\CompraDocumento::findOrFail($documentoId);
+        
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($documento->file_path)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($documento->file_path);
+        }
+        
+        $documento->delete();
+        return response()->json(['message' => 'Documento eliminado correctamente']);
     }
 }

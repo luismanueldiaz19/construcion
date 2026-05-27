@@ -135,6 +135,25 @@
             </tr>
         </table>
 
+        <!-- Detalles Adicionales de la Compra -->
+        <table class="info-table" style="margin-top: -10px;">
+            <tr>
+                <td class="info-box" style="width: 100%;">
+                    <h3>Detalles de la Factura</h3>
+                    <table style="width: 100%; font-size: 12px;">
+                        <tr>
+                            <td><strong>Comprobante:</strong> {{ $compra->comprobante ?? 'N/A' }}</td>
+                            <td><strong>Orden #:</strong> {{ $compra->orden ?? 'N/A' }}</td>
+                            <td><strong>Código Ref:</strong> {{ $compra->codigo ?? 'N/A' }}</td>
+                            @if($compra->tipo_compra == 'Crédito')
+                            <td><strong>Vencimiento:</strong> {{ $compra->fecha_vencimiento ? \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d/m/Y') : 'N/A' }}</td>
+                            @endif
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
         <!-- Detalles -->
         <table class="items-table">
             <thead>
@@ -174,6 +193,13 @@
                 <td class="text-right">${{ number_format($compra->total, 2) }}</td>
             </tr>
         </table>
+
+        @if($compra->nota)
+        <div style="margin-top: 20px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd;">
+            <strong>Notas / Observaciones:</strong><br>
+            {{ $compra->nota }}
+        </div>
+        @endif
 
         <!-- Firmas -->
         <table class="signature-table">

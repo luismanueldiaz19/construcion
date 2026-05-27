@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import '../../services/project_service.dart';
 import '../../services/accounting_service.dart';
 import '../../services/purchase_service.dart';
 import '../../models/gasto_proyecto.dart';
-
+import '../../models/proveedor.dart';
 import '../../models/proyecto.dart';
 
 class GastoProyectoDialog extends StatefulWidget {
@@ -25,8 +24,8 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
   final _searchController = TextEditingController();
 
   List<dynamic> _cuentasCostos = [];
-  List<dynamic> _proveedores = [];
-  List<dynamic> _proveedoresFiltrados = [];
+  List<Proveedor> _proveedores = [];
+  List<Proveedor> _proveedoresFiltrados = [];
   List<dynamic> _bancos = [];
   List<dynamic> _subpartidas = [];
 
@@ -66,7 +65,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
             .where((c) => c['codigo'].toString().startsWith('5'))
             .toList();
 
-        _proveedores = results[1];
+        _proveedores = results[1] as List<Proveedor>;
         _bancos = results[2];
         _isLoading = false;
 
@@ -89,7 +88,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
       } else {
         _proveedoresFiltrados = _proveedores
             .where(
-              (p) => p['nombre'].toString().toLowerCase().contains(
+              (p) => p.nombre.toLowerCase().contains(
                 query.toLowerCase(),
               ),
             )
@@ -112,20 +111,22 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
 
     setState(() => _isSaving = true);
     try {
-      await _projectService.createGastoProyecto(GastoProyecto(
-        proyectoId: widget.proyecto.id!,
-        subpartidaId: _subpartidaId,
-        proveedorId: _proveedorId,
-        cuentaCostoId: _cuentaCostoId,
-        monto: double.parse(_montoController.text),
-        tipoGasto: _cuentasCostos.firstWhere(
-          (c) => c['id'] == _cuentaCostoId,
-        )['nombre'],
-        descripcion: _descController.text,
-        fecha: DateTime.now(),
-        metodoPago: _metodoPago,
-        bancoId: _metodoPago == 'Crédito' ? null : _bancoId,
-      ));
+      await _projectService.createGastoProyecto(
+        GastoProyecto(
+          proyectoId: widget.proyecto.id!,
+          subpartidaId: _subpartidaId,
+          proveedorId: _proveedorId,
+          cuentaCostoId: _cuentaCostoId,
+          monto: double.parse(_montoController.text),
+          tipoGasto: _cuentasCostos.firstWhere(
+            (c) => c['id'] == _cuentaCostoId,
+          )['nombre'],
+          descripcion: _descController.text,
+          fecha: DateTime.now(),
+          metodoPago: _metodoPago,
+          bancoId: _metodoPago == 'Crédito' ? null : _bancoId,
+        ),
+      );
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -182,7 +183,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Registrar Gasto Contable',
+                                'Registrar Gastos',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -455,11 +456,11 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
                 itemCount: _proveedoresFiltrados.length,
                 itemBuilder: (context, index) {
                   final p = _proveedoresFiltrados[index];
-                  final isSelected = _proveedorId == p['id'];
+                  final isSelected = _proveedorId == p.id;
                   return ListTile(
                     visualDensity: VisualDensity.compact,
                     title: Text(
-                      p['nombre'],
+                      p.nombre,
                       style: TextStyle(
                         fontWeight: isSelected
                             ? FontWeight.bold
@@ -471,8 +472,8 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
                         : null,
                     onTap: () {
                       setState(() {
-                        _proveedorId = p['id'];
-                        _searchController.text = p['nombre'];
+                        _proveedorId = p.id;
+                        _searchController.text = p.nombre;
                         _proveedoresFiltrados = [];
                       });
                     },

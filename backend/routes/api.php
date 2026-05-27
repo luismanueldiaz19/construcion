@@ -50,6 +50,8 @@ Route::prefix('v1')->group(function () {
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);
     Route::get('compras/{id}/pdf', [CompraController::class, 'imprimirTicket']);
+    Route::post('compras/{id}/documentos', [CompraController::class, 'uploadDocumento']);
+    Route::delete('compras/documentos/{id}', [CompraController::class, 'deleteDocumento']);
     Route::post('recepciones', [RecepcionController::class, 'store']);
     Route::apiResource('consumos', ConsumoController::class);
     Route::get('cuentas-por-pagar', [PagoCompraController::class, 'index']);

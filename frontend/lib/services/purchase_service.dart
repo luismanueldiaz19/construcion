@@ -1,3 +1,5 @@
+import 'package:http/http.dart' as http;
+import '../models/compra.dart';
 import '../models/proveedor.dart';
 import 'http_service.dart';
 
@@ -21,8 +23,22 @@ class PurchaseService {
     return await _http.post('compras', data);
   }
 
-  Future<List<dynamic>> getAllCompras() async {
-    return await _http.get('compras');
+  Future<List<Compra>> getAllCompras() async {
+    final List<dynamic> data = await _http.get('compras');
+    return data.map((json) => Compra.fromJson(json)).toList();
+  }
+
+  Future<Map<String, dynamic>> getComprasReporte(Map<String, dynamic> filters, int page, int perPage) async {
+    List<String> queryParams = ['page=$page', 'per_page=$perPage'];
+
+    filters.forEach((key, value) {
+      if (value != null && value.toString().isNotEmpty && value.toString() != 'Todos') {
+        queryParams.add('$key=$value');
+      }
+    });
+
+    final queryString = queryParams.isNotEmpty ? '?${queryParams.join('&')}' : '';
+    return await _http.get('compras$queryString');
   }
 
   Future<List<dynamic>> getComprasPendientes() async {
@@ -43,5 +59,17 @@ class PurchaseService {
 
   Future<Map<String, dynamic>> getGasto(int id) async {
     return await _http.get('gastos/$id');
+  }
+
+  Future<dynamic> uploadDocumentoCompra(int compraId, String filePath) async {
+    final file = await http.MultipartFile.fromPath('documento', filePath);
+    return await _http.multipart(
+      'compras/$compraId/documentos',
+      files: [file],
+    );
+  }
+
+  Future<void> deleteDocumentoCompra(int documentoId) async {
+    await _http.delete('compras/documentos/$documentoId');
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:construccion_erp/modules/projects/historial_proyectos_screen.dart';
 import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
@@ -30,6 +31,15 @@ void main() {
   );
 }
 
+class AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
+}
+
 class ConstruccionERP extends StatelessWidget {
   const ConstruccionERP({super.key});
 
@@ -39,6 +49,7 @@ class ConstruccionERP extends StatelessWidget {
       title: 'Neo Project S.R.L',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      scrollBehavior: AppScrollBehavior(),
       home: const MainLayout(),
     );
   }

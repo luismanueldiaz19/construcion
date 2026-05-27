@@ -61,18 +61,14 @@
             <td class="bold">Proyecto:</td>
             <td>{{ $compra->proyecto->nombre }}</td>
         </tr>
-        @if($compra->orden)
         <tr>
             <td class="bold">Orden #:</td>
-            <td>{{ $compra->orden }}</td>
+            <td>{{ $compra->orden ?? 'N/A' }}</td>
         </tr>
-        @endif
-        @if($compra->codigo)
         <tr>
             <td class="bold">Código Ref:</td>
-            <td>{{ $compra->codigo }}</td>
+            <td>{{ $compra->codigo ?? 'N/A' }}</td>
         </tr>
-        @endif
         <tr>
             <td class="bold">Comprobante:</td>
             <td>{{ $compra->comprobante }}</td>
@@ -81,10 +77,10 @@
             <td class="bold">Tipo:</td>
             <td>{{ $compra->tipo_compra }}</td>
         </tr>
-        @if($compra->tipo_compra == 'Crédito' && $compra->fecha_vencimiento)
+        @if($compra->tipo_compra == 'Crédito')
         <tr>
             <td class="bold">Vence:</td>
-            <td>{{ \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d/m/Y') }}</td>
+            <td>{{ $compra->fecha_vencimiento ? \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d/m/Y') : 'N/A' }}</td>
         </tr>
         @endif
     </table>
@@ -95,8 +91,9 @@
         <thead>
             <tr class="bold">
                 <td style="width: 15%">Cant.</td>
-                <td style="width: 60%">Descripción</td>
-                <td class="text-right" style="width: 25%">Total</td>
+                <td style="width: 45%">Descripción</td>
+                <td class="text-right" style="width: 20%">Precio</td>
+                <td class="text-right" style="width: 20%">Total</td>
             </tr>
         </thead>
         <tbody>
@@ -104,6 +101,7 @@
             <tr>
                 <td>{{ number_format($detalle->cantidad, 2) }}</td>
                 <td>{{ $detalle->material->nombre }}</td>
+                <td class="text-right">${{ number_format($detalle->precio_unitario, 2) }}</td>
                 <td class="text-right">${{ number_format($detalle->subtotal, 2) }}</td>
             </tr>
             @endforeach
