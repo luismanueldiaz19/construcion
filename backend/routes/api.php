@@ -54,6 +54,7 @@ Route::prefix('v1')->group(function () {
     Route::delete('compras/documentos/{id}', [CompraController::class, 'deleteDocumento']);
     Route::post('recepciones', [RecepcionController::class, 'store']);
     Route::apiResource('consumos', ConsumoController::class);
+    Route::post('transferencias', [\App\Http\Controllers\Api\TransferenciaController::class, 'store']);
     Route::get('cuentas-por-pagar', [PagoCompraController::class, 'index']);
     Route::post('pagos-compras', [PagoCompraController::class, 'store']);
     Route::get('pagos-compras/{id}/pdf', [PagoCompraController::class, 'imprimirRecibo']);

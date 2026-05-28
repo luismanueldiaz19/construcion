@@ -49,12 +49,16 @@ class ConsumoController extends Controller
                 return response()->json(['message' => 'Stock insuficiente en el proyecto'], 422);
             }
 
-            // 2. Determinar costo (Promedio de compras para este proyecto)
+            // 2. Determinar costo (Promedio de compras para este proyecto, fallback a precio_costo global)
             $costoUnitario = CompraDetalle::whereHas('compra', function($q) use ($validated) {
                     $q->where('proyecto_id', $validated['proyecto_id']);
                 })
                 ->where('material_id', $validated['material_id'])
                 ->avg('precio_unitario') ?? 0;
+
+            if ($costoUnitario <= 0) {
+                $costoUnitario = \App\Models\Material::where('id', $validated['material_id'])->value('precio_costo') ?? 0;
+            }
 
             $totalCosto = $validated['cantidad'] * $costoUnitario;
 

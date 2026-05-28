@@ -38,19 +38,20 @@ class _CustomSidebarState extends State<CustomSidebar> {
     // Determine which section should be open based on selectedIndex
     if (widget.selectedIndex >= 0 && widget.selectedIndex <= 2) {
       _expandedSection = 'GESTIÓN PROYECTOS';
-    } else if (widget.selectedIndex == 3 || widget.selectedIndex == 10) {
-      _expandedSection = 'PROVEEDORES';
-    } else if (widget.selectedIndex == 5 || widget.selectedIndex == 7) {
-      _expandedSection = 'COMPRAS';
+    } else if (widget.selectedIndex == 3 ||
+        widget.selectedIndex == 5 ||
+        widget.selectedIndex == 7) {
+      _expandedSection = 'COMPRAS Y PROVEEDORES';
     } else if (widget.selectedIndex == 4 ||
         widget.selectedIndex == 6 ||
         widget.selectedIndex == 9) {
       _expandedSection = 'INVENTARIO';
-    } else if (widget.selectedIndex == 11 ||
-        widget.selectedIndex == 12 ||
-        widget.selectedIndex == 13 ||
-        widget.selectedIndex == 8) {
-      _expandedSection = 'FINANZAS';
+    } else if (widget.selectedIndex == 10) {
+      _expandedSection = 'CUENTAS POR PAGAR';
+    } else if (widget.selectedIndex == 11) {
+      _expandedSection = 'CUENTAS POR COBRAR';
+    } else if (widget.selectedIndex == 12 || widget.selectedIndex == 13) {
+      _expandedSection = 'FINANZAS Y CONTABILIDAD';
     } else if (widget.selectedIndex == 14) {
       _expandedSection = 'CONFIGURACIÓN';
     }
@@ -89,153 +90,163 @@ class _CustomSidebarState extends State<CustomSidebar> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          _buildHeader(accentColor),
-          const Divider(color: Colors.white10, height: 1),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              children: [
-                _buildExpansionSection(
-                  'GESTIÓN PROYECTOS',
-                  Icons.business_center_outlined,
-                  [
-                    _buildMenuItem(
-                      0,
-                      Icons.business_outlined,
-                      Icons.business,
-                      'Proyectos',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      1,
-                      Icons.dashboard_outlined,
-                      Icons.dashboard,
-                      'Dashboard Principal',
-                      accentColor,
-                    ),
-
-                    _buildMenuItem(
-                      2,
-                      Icons.history_outlined,
-                      Icons.history,
-                      'Historial de Proyectos',
-                      accentColor,
-                    ),
-                  ],
-                ),
-                _buildExpansionSection('PROVEEDORES', Icons.people_outline, [
-                  _buildMenuItem(
-                    3,
-                    Icons.contact_phone_outlined,
-                    Icons.contact_phone,
-                    'Directorio de Proveedores',
-                    accentColor,
+      child:
+          Column(
+            children:
+                [
+                  _buildHeader(accentColor),
+                  const Divider(color: Colors.white10, height: 1),
+                  Expanded(
+                    child:
+                        ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          children:
+                              [
+                                _buildExpansionSection(
+                                  'GESTIÓN PROYECTOS',
+                                  Icons.business_center_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      1,
+                                      Icons.dashboard_outlined,
+                                      Icons.dashboard,
+                                      'Dashboard Principal',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      0,
+                                      Icons.business_outlined,
+                                      Icons.business,
+                                      'Proyectos Activos',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      2,
+                                      Icons.history_outlined,
+                                      Icons.history,
+                                      'Historial de Proyectos',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'COMPRAS Y PROVEEDORES',
+                                  Icons.shopping_bag_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      3,
+                                      Icons.contact_phone_outlined,
+                                      Icons.contact_phone,
+                                      'Directorio de Proveedores',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      5,
+                                      Icons.add_shopping_cart_outlined,
+                                      Icons.add_shopping_cart,
+                                      'Nueva Orden de Compra',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      7,
+                                      Icons.receipt_long_outlined,
+                                      Icons.receipt_long,
+                                      'Registro de Compras',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'INVENTARIO',
+                                  Icons.inventory_2_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      9,
+                                      Icons.storage_outlined,
+                                      Icons.storage,
+                                      'Stock por Proyecto',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      6,
+                                      Icons.local_shipping_outlined,
+                                      Icons.local_shipping,
+                                      'Recepción de Material',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      4,
+                                      Icons.category_outlined,
+                                      Icons.category,
+                                      'Catálogo de Productos',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'CUENTAS POR PAGAR',
+                                  Icons.assignment_late_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      10,
+                                      Icons.money_off_outlined,
+                                      Icons.money_off,
+                                      'Cuentas por Pagar',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'CUENTAS POR COBRAR',
+                                  Icons.pending_actions_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      11,
+                                      Icons.pending_actions_outlined,
+                                      Icons.pending_actions,
+                                      'Cuentas por Cobrar',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'FINANZAS Y CONTABILIDAD',
+                                  Icons.account_balance_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      13,
+                                      Icons.account_balance_outlined,
+                                      Icons.account_balance,
+                                      'Libro Contable',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      12,
+                                      Icons.payments_outlined,
+                                      Icons.payments,
+                                      'Historial de Pagos',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'CONFIGURACIÓN',
+                                  Icons.settings_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      14,
+                                      Icons.admin_panel_settings_outlined,
+                                      Icons.admin_panel_settings,
+                                      'Ajustes del Sistema',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                        ),
                   ),
-                  _buildMenuItem(
-                    10,
-                    Icons.money_off_outlined,
-                    Icons.money_off,
-                    'Cuentas por Pagar',
-                    accentColor,
-                  ),
-                ]),
-                _buildExpansionSection('COMPRAS', Icons.shopping_bag_outlined, [
-                  _buildMenuItem(
-                    5,
-                    Icons.add_shopping_cart_outlined,
-                    Icons.add_shopping_cart,
-                    'Nueva Orden de Compra',
-                    accentColor,
-                  ),
-                  _buildMenuItem(
-                    7,
-                    Icons.receipt_long_outlined,
-                    Icons.receipt_long,
-                    'Registro de Compras',
-                    accentColor,
-                  ),
-                ]),
-                _buildExpansionSection(
-                  'INVENTARIO',
-                  Icons.inventory_2_outlined,
-                  [
-                    _buildMenuItem(
-                      4,
-                      Icons.category_outlined,
-                      Icons.category,
-                      'Catálogo de Productos',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      6,
-                      Icons.local_shipping_outlined,
-                      Icons.local_shipping,
-                      'Recepción de Material',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      9,
-                      Icons.storage_outlined,
-                      Icons.storage,
-                      'Stock por Proyecto',
-                      accentColor,
-                    ),
-                  ],
-                ),
-                _buildExpansionSection(
-                  'FINANZAS',
-                  Icons.account_balance_wallet_outlined,
-                  [
-                    _buildMenuItem(
-                      11,
-                      Icons.pending_actions_outlined,
-                      Icons.pending_actions,
-                      'Cuentas por Cobrar',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      12,
-                      Icons.payments_outlined,
-                      Icons.payments,
-                      'Control de Pagos',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      13,
-                      Icons.account_balance_outlined,
-                      Icons.account_balance,
-                      'Libro Contable',
-                      accentColor,
-                    ),
-                    _buildMenuItem(
-                      8,
-                      Icons.money_outlined,
-                      Icons.money,
-                      'Control de Gastos',
-                      accentColor,
-                    ),
-                  ],
-                ),
-                _buildExpansionSection(
-                  'CONFIGURACIÓN',
-                  Icons.settings_outlined,
-                  [
-                    _buildMenuItem(
-                      14,
-                      Icons.admin_panel_settings_outlined,
-                      Icons.admin_panel_settings,
-                      'Ajustes del Sistema',
-                      accentColor,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                ],
           ),
-        ],
-      ),
     );
   }
 

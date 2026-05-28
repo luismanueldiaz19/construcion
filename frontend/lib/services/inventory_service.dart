@@ -24,7 +24,9 @@ class InventoryService {
     return await _http.get('categorias');
   }
 
-  Future<Map<String, dynamic>> createCategoria(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createCategoria(
+    Map<String, dynamic> data,
+  ) async {
     return await _http.post('categorias', data);
   }
 
@@ -40,8 +42,17 @@ class InventoryService {
     await _http.post('consumos', data);
   }
 
+  Future<void> registrarTransferencia(Map<String, dynamic> data) async {
+    await _http.post('transferencias', data);
+  }
+
   Future<List<ConsumoProyecto>> getConsumosProyecto(int proyectoId) async {
-    final data = await _http.get('consumos', params: {'proyecto_id': proyectoId.toString()});
-    return (data as List).map((json) => ConsumoProyecto.fromJson(json)).toList();
+    final data = await _http.get(
+      'consumos',
+      params: {'proyecto_id': proyectoId.toString()},
+    );
+    return (data as List)
+        .map((json) => ConsumoProyecto.fromJson(json))
+        .toList();
   }
 }

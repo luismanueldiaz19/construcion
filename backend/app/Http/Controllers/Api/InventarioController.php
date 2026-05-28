@@ -22,7 +22,7 @@ class InventarioController extends Controller
         try {
             $proyecto = Proyecto::findOrFail($id);
             
-            // Balance de Inventario (Stock Actual con Totales de Entradas y Salidas)
+            // Balance de Inventario (Stock Actual con Totales de Entradas y Salidas, incluyendo Transferencias)
             $balance = Inventario::with('material')
                 ->where('proyecto_id', $id)
                 ->get()
@@ -37,9 +37,31 @@ class InventarioController extends Controller
                         })
                         ->sum('cantidad_entregada');
 
+                    // Sumar transferencias recibidas
+                    $transRecibidas = \App\Models\Transferencia::where('proyecto_destino_id', $id)
+                        ->where('material_id', $inv->material_id)
+                        ->sum('cantidad');
+                    
+                    $totalEntradas += $transRecibidas;
+
                     $totalSalidas = \App\Models\Consumo::where('proyecto_id', $id)
                         ->where('material_id', $inv->material_id)
                         ->sum('cantidad');
+
+                    // Sumar transferencias enviadas
+                    $transEnviadas = \App\Models\Transferencia::where('proyecto_origen_id', $id)
+                        ->where('material_id', $inv->material_id)
+                        ->sum('cantidad');
+
+                    $totalSalidas += $transEnviadas;
+
+                    $ultimoCosto = \App\Models\CompraDetalle::where('material_id', $inv->material_id)
+                        ->latest()
+                        ->value('precio_unitario');
+
+                    if (!$ultimoCosto || $ultimoCosto <= 0) {
+                        $ultimoCosto = optional($inv->material)->precio_costo ?? 0;
+                    }
 
                     return [
                         'material_id' => $inv->material_id,
@@ -48,9 +70,7 @@ class InventarioController extends Controller
                         'entradas' => $totalEntradas,
                         'salidas' => $totalSalidas,
                         'stock' => $inv->stock,
-                        'ultimo_costo' => \App\Models\CompraDetalle::where('material_id', $inv->material_id)
-                            ->latest()
-                            ->value('precio_unitario') ?? 0
+                        'ultimo_costo' => $ultimoCosto
                     ];
                 });
 
@@ -72,6 +92,25 @@ class InventarioController extends Controller
                     ];
                 });
 
+            // Transferencias Recibidas (Entradas)
+            $transEntradas = \App\Models\Transferencia::with(['material', 'proyectoOrigen'])
+                ->where('proyecto_destino_id', $id)
+                ->get()
+                ->map(function($trans) {
+                    $costo = \App\Models\CompraDetalle::where('material_id', $trans->material_id)
+                        ->latest()
+                        ->value('precio_unitario') ?? optional($trans->material)->precio_costo ?? 0;
+                    return [
+                        'tipo' => 'Entrada',
+                        'fecha' => $trans->fecha,
+                        'referencia' => "Transf. desde: " . optional($trans->proyectoOrigen)->nombre . ($trans->observaciones ? " ({$trans->observaciones})" : ""),
+                        'material' => optional($trans->material)->nombre ?? 'Material Desconocido',
+                        'cantidad' => $trans->cantidad,
+                        'costo' => $costo,
+                        'total' => $trans->cantidad * $costo
+                    ];
+                });
+
             // Salidas (Consumos registrados)
             $salidas = \App\Models\Consumo::with(['material', 'subpartida'])
                 ->where('proyecto_id', $id)
@@ -88,7 +127,31 @@ class InventarioController extends Controller
                     ];
                 });
 
-            $movimientos = $entradas->concat($salidas)->sortByDesc('fecha')->values();
+            // Transferencias Enviadas (Salidas)
+            $transSalidas = \App\Models\Transferencia::with(['material', 'proyectoDestino'])
+                ->where('proyecto_origen_id', $id)
+                ->get()
+                ->map(function($trans) {
+                    $costo = \App\Models\CompraDetalle::where('material_id', $trans->material_id)
+                        ->latest()
+                        ->value('precio_unitario') ?? optional($trans->material)->precio_costo ?? 0;
+                    return [
+                        'tipo' => 'Salida',
+                        'fecha' => $trans->fecha,
+                        'referencia' => "Transf. a: " . optional($trans->proyectoDestino)->nombre . ($trans->observaciones ? " ({$trans->observaciones})" : ""),
+                        'material' => optional($trans->material)->nombre ?? 'Material Desconocido',
+                        'cantidad' => $trans->cantidad,
+                        'costo' => $costo,
+                        'total' => $trans->cantidad * $costo
+                    ];
+                });
+
+            $movimientos = $entradas
+                ->concat($transEntradas)
+                ->concat($salidas)
+                ->concat($transSalidas)
+                ->sortByDesc('fecha')
+                ->values();
 
             return response()->json([
                 'proyecto' => $proyecto->nombre,

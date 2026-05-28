@@ -13,8 +13,9 @@ class Proyecto {
   final double transporte;
   final double otrosCostos;
   final double supervisionTecnica;
-  final String? logoPath;
   final String? notas;
+  final String? logoPath;
+  final bool esAlmacen;
 
   // Atributos calculados (de la respuesta JSON del backend)
   final double? totalPresupuestoConGlobales;
@@ -40,6 +41,7 @@ class Proyecto {
     this.supervisionTecnica = 0.0,
     this.logoPath,
     this.notas,
+    this.esAlmacen = false,
     this.totalPresupuestoConGlobales,
     this.porcentajeAvanceTotal,
     this.montoEjecutadoTotal,
@@ -73,6 +75,7 @@ class Proyecto {
           0.0,
       logoPath: json['logo_path'],
       notas: json['notas'],
+      esAlmacen: json['es_almacen'] == true || json['es_almacen'] == 1,
       totalPresupuestoConGlobales: double.tryParse(
         json['total_presupuesto_con_globales']?.toString() ?? '0',
       ),
@@ -108,6 +111,7 @@ class Proyecto {
       'supervision_tecnica': supervisionTecnica,
       'logo_path': logoPath,
       'notas': notas,
+      'es_almacen': esAlmacen,
       'partidas': partidas.map((p) => p.toJson()).toList(),
     };
   }

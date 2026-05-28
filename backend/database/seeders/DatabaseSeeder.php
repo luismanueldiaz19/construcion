@@ -21,5 +21,18 @@ class DatabaseSeeder extends Seeder
             CategoriaMaterialSeeder::class,
             ProveedorSeeder::class, 
         ]);
+
+        // Asegurar que existe el Almacén General
+        \App\Models\Proyecto::firstOrCreate(
+            ['es_almacen' => true],
+            [
+                'nombre' => 'ALMACÉN GENERAL',
+                'cliente' => 'NEO PROJECT S.R.L',
+                'ubicacion' => 'OFICINA CENTRAL / ALMACÉN',
+                'fecha_inicio' => now()->toDateString(),
+                'presupuesto_estimado' => 0.00,
+                'estado' => 'Activo',
+            ]
+        );
     }
 }

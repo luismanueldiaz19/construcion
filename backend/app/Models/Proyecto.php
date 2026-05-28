@@ -9,7 +9,11 @@ class Proyecto extends Model
     protected $fillable = [
         'nombre', 'cliente', 'ubicacion', 'fecha_inicio', 'fecha_fin', 
         'presupuesto_estimado', 'estado', 'itbis', 'transporte', 'otros_costos', 'supervision_tecnica',
-        'logo_path', 'notas'
+        'logo_path', 'notas', 'es_almacen'
+    ];
+
+    protected $casts = [
+        'es_almacen' => 'boolean',
     ];
 
     public function partidas()
