@@ -8,7 +8,10 @@ class PurchaseService {
 
   Future<List<Proveedor>> getProveedores() async {
     final List<dynamic> data = await _http.get('proveedores');
-    return data.map((json) => Proveedor.fromJson(json)).toList().cast<Proveedor>();
+    return data
+        .map((json) => Proveedor.fromJson(json))
+        .toList()
+        .cast<Proveedor>();
   }
 
   Future<void> createProveedor(Proveedor proveedor) async {
@@ -28,16 +31,24 @@ class PurchaseService {
     return data.map((json) => Compra.fromJson(json)).toList();
   }
 
-  Future<Map<String, dynamic>> getComprasReporte(Map<String, dynamic> filters, int page, int perPage) async {
+  Future<Map<String, dynamic>> getComprasReporte(
+    Map<String, dynamic> filters,
+    int page,
+    int perPage,
+  ) async {
     List<String> queryParams = ['page=$page', 'per_page=$perPage'];
 
     filters.forEach((key, value) {
-      if (value != null && value.toString().isNotEmpty && value.toString() != 'Todos') {
+      if (value != null &&
+          value.toString().isNotEmpty &&
+          value.toString() != 'Todos') {
         queryParams.add('$key=$value');
       }
     });
 
-    final queryString = queryParams.isNotEmpty ? '?${queryParams.join('&')}' : '';
+    final queryString = queryParams.isNotEmpty
+        ? '?${queryParams.join('&')}'
+        : '';
     return await _http.get('compras$queryString');
   }
 
@@ -63,10 +74,7 @@ class PurchaseService {
 
   Future<dynamic> uploadDocumentoCompra(int compraId, String filePath) async {
     final file = await http.MultipartFile.fromPath('documento', filePath);
-    return await _http.multipart(
-      'compras/$compraId/documentos',
-      files: [file],
-    );
+    return await _http.multipart('compras/$compraId/documentos', files: [file]);
   }
 
   Future<void> deleteDocumentoCompra(int documentoId) async {

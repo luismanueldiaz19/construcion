@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:construccion_erp/modules/projects/historial_proyectos_screen.dart';
 import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
+import 'core/auth_provider.dart';
+import 'modules/auth/splash_screen.dart';
 import 'modules/projects/projects_screen.dart';
 import 'modules/accounting/accounting_screen.dart';
 import 'modules/accounting/cuentas_por_pagar_screen.dart';
@@ -23,6 +25,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => ProjectsProvider()),
       ],
@@ -50,7 +53,7 @@ class ConstruccionERP extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       scrollBehavior: AppScrollBehavior(),
-      home: const MainLayout(),
+      home: const SplashScreen(),
     );
   }
 }

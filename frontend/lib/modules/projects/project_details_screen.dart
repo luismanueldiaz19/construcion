@@ -14,10 +14,19 @@ import 'gasto_proyecto_dialog.dart';
 import '../../models/avance_proyecto.dart';
 import '../../models/gasto_proyecto.dart';
 import '../../models/consumo_proyecto.dart';
+import 'project_documents_screen.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   final Proyecto proyecto;
-  const ProjectDetailsScreen({super.key, required this.proyecto});
+  final bool embedded;
+  final VoidCallback? onRefresh;
+
+  const ProjectDetailsScreen({
+    super.key,
+    required this.proyecto,
+    this.embedded = false,
+    this.onRefresh,
+  });
 
   @override
   State<ProjectDetailsScreen> createState() => _ProjectDetailsScreenState();
@@ -31,6 +40,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   late Proyecto _proyecto;
   List<GastoProyecto> _gastos = [];
   List<ConsumoProyecto> _consumos = [];
+  List<dynamic> _pagos = [];
+  int _activeTabIndex = 0;
   bool _isLoading = true;
 
   @override
@@ -40,20 +51,50 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     _refresh();
   }
 
-  Future<void> _refresh() async {
+  @override
+  void didUpdateWidget(covariant ProjectDetailsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.proyecto != oldWidget.proyecto) {
+      setState(() {
+        _proyecto = widget.proyecto;
+      });
+    }
+  }
+
+  Future<void> _refresh({bool notifyParent = false}) async {
     try {
       final updatedProyecto = await _projectService.getProyecto(_proyecto.id!);
       final gastos = await _projectService.getGastosProyecto(_proyecto.id!);
       final consumos = await _inventoryService.getConsumosProyecto(
         _proyecto.id!,
       );
+      List<dynamic> projectPagos = [];
+      try {
+        final allPagos = await _accountingService.getAllPagosHistorial();
+        projectPagos = allPagos
+            .where(
+              (item) =>
+                  item['proyecto'] == updatedProyecto.nombre &&
+                  item['tipo'] == 'Cobro',
+            )
+            .toList();
+      } catch (e) {
+        print("Error fetching pagos: $e");
+      }
 
-      setState(() {
-        _proyecto = updatedProyecto;
-        _gastos = gastos;
-        _consumos = consumos;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _proyecto = updatedProyecto;
+          _gastos = gastos;
+          _consumos = consumos;
+          _pagos = projectPagos;
+          _isLoading = false;
+        });
+      }
+
+      if (notifyParent && widget.onRefresh != null) {
+        widget.onRefresh!();
+      }
     } catch (e) {
       print("Error refreshing project: $e");
       if (mounted) {
@@ -72,7 +113,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('¡Proyecto provisionado al 100%!')),
       );
-      _refresh();
+      await _refresh(notifyParent: true);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -87,7 +128,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       try {
         setState(() => _isLoading = true);
         await _projectService.uploadLogo(_proyecto.id!, image);
-        await _refresh();
+        await _refresh(notifyParent: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Logo actualizado correctamente')),
@@ -109,7 +150,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     try {
       setState(() => _isLoading = true);
       await _projectService.removeLogo(_proyecto.id!);
-      await _refresh();
+      await _refresh(notifyParent: true);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -165,7 +206,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       try {
         setState(() => _isLoading = true);
         await _projectService.updateProyectoEstado(_proyecto.id!, nuevoEstado);
-        await _refresh();
+        await _refresh(notifyParent: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Proyecto actualizado a: $nuevoEstado')),
@@ -225,7 +266,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             notas: controller.text,
           ),
         );
-        await _refresh();
+        await _refresh(notifyParent: true);
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(
@@ -271,15 +312,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final f = NumberFormat.currency(symbol: '\$');
-    final partidas = _proyecto.partidas;
-
-    final totalConImpuestos = _proyecto.totalPresupuestoConGlobales ?? 0;
-    final cobrado = _proyecto.totalCobrado ?? 0;
-    final saldoPendiente = totalConImpuestos - cobrado;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_proyecto.nombre),
+        automaticallyImplyLeading: !widget.embedded,
         actions: [
           IconButton(
             onPressed: () async {
@@ -316,100 +353,1031 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 900;
-                final content = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(f),
-                    const SizedBox(height: 32),
-                    if (isWide)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 6,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Estructura de Costos y Avance',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                ...partidas
-                                    .map((p) => _buildPartidaCard(p, f))
-                                    .toList(),
-                                // if (!_isReadonly)
-                                //   Padding(
-                                //     padding: const EdgeInsets.symmetric(
-                                //       vertical: 16.0,
-                                //     ),
-                                //     child: Center(
-                                //       child: ElevatedButton.icon(
-                                //         onPressed: _showAddPartidaDialog,
-                                //         icon: const Icon(Icons.add),
-                                //         label: const Text(
-                                //           'Añadir Partida Extra',
-                                //         ),
-                                //       ),
-                                //     ),
-                                //   ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 32),
-                          Expanded(flex: 4, child: _buildGastosSection(f)),
-                        ],
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Estructura de Costos y Avance',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ...partidas
-                              .map((p) => _buildPartidaCard(p, f))
-                              .toList(),
-                          // if (!_isReadonly)
-                          //   Padding(
-                          //     padding: const EdgeInsets.symmetric(
-                          //       vertical: 16.0,
-                          //     ),
-                          //     child: Center(
-                          //       child: ElevatedButton.icon(
-                          //         onPressed: _showAddPartidaDialog,
-                          //         icon: const Icon(Icons.add),
-                          //         label: const Text('Añadir Partida Extra'),
-                          //       ),
-                          //     ),
-                          //   ),
-                          const SizedBox(height: 32),
-                          _buildGastosSection(f),
-                        ],
-                      ),
-                  ],
-                );
+                final double width = constraints.maxWidth;
+                final bool isNarrow = width < 750;
 
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1200),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: content,
+                return Row(
+                  children: [
+                    _buildDetailsSidebar(isNarrow),
+                    const VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Colors.black12,
                     ),
-                  ),
+                    Expanded(
+                      child: Container(
+                        color: Colors.grey.shade50,
+                        child: _buildActiveTabContent(f),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
+    );
+  }
+
+  Widget _buildDetailsSidebar(bool isNarrow) {
+    final accentColor = const Color(0xFFE31E24);
+    final darkBlue = const Color(0xFF003366);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: isNarrow ? 70 : 200,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [darkBlue, darkBlue.withOpacity(0.9)],
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildSidebarItem(
+                  0,
+                  Icons.dashboard_outlined,
+                  Icons.dashboard,
+                  'Resumen',
+                  isNarrow,
+                  accentColor,
+                ),
+                _buildSidebarItem(
+                  1,
+                  Icons.construction_outlined,
+                  Icons.construction,
+                  'Partidas',
+                  isNarrow,
+                  accentColor,
+                ),
+                _buildSidebarItem(
+                  2,
+                  Icons.shopping_bag_outlined,
+                  Icons.shopping_bag,
+                  'Gastos',
+                  isNarrow,
+                  accentColor,
+                ),
+                _buildSidebarItem(
+                  3,
+                  Icons.payments_outlined,
+                  Icons.payments,
+                  'Pagos',
+                  isNarrow,
+                  accentColor,
+                ),
+                _buildSidebarItem(
+                  4,
+                  Icons.assessment_outlined,
+                  Icons.assessment,
+                  'Reportes',
+                  isNarrow,
+                  accentColor,
+                ),
+                _buildSidebarItem(
+                  5,
+                  Icons.folder_shared_outlined,
+                  Icons.folder_shared,
+                  'Documentos',
+                  isNarrow,
+                  accentColor,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(
+    int index,
+    IconData icon,
+    IconData selectedIcon,
+    String label,
+    bool isNarrow,
+    Color accentColor,
+  ) {
+    final isSelected = _activeTabIndex == index;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _activeTabIndex = index;
+          });
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: isNarrow ? 0 : 12,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.white.withOpacity(0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: isNarrow
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
+            children: [
+              Icon(
+                isSelected ? selectedIcon : icon,
+                color: isSelected ? Colors.white : Colors.white70,
+                size: 20,
+              ),
+              if (!isNarrow) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 4,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withOpacity(0.5),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveTabContent(NumberFormat f) {
+    switch (_activeTabIndex) {
+      case 0:
+        return _buildTabResumen(f);
+      case 1:
+        return _buildTabPartidas(f);
+      case 2:
+        return _buildTabGastos(f);
+      case 3:
+        return _buildTabPagos(f);
+      case 4:
+        return _buildTabReportes(f);
+      case 5:
+        return _buildTabDocumentos();
+      default:
+        return const Center(child: Text('Pestaña no encontrada'));
+    }
+  }
+
+  Widget _buildTabResumen(NumberFormat f) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(f),
+          const SizedBox(height: 24),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 900) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildProfitabilityCard(f)),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildCashFlowCard(f),
+                          const SizedBox(height: 24),
+                          _buildIndirectsBreakdown(f),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildProfitabilityCard(f),
+                    const SizedBox(height: 24),
+                    _buildCashFlowCard(f),
+                    const SizedBox(height: 24),
+                    _buildIndirectsBreakdown(f),
+                  ],
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabPartidas(NumberFormat f) {
+    final partidas = _proyecto.partidas;
+    int total = partidas.length;
+    int completadas = 0;
+    int enProceso = 0;
+    int pendientes = 0;
+
+    for (var p in partidas) {
+      final sub = p.subpartidas;
+      if (sub.isEmpty) {
+        pendientes++;
+      } else if (sub.every((s) => s.avanceActual >= 100)) {
+        completadas++;
+      } else if (sub.every((s) => s.avanceActual == 0)) {
+        pendientes++;
+      } else {
+        enProceso++;
+      }
+    }
+
+    final totalConImpuestos =
+        double.tryParse(
+          _proyecto.totalPresupuestoConGlobales?.toString() ?? '0',
+        ) ??
+        0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool useGrid = constraints.maxWidth > 800;
+
+              if (useGrid) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Total de Partidas',
+                        total.toString(),
+                        Colors.blueGrey,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Completadas',
+                        completadas.toString(),
+                        Colors.green,
+                        subtitle:
+                            '${total > 0 ? (completadas / total * 100).toStringAsFixed(1) : 0}%',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'En Proceso',
+                        enProceso.toString(),
+                        Colors.blue,
+                        subtitle:
+                            '${total > 0 ? (enProceso / total * 100).toStringAsFixed(1) : 0}%',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Pendientes',
+                        pendientes.toString(),
+                        Colors.orange,
+                        subtitle:
+                            '${total > 0 ? (pendientes / total * 100).toStringAsFixed(1) : 0}%',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Presupuesto Total',
+                        f.format(totalConImpuestos),
+                        const Color(0xFF003366),
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Total Partidas',
+                            total.toString(),
+                            Colors.blueGrey,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Completadas',
+                            completadas.toString(),
+                            Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'En Proceso',
+                            enProceso.toString(),
+                            Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Pendientes',
+                            pendientes.toString(),
+                            Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Presupuesto Total',
+                            f.format(totalConImpuestos),
+                            const Color(0xFF003366),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 28),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Estructura de Costos y Avance',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A),
+                ),
+              ),
+              if (_proyecto.estado == 'Activo')
+                ElevatedButton.icon(
+                  onPressed: _showAddPartidaDialog,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Añadir Partida'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFA000),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (partidas.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40.0),
+                child: Text('No hay partidas registradas en este proyecto.'),
+              ),
+            )
+          else
+            ...partidas.map((p) => _buildPartidaCard(p, f)).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailStatCard(
+    String title,
+    String value,
+    Color color, {
+    String? subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabGastos(NumberFormat f) {
+    final double totalGastado = _gastos.fold(0.0, (sum, g) => sum + g.monto);
+    final double moGastado = _gastos
+        .where((g) => g.tipoGasto.contains('Mano de Obra'))
+        .fold(0.0, (sum, g) => sum + g.monto);
+    final double alquilerGastado = _gastos
+        .where((g) => g.tipoGasto.contains('Alquiler'))
+        .fold(0.0, (sum, g) => sum + g.monto);
+    final double otrosGastado = totalGastado - moGastado - alquilerGastado;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool useGrid = constraints.maxWidth > 700;
+              if (useGrid) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Total Gastado',
+                        f.format(totalGastado),
+                        Colors.redAccent,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Mano de Obra',
+                        f.format(moGastado),
+                        Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Alquiler de Equipos',
+                        f.format(alquilerGastado),
+                        Colors.purple,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildDetailStatCard(
+                        'Otros Egresos',
+                        f.format(otrosGastado),
+                        Colors.cyan,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Total Gastado',
+                            f.format(totalGastado),
+                            Colors.redAccent,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Mano de Obra',
+                            f.format(moGastado),
+                            Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Alquiler',
+                            f.format(alquilerGastado),
+                            Colors.purple,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDetailStatCard(
+                            'Otros',
+                            f.format(otrosGastado),
+                            Colors.cyan,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 28),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Text(
+                  'Historial de Gastos (MO / Alquiler / Otros)',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A1A),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (_proyecto.estado == 'Activo')
+                ElevatedButton.icon(
+                  onPressed: () => _showGastoDialog(context),
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('Registrar Gasto'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent,
+                    foregroundColor: Colors.black87,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (_gastos.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40.0),
+                child: Text('No hay gastos registrados en este proyecto.'),
+              ),
+            )
+          else
+            ..._gastos.map((g) {
+              IconData icon = Icons.payments;
+              Color color = Colors.blue;
+              if (g.tipoGasto.contains('Mano de Obra')) {
+                icon = Icons.engineering;
+                color = Colors.orange;
+              } else if (g.tipoGasto.contains('Alquiler')) {
+                icon = Icons.construction;
+                color = Colors.purple;
+              } else if (g.tipoGasto.contains('Transporte')) {
+                icon = Icons.local_shipping;
+                color = Colors.cyan;
+              }
+
+              final fechaStr = g.fecha.toIso8601String().split('T')[0];
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade100),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: color.withOpacity(0.1),
+                    child: Icon(icon, color: color),
+                  ),
+                  title: Text(
+                    g.descripcion ?? 'Gasto sin descripción',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    "${g.proveedor?['nombre'] ?? 'Sin proveedor'} • $fechaStr",
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        f.format(g.monto),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                      Text(
+                        g.metodoPago,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabPagos(NumberFormat f) {
+    final totalConImpuestos =
+        double.tryParse(
+          _proyecto.totalPresupuestoConGlobales?.toString() ?? '0',
+        ) ??
+        0;
+    final totalCobrado = _proyecto.totalCobrado ?? 0;
+    final saldoPendiente = totalConImpuestos - totalCobrado;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailStatCard(
+                  'Monto Total Presupuestado',
+                  f.format(totalConImpuestos),
+                  const Color(0xFF003366),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildDetailStatCard(
+                  'Total Cobrado al Cliente',
+                  f.format(totalCobrado),
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildDetailStatCard(
+                  'Saldo Pendiente de Cobro',
+                  f.format(saldoPendiente),
+                  saldoPendiente > 0.01 ? Colors.orange : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Historial de Cobros a Clientes',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A),
+                ),
+              ),
+              if (_proyecto.estado == 'Activo' && saldoPendiente > 0.01)
+                ElevatedButton.icon(
+                  onPressed: _showPagoDialog,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Registrar Pago'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (_pagos.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40.0),
+                child: Text('No hay cobros registrados para este proyecto.'),
+              ),
+            )
+          else
+            ..._pagos.map((item) {
+              final monto = double.tryParse(item['monto'].toString()) ?? 0;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade100),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.green,
+                    child: Icon(Icons.person, color: Colors.white),
+                  ),
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item['entidad'] ?? 'Cliente General',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Text(
+                        f.format(monto),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(item['concepto'] ?? 'Abono de Proyecto'),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 12,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            item['fecha'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(
+                            Icons.payment,
+                            size: 12,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            item['metodo_pago'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                    onPressed: () => _openPagoPdf(item['id']),
+                    tooltip: 'Imprimir Recibo',
+                  ),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+
+  void _openPagoPdf(int id) async {
+    final url = Uri.parse('$host/api/v1/pagos-historial/Cobro/$id/pdf');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el PDF del recibo')),
+        );
+      }
+    }
+  }
+
+  Widget _buildTabReportes(NumberFormat f) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Informes y Reportes del Proyecto',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Descarga y consulta la información financiera y operativa del proyecto.',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+
+          _buildReportItem(
+            'Reporte General del Proyecto (PDF)',
+            'Incluye avance físico consolidado, desglose de presupuestos por partida, gastos acumulados y balance de fondos.',
+            Icons.picture_as_pdf,
+            Colors.redAccent,
+            () async {
+              final url = Uri.parse(
+                '$host/reports/proyecto/${_proyecto.id}/pdf',
+              );
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No se pudo abrir el reporte PDF'),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+
+          _buildReportItem(
+            'Estado de Resultados del Proyecto',
+            'Informe analítico de ingresos netos devengados, egresos reales de caja y materiales, y cálculo de utilidad/ganancia real.',
+            Icons.assessment,
+            Colors.green,
+            () async {
+              try {
+                final data = await _accountingService.getEstadoResultados(
+                  proyectoId: _proyecto.id,
+                );
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Estado de Resultados del Proyecto'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ingresos Totales: ${f.format(double.tryParse(data['ingresos']?.toString() ?? '0') ?? 0)}',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Costos Totales: ${f.format(double.tryParse(data['costos']?.toString() ?? '0') ?? 0)}',
+                          ),
+                          const Divider(height: 24),
+                          Text(
+                            'Utilidad: ${f.format(double.tryParse(data['utilidad']?.toString() ?? '0') ?? 0)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cerrar'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al cargar estado de resultados: $e'),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportItem(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.1),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(description),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildTabDocumentos() {
+    return ProjectDocumentsScreen(
+      proyectoId: _proyecto.id!,
+      proyectoNombre: _proyecto.nombre,
+      logoPath: _proyecto.logoPath,
+      embedded: true,
     );
   }
 
@@ -718,30 +1686,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            _buildIndirectsBreakdown(f),
             const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, c) {
-                if (c.maxWidth > 700) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _buildProfitabilityCard(f)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildCashFlowCard(f)),
-                    ],
-                  );
-                }
-                return Column(
-                  children: [
-                    _buildProfitabilityCard(f),
-                    const SizedBox(height: 16),
-                    _buildCashFlowCard(f),
-                  ],
-                );
-              },
-            ),
 
             Builder(
               builder: (context) {
@@ -789,10 +1734,17 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Widget _buildIndirectsBreakdown(NumberFormat f) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFF003366),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,8 +1752,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const Text(
             'DESGLOSE DE COSTOS INDIRECTOS',
             style: TextStyle(
-              color: Colors.white38,
-              fontSize: 10,
+              color: Colors.white70,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -860,9 +1812,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF003366),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -930,9 +1889,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF003366),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -1283,6 +2249,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             : Text('Partida con ${subpartidas.length} Sub-Partidas'),
         children: [
           ...subpartidas.map((s) => _buildSubpartidaTile(s, f)).toList(),
+          if (_proyecto.estado == 'Activo')
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline, color: Colors.blue),
+              title: const Text(
+                'Añadir Sub-partida',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onTap: () => _showAddSubpartidaDialog(partida.id!),
+            ),
         ],
       ),
     );
@@ -1423,7 +2401,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     content: Text('Avance registrado correctamente'),
                   ),
                 );
-                _refresh();
+                _refresh(notifyParent: true);
               } catch (e) {
                 ScaffoldMessenger.of(
                   context,
@@ -1443,7 +2421,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       builder: (context) => GastoProyectoDialog(proyecto: _proyecto),
     );
     if (result == true) {
-      _refresh();
+      _refresh(notifyParent: true);
     }
   }
 
@@ -1593,7 +2571,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                         content: Text('¡Pago registrado con éxito!'),
                       ),
                     );
-                    _refresh();
+                    _refresh(notifyParent: true);
                   } catch (e) {
                     ScaffoldMessenger.of(
                       context,
@@ -1752,7 +2730,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                             ],
                           });
                           Navigator.pop(context);
-                          _refresh();
+                          _refresh(notifyParent: true);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Partida añadida exitosamente'),
@@ -1888,7 +2866,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 double.tryParse(subCostoController.text) ?? 0,
                           });
                           Navigator.pop(context);
-                          _refresh();
+                          _refresh(notifyParent: true);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Sub-partida añadida exitosamente'),

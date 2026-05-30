@@ -15,12 +15,14 @@ class ProjectDocumentsScreen extends StatefulWidget {
   final int proyectoId;
   final String proyectoNombre;
   final String? logoPath;
+  final bool embedded;
 
   const ProjectDocumentsScreen({
     super.key,
     required this.proyectoId,
     required this.proyectoNombre,
     this.logoPath,
+    this.embedded = false,
   });
 
   @override
@@ -468,10 +470,10 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
     final filtered = _filteredDocuments;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: widget.embedded ? Colors.transparent : AppTheme.backgroundColor,
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(),
+          if (!widget.embedded) _buildSliverAppBar(),
           _buildFiltersAndStats(),
           _isLoading
               ? const SliverToBoxAdapter(
@@ -572,17 +574,50 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          color: widget.embedded ? Colors.transparent : Colors.white,
+          boxShadow: widget.embedded
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.embedded) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Planos y Documentación',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
+                        onPressed: () => setState(() => _isGridView = !_isGridView),
+                        tooltip: _isGridView ? 'Vista de Lista' : 'Vista de Cuadrícula',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _loadData,
+                        tooltip: 'Recargar',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
             Row(
               children: [
                 Expanded(
