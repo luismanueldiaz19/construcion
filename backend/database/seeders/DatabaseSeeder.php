@@ -22,6 +22,16 @@ class DatabaseSeeder extends Seeder
             ProveedorSeeder::class, 
         ]);
 
+        // Crear usuario admin por defecto si no existe
+        \App\Models\User::firstOrCreate(
+            ['username' => 'ludeveloper'],
+            [
+                'name' => 'Lwader Soft S.R.L',
+                'email' => 'lwadersoft@gmail.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('199512'),
+            ]
+        );
+
         // Asegurar que existe el Almacén General
         \App\Models\Proyecto::firstOrCreate(
             ['es_almacen' => true],

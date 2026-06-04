@@ -15,12 +15,16 @@ use App\Http\Controllers\Api\GastoProyectoController;
 use App\Http\Controllers\Api\PagoCompraController;
 use App\Http\Controllers\Api\PagosController;
 use App\Http\Controllers\Api\CuentaPorCobrarController;
+use App\Http\Controllers\Api\AuthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+    Route::middleware('auth:sanctum')->post('logout', [AuthController::class, 'logout']);
+
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::apiResource('proyectos', ProyectoController::class);
     Route::apiResource('gastos-proyecto', GastoProyectoController::class);

@@ -1,13 +1,10 @@
 #!/bin/bash
 set -e
 
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear || true
+# Optimizar caché de configuración, rutas y vistas para producción
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 php artisan storage:link || true
-# php artisan migrate || true
-# Migraciones solo si quieres automatizar (opcional)
-# php artisan migrate --force || true
 
 exec "$@"

@@ -5,11 +5,18 @@ import 'package:http/http.dart' as http;
 
 class HttpService {
   final String baseUrl = "$host/api/v1";
+  static String? token;
 
-  Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+  Map<String, String> get _headers {
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
 
   Future<dynamic> get(String endpoint, {Map<String, String>? params}) async {
     try {

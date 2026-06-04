@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/http_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -11,44 +12,63 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get username => _username;
 
-  Future<bool> login(String email, String password) async {
+  final HttpService _httpService = HttpService();
+
+  Future<bool> login(String username, String password) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
-    // Simular retraso de red de 1.5 segundos
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    final trimmedEmail = email.trim();
+    final trimmedUsername = username.trim();
     final trimmedPassword = password.trim();
 
-    if (trimmedEmail.isEmpty || trimmedPassword.isEmpty) {
+    if (trimmedUsername.isEmpty || trimmedPassword.isEmpty) {
       _errorMessage = "Por favor, complete todos los campos.";
       _isLoading = false;
       notifyListeners();
       return false;
     }
 
-    // Credenciales predefinidas para propósitos de prueba
-    if (trimmedEmail == 'admin@gmail.com' && trimmedPassword == 'admin123') {
-      _isAuthenticated = true;
-      _username = "Administrador";
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } else {
-      _errorMessage =
-          "Credenciales incorrectas. Intente con admin@gmail.com / admin123";
+    try {
+      final response = await _httpService.post('login', {
+        'username': trimmedUsername,
+        'password': trimmedPassword,
+      });
+
+      if (response != null && response['token'] != null) {
+        HttpService.token = response['token'];
+        _isAuthenticated = true;
+        _username = response['user']['name'] ?? trimmedUsername;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = "Respuesta del servidor inválida.";
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  void logout() {
-    _isAuthenticated = false;
-    _username = null;
-    notifyListeners();
+  Future<void> logout() async {
+    try {
+      if (HttpService.token != null) {
+        await _httpService.post('logout', {});
+      }
+    } catch (_) {
+      // Ignorar errores de logout del servidor para asegurar que el frontend cierre sesión de todos modos
+    } finally {
+      HttpService.token = null;
+      _isAuthenticated = false;
+      _username = null;
+      notifyListeners();
+    }
   }
 
   Future<bool> sendResetCode(String email) async {

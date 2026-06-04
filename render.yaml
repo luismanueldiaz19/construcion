@@ -5,11 +5,7 @@ services:
     dockerfilePath: Dockerfile
     autoDeploy: true
 
-    deployHooks:
-      - command: php artisan migrate --force
-      - command: php artisan config:cache
-      - command: php artisan route:cache
-      - command: php artisan view:cache
+    preDeployCommand: php artisan migrate --force
 
   # - type: web
   #   name: flutter-frontend

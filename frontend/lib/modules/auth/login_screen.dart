@@ -15,14 +15,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.login(
-      _emailController.text,
+      _usernameController.text,
       _passwordController.text,
     );
 
@@ -51,8 +51,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _autofillCredentials() {
     setState(() {
-      _emailController.text = "admin@gmail.com";
-      _passwordController.text = "admin123";
+      _usernameController.text = "ludeveloper";
+      _passwordController.text = "199512";
     });
   }
 
@@ -341,16 +341,16 @@ class _LoginScreenState extends State<LoginScreen> {
               key: _formKey,
               child: Column(
                 children: [
-                  // Email Field
+                  // Username Field
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: _usernameController,
+                    keyboardType: TextInputType.text,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: 'Correo Electrónico',
+                      labelText: 'Nombre de usuario',
                       labelStyle: const TextStyle(color: Colors.white38),
                       prefixIcon: const Icon(
-                        Icons.email_outlined,
+                        Icons.person_outline,
                         color: Colors.white38,
                       ),
                       enabledBorder: OutlineInputBorder(
@@ -382,12 +382,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Ingrese su correo electrónico';
-                      }
-                      if (!RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                      ).hasMatch(value)) {
-                        return 'Ingrese un formato de correo válido';
+                        return 'Ingrese su nombre de usuario';
                       }
                       return null;
                     },
@@ -583,7 +578,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Toque aquí para ingresar credenciales por defecto (admin@gmail.com / admin123)',
+                        'Toque aquí para ingresar credenciales por defecto (admin / admin123)',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 11,
