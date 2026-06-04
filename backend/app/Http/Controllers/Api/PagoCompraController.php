@@ -56,7 +56,7 @@ class PagoCompraController extends Controller
 
             // 3. Asiento Contable
             $cuentaCXP = CatalogoCuenta::where('codigo', '2.1.01')->first();
-            $cuentaBanco = CatalogoCuenta::where('codigo', '1.1.01.02')->first();
+            $cuentaBanco = CatalogoCuenta::where('codigo', '1.1.01.02.01')->first();
 
             if ($cuentaCXP && $cuentaBanco) {
                 $detallesAsiento = [
@@ -89,7 +89,8 @@ class PagoCompraController extends Controller
     {
         $pago = PagoCompra::with('cuentaPorPagar.proveedor', 'cuentaPorPagar.compra')->findOrFail($id);
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.recibo_pago', compact('pago'))
-            ->setPaper([0, 0, 226.77, 500]);
+            ->setPaper([0, 0, 226.77, 620])
+            ->setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => false, 'dpi' => 96]);
         return $pdf->stream("recibo_pago_{$pago->id}.pdf");
     }
 }

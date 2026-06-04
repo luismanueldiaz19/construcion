@@ -20,7 +20,9 @@ class HttpService {
 
   Future<dynamic> get(String endpoint, {Map<String, String>? params}) async {
     try {
-      final uri = Uri.parse('$baseUrl/$endpoint').replace(queryParameters: params);
+      final uri = Uri.parse(
+        '$baseUrl/$endpoint',
+      ).replace(queryParameters: params);
       final response = await http.get(uri, headers: _headers);
       return _handleResponse(response);
     } catch (e) {
@@ -90,9 +92,7 @@ class HttpService {
         method,
         Uri.parse('$baseUrl/$endpoint'),
       );
-      request.headers.addAll({
-        'Accept': 'application/json',
-      });
+      request.headers.addAll({'Accept': 'application/json'});
 
       if (fields != null) request.fields.addAll(fields);
       if (files != null) request.files.addAll(files);

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../core/app_theme.dart';
 import '../models/proveedor.dart';
 
 class SearchSelectorDialog extends StatefulWidget {
@@ -72,7 +72,7 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF003366),
+                    color: AppTheme.primaryColor,
                   ),
                 ),
                 IconButton(
@@ -88,7 +88,7 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
               onChanged: _filter,
               decoration: InputDecoration(
                 hintText: 'Buscar...',
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF003366)),
+                prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -125,7 +125,7 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
                               icon: const Icon(Icons.add),
                               label: Text('Agregar nuevo ${widget.title}'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF003366),
+                                backgroundColor: AppTheme.primaryColor,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -181,7 +181,7 @@ class _SearchSelectorDialogState extends State<SearchSelectorDialog> {
                                   context,
                                   item is Proveedor ? item.id : item['id'],
                                 ),
-                                hoverColor: Colors.blue[50],
+                                hoverColor: AppTheme.primaryColor.withValues(alpha: 0.05),
                               );
                             },
                           ),

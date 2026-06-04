@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_theme.dart';
 import '../models/proveedor.dart';
 import '../services/purchase_service.dart';
 
@@ -60,7 +61,7 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF003366),
+                  color: AppTheme.primaryColor,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
@@ -192,6 +193,9 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
                                   return;
                                 }
 
+                                final navigator = Navigator.of(context);
+                                final scaffoldMessenger = ScaffoldMessenger.of(context);
+
                                 setState(() => _isSaving = true);
                                 
                                 final nuevoProveedor = Proveedor(
@@ -215,9 +219,9 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
                                   }
                                   
                                   if (mounted) {
-                                    Navigator.pop(context);
+                                    navigator.pop();
                                     widget.onSaved();
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    scaffoldMessenger.showSnackBar(
                                       SnackBar(
                                         content: Text(isEdit ? 'Proveedor actualizado' : 'Proveedor registrado'),
                                         backgroundColor: Colors.green,
@@ -227,14 +231,14 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
                                 } catch (e) {
                                   if (mounted) {
                                     setState(() => _isSaving = false);
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    scaffoldMessenger.showSnackBar(
                                       SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
                                     );
                                   }
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFA000),
+                          backgroundColor: AppTheme.accentColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

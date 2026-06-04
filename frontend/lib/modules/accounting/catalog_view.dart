@@ -23,11 +23,13 @@ class _CatalogViewState extends State<CatalogView> {
   Future<void> _loadCatalogo() async {
     try {
       final data = await _accountingService.getCatalogo();
+      if (!mounted) return;
       setState(() {
         _catalogo = data;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }

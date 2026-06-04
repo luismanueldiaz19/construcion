@@ -536,59 +536,59 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Test credentials helper card
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _autofillCredentials,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.vpn_key_outlined,
-                            color: Colors.amberAccent,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Modo Desarrollo: Autocompletar',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Toque aquí para ingresar credenciales por defecto (admin / admin123)',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // // Test credentials helper card
+            // MouseRegion(
+            //   cursor: SystemMouseCursors.click,
+            //   child: GestureDetector(
+            //     onTap: _autofillCredentials,
+            //     child: Container(
+            //       width: double.infinity,
+            //       padding: const EdgeInsets.symmetric(
+            //         horizontal: 16,
+            //         vertical: 12,
+            //       ),
+            //       decoration: BoxDecoration(
+            //         color: Colors.white.withValues(alpha: 0.05),
+            //         borderRadius: BorderRadius.circular(12),
+            //         border: Border.all(
+            //           color: Colors.white.withValues(alpha: 0.1),
+            //           width: 1,
+            //         ),
+            //       ),
+            //       child: Column(
+            //         crossAxisAlignment: CrossAxisAlignment.start,
+            //         children: [
+            //           Row(
+            //             children: [
+            //               const Icon(
+            //                 Icons.vpn_key_outlined,
+            //                 color: Colors.amberAccent,
+            //                 size: 18,
+            //               ),
+            //               const SizedBox(width: 8),
+            //               Text(
+            //                 'Modo Desarrollo: Autocompletar',
+            //                 style: TextStyle(
+            //                   color: Colors.white.withValues(alpha: 0.8),
+            //                   fontWeight: FontWeight.bold,
+            //                   fontSize: 12,
+            //                 ),
+            //               ),
+            //             ],
+            //           ),
+            //           const SizedBox(height: 6),
+            //           Text(
+            //             'Toque aquí para ingresar credenciales por defecto (admin / admin123)',
+            //             style: TextStyle(
+            //               color: Colors.white.withValues(alpha: 0.5),
+            //               fontSize: 11,
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       ),

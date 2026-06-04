@@ -13,4 +13,9 @@ class PagoCliente extends Model
     {
         return $this->belongsTo(Proyecto::class);
     }
+
+    public function cuentaContable()
+    {
+        return $this->belongsTo(CatalogoCuenta::class, 'cuenta_contable_id');
+    }
 }

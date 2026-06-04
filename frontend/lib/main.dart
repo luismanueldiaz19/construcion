@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:construccion_erp/core/constants.dart';
 import 'package:construccion_erp/modules/projects/historial_proyectos_screen.dart';
 import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
@@ -89,18 +90,68 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMobile = MediaQuery.of(context).size.width <= 850;
+
     return Scaffold(
+      appBar: isMobile
+          ? AppBar(
+              backgroundColor: const Color(0xFF1A1C1E),
+              elevation: 0,
+              title: Row(
+                children: [
+                  Image.asset(
+                    logoPath,
+                    height: 30,
+                    color: Colors.white,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.construction,
+                      color: Color(0xFFE31E24),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'NEO PROJECT',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+              iconTheme: const IconThemeData(color: Colors.white),
+            )
+          : null,
+      drawer: isMobile
+          ? Drawer(
+              width: 260,
+              child: CustomSidebar(
+                extended: true,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (int index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                  Navigator.of(context).pop(); // Cierra el Drawer
+                },
+              ),
+            )
+          : null,
       body: Row(
         children: [
-          CustomSidebar(
-            extended: MediaQuery.of(context).size.width > 850,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-          ),
+          if (!isMobile)
+            CustomSidebar(
+              extended: true,
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+            ),
           Expanded(
             child: Container(
               decoration: const BoxDecoration(

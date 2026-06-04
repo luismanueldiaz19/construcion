@@ -23,6 +23,7 @@ class AppTheme {
       //     Colors.transparent, // Also make AppBar transparent by default
       // foregroundColor: textPrimary,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
         color: textPrimary,
