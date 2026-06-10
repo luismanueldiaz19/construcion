@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             ProyectoSeeder::class,
             CategoriaMaterialSeeder::class,
             ProveedorSeeder::class, 
+            AssetCategorySeeder::class,
         ]);
 
         // Crear usuario admin por defecto si no existe

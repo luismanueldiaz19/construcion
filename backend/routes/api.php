@@ -16,12 +16,19 @@ use App\Http\Controllers\Api\PagoCompraController;
 use App\Http\Controllers\Api\PagosController;
 use App\Http\Controllers\Api\CuentaPorCobrarController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AssetController;
+use App\Http\Controllers\Api\AssetCategoryController;
+use App\Http\Controllers\Api\AssetExpenseController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->group(function () {
+    Route::apiResource('assets', AssetController::class);
+    Route::apiResource('asset-categories', AssetCategoryController::class);
+    Route::apiResource('asset-expenses', AssetExpenseController::class);
+
     Route::post('login', [AuthController::class, 'login']);
     Route::middleware('auth:sanctum')->post('logout', [AuthController::class, 'logout']);
 

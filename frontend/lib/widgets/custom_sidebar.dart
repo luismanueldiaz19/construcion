@@ -58,6 +58,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
       _expandedSection = 'CUENTAS POR COBRAR';
     } else if (widget.selectedIndex == 13) {
       _expandedSection = 'FINANZAS Y CONTABILIDAD';
+    } else if (widget.selectedIndex == 17) {
+      _expandedSection = 'ACTIVOS FIJOS';
     } else if (widget.selectedIndex == 14) {
       _expandedSection = 'CONFIGURACIÓN';
     }
@@ -252,6 +254,19 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                       Icons.payments_outlined,
                                       Icons.payments,
                                       'Historial de Pagos',
+                                      accentColor,
+                                    ),
+                                  ],
+                                ),
+                                _buildExpansionSection(
+                                  'ACTIVOS FIJOS',
+                                  Icons.precision_manufacturing_outlined,
+                                  [
+                                    _buildMenuItem(
+                                      17,
+                                      Icons.computer_outlined,
+                                      Icons.computer,
+                                      'Equipos y Herramientas',
                                       accentColor,
                                     ),
                                   ],

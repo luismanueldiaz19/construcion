@@ -19,9 +19,12 @@ import 'modules/inventory/purchase_form_screen.dart';
 import 'modules/inventory/products_screen.dart';
 import 'modules/inventory/reception_screen.dart';
 import 'modules/clients/clients_screen.dart';
+import 'modules/assets/presentation/assets_screen.dart';
 import 'package:provider/provider.dart';
 import 'modules/dashboard/dashboard_provider.dart';
 import 'modules/projects/projects_provider.dart';
+import 'modules/assets/providers/assets_provider.dart';
+import 'modules/settings/settings_screen.dart';
 import 'widgets/custom_sidebar.dart';
 
 void main() {
@@ -31,6 +34,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => ProjectsProvider()),
+        ChangeNotifierProvider(create: (_) => AssetsProvider()),
       ],
       child: const ConstruccionERP(),
     ),
@@ -87,9 +91,10 @@ class _MainLayoutState extends State<MainLayout> {
     const CuentasPorCobrarScreen(),
     const PaymentsScreen(),
     const AccountingScreen(),
-    const Center(child: Text('Configuración')),
+    const SettingsScreen(),
     const LocalInventoriesScreen(),
     const ClientsScreen(),
+    const AssetsScreen(),
   ];
 
   @override
