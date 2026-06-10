@@ -11,12 +11,14 @@ import 'modules/accounting/cuentas_por_pagar_screen.dart';
 import 'modules/accounting/cuentas_por_cobrar_screen.dart';
 import 'modules/payments/payments_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
+import 'modules/inventory/local_inventories_screen.dart';
 import 'modules/reports/compras_report_screen.dart';
 import 'modules/reports/gastos_report_screen.dart';
 import 'modules/inventory/suppliers_screen.dart';
 import 'modules/inventory/purchase_form_screen.dart';
 import 'modules/inventory/products_screen.dart';
 import 'modules/inventory/reception_screen.dart';
+import 'modules/clients/clients_screen.dart';
 import 'package:provider/provider.dart';
 import 'modules/dashboard/dashboard_provider.dart';
 import 'modules/projects/projects_provider.dart';
@@ -86,6 +88,8 @@ class _MainLayoutState extends State<MainLayout> {
     const PaymentsScreen(),
     const AccountingScreen(),
     const Center(child: Text('Configuración')),
+    const LocalInventoriesScreen(),
+    const ClientsScreen(),
   ];
 
   @override

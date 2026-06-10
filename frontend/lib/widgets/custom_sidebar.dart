@@ -47,11 +47,14 @@ class _CustomSidebarState extends State<CustomSidebar> {
       _expandedSection = 'COMPRAS Y PROVEEDORES';
     } else if (widget.selectedIndex == 4 ||
         widget.selectedIndex == 6 ||
-        widget.selectedIndex == 9) {
+        widget.selectedIndex == 9 ||
+        widget.selectedIndex == 15) {
       _expandedSection = 'INVENTARIO';
     } else if (widget.selectedIndex == 10) {
       _expandedSection = 'CUENTAS POR PAGAR';
-    } else if (widget.selectedIndex == 11 || widget.selectedIndex == 12) {
+    } else if (widget.selectedIndex == 11 ||
+        widget.selectedIndex == 12 ||
+        widget.selectedIndex == 16) {
       _expandedSection = 'CUENTAS POR COBRAR';
     } else if (widget.selectedIndex == 13) {
       _expandedSection = 'FINANZAS Y CONTABILIDAD';
@@ -171,6 +174,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                       accentColor,
                                     ),
                                     _buildMenuItem(
+                                      15,
+                                      Icons.warehouse_outlined,
+                                      Icons.warehouse,
+                                      'Inventarios Locales',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
                                       6,
                                       Icons.local_shipping_outlined,
                                       Icons.local_shipping,
@@ -203,6 +213,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                   'CUENTAS POR COBRAR',
                                   Icons.pending_actions_outlined,
                                   [
+                                    _buildMenuItem(
+                                      16,
+                                      Icons.people_outline,
+                                      Icons.people,
+                                      'Directorio de Clientes',
+                                      accentColor,
+                                    ),
                                     _buildMenuItem(
                                       11,
                                       Icons.pending_actions_outlined,

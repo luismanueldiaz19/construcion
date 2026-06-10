@@ -369,7 +369,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
                       ..._proveedores.map(
                         (p) => DropdownMenuItem<Proveedor>(
                           value: p,
-                          child: Text(p.nombre),
+                          child: Text(p.name),
                         ),
                       ),
                     ],
@@ -537,7 +537,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
                   ),
                 if (_selectedProveedor != null)
                   Chip(
-                    label: Text('Proveedor: ${_selectedProveedor!.nombre}'),
+                    label: Text('Proveedor: ${_selectedProveedor!.name}'),
                     onDeleted: () {
                       setState(() {
                         _selectedProveedor = null;
@@ -923,7 +923,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              c.proveedor?.nombre ?? 'N/A',
+                              c.proveedor?.name ?? 'N/A',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,

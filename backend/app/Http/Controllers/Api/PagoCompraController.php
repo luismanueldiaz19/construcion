@@ -56,7 +56,7 @@ class PagoCompraController extends Controller
 
             // 3. Asiento Contable
             $cuentaCXP = CatalogoCuenta::where('codigo', '2.1.01')->first();
-            $cuentaBanco = CatalogoCuenta::where('codigo', '1.1.01.02.01')->first();
+            $cuentaBanco = CatalogoCuenta::where('codigo', '1.1.01.02')->first();
 
             if ($cuentaCXP && $cuentaBanco) {
                 $detallesAsiento = [

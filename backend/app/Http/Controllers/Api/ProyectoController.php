@@ -11,7 +11,7 @@ class ProyectoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Proyecto::with(['partidas.subpartidas.avances']);
+        $query = Proyecto::with(['partidas.subpartidas.avances', 'client']);
 
         if ($request->has('estado') && !empty($request->estado) && $request->estado !== 'Todos') {
             $estados = explode(',', $request->estado);
@@ -42,7 +42,7 @@ class ProyectoController extends Controller
 
     public function show($id)
     {
-        $proyecto = Proyecto::with(['partidas.subpartidas.avances'])->findOrFail($id);
+        $proyecto = Proyecto::with(['partidas.subpartidas.avances', 'client'])->findOrFail($id);
         $this->calculateProgress($proyecto);
         return $proyecto;
     }
@@ -108,6 +108,7 @@ class ProyectoController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
             'cliente' => 'nullable|string',
+            'client_id' => 'nullable|exists:clients,id',
             'ubicacion' => 'nullable|string',
             'fecha_inicio' => 'nullable|date',
             'fecha_fin' => 'nullable|date',

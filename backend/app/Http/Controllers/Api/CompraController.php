@@ -152,7 +152,7 @@ class CompraController extends Controller
             $cuentaItbisPagado = CatalogoCuenta::where('codigo', '1.1.03')->first();
             $cuentaContrapartida = ($validated['tipo_compra'] == 'Crédito') 
                 ? CatalogoCuenta::where('codigo', '2.1.01')->first() 
-                : CatalogoCuenta::where('codigo', '1.1.01.02.01')->first();
+                : CatalogoCuenta::where('codigo', '1.1.01.02')->first();
 
             $detallesAsiento = [
                 [

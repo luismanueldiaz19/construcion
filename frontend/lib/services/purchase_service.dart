@@ -22,6 +22,11 @@ class PurchaseService {
     await _http.put('proveedores/$id', proveedor.toJson());
   }
 
+  Future<Proveedor> toggleActiveProveedor(int id) async {
+    final response = await _http.post('proveedores/$id/toggle-active', {});
+    return Proveedor.fromJson(response);
+  }
+
   Future<Map<String, dynamic>> createCompra(Map<String, dynamic> data) async {
     return await _http.post('compras', data);
   }

@@ -5,6 +5,7 @@ import '../../services/inventory_service.dart';
 import '../../services/project_service.dart';
 import '../../core/constants.dart';
 import '../../models/proyecto.dart';
+import '../../models/local_inventory.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProjectInventoryDetailsScreen extends StatefulWidget {
@@ -1055,9 +1056,9 @@ class _ProjectInventoryDetailsScreenState
   void _showTransferDialog(dynamic material) async {
     final cantidadController = TextEditingController();
     final observacionesController = TextEditingController();
-    int? selectedProyectoDestinoId;
-    List<Proyecto> proyectosDestino = [];
-    bool loading = true;
+    dynamic selectedDestino; // Can be Proyecto or LocalInventory
+    List<dynamic> destinos = [];
+    bool loadingDestinos = true;
     bool saving = false;
 
     showDialog(
@@ -1065,30 +1066,32 @@ class _ProjectInventoryDetailsScreenState
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
-          if (loading) {
-            _projectService
-                .getProyectos()
-                .then((proyectosList) {
-                  final list = proyectosList
-                      .where((p) => p.id != widget.proyectoId)
-                      .toList();
-                  if (context.mounted) {
-                    setDialogState(() {
-                      proyectosDestino = list;
-                      loading = false;
-                    });
-                  }
-                })
-                .catchError((e) {
-                  if (context.mounted) {
-                    setDialogState(() {
-                      loading = false;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error al cargar proyectos: $e')),
-                    );
-                  }
+          if (loadingDestinos) {
+            Future.wait([
+              _projectService.getProyectos(),
+              _inventoryService.getLocalInventories(),
+            ]).then((results) {
+              final projects = results[0] as List<Proyecto>;
+              final localInventories = results[1] as List<LocalInventory>;
+
+              final list = [];
+              list.addAll(projects.where((p) => p.id != widget.proyectoId));
+              list.addAll(localInventories);
+
+              if (context.mounted) {
+                setDialogState(() {
+                  destinos = list;
+                  loadingDestinos = false;
                 });
+              }
+            }).catchError((e) {
+              if (context.mounted) {
+                setDialogState(() => loadingDestinos = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error al cargar destinos: $e')),
+                );
+              }
+            });
           }
 
           return Dialog(
@@ -1195,7 +1198,7 @@ class _ProjectInventoryDetailsScreenState
                             ),
                           ),
                           const SizedBox(height: 16),
-                          loading
+                          loadingDestinos
                               ? const Center(
                                   child: Padding(
                                     padding: EdgeInsets.symmetric(
@@ -1204,8 +1207,8 @@ class _ProjectInventoryDetailsScreenState
                                     child: CircularProgressIndicator(),
                                   ),
                                 )
-                              : DropdownButtonFormField<int>(
-                                  initialValue: selectedProyectoDestinoId,
+                              : DropdownButtonFormField<dynamic>(
+                                  value: selectedDestino,
                                   isExpanded: true,
                                   decoration: InputDecoration(
                                     labelText: 'Proyecto o Almacén Destino *',
@@ -1214,26 +1217,31 @@ class _ProjectInventoryDetailsScreenState
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  items: proyectosDestino
+                                  items: destinos
                                       .map(
-                                        (p) => DropdownMenuItem<int>(
-                                          value: p.id,
-                                          child: Text(
-                                            p.esAlmacen
-                                                ? "🏢 ${p.nombre} (ALMACÉN)"
-                                                : "🚧 ${p.nombre}",
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 13,
+                                        (dest) {
+                                          final bool isProject = dest is Proyecto;
+                                          final String label = isProject
+                                              ? "🚧 Proyecto: ${dest.nombre}"
+                                              : "🏢 Almacén: ${dest.nameInventario}";
+
+                                          return DropdownMenuItem<dynamic>(
+                                            value: dest,
+                                            child: Text(
+                                              label,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                              ),
                                             ),
-                                          ),
-                                        ),
+                                          );
+                                        },
                                       )
                                       .toList(),
                                   onChanged: saving
                                       ? null
                                       : (v) => setDialogState(
-                                          () => selectedProyectoDestinoId = v,
+                                          () => selectedDestino = v,
                                         ),
                                 ),
                           const SizedBox(height: 16),
@@ -1276,8 +1284,8 @@ class _ProjectInventoryDetailsScreenState
                             height: 50,
                             child: ElevatedButton(
                               onPressed:
-                                  loading ||
-                                      selectedProyectoDestinoId == null ||
+                                  loadingDestinos ||
+                                      selectedDestino == null ||
                                       saving
                                   ? null
                                   : () async {
@@ -1305,6 +1313,8 @@ class _ProjectInventoryDetailsScreenState
 
                                       setDialogState(() => saving = true);
 
+                                      final isProject = selectedDestino is Proyecto;
+
                                       try {
                                         await _inventoryService
                                             .registrarTransferencia({
@@ -1313,7 +1323,9 @@ class _ProjectInventoryDetailsScreenState
                                               'proyecto_origen_id':
                                                   widget.proyectoId,
                                               'proyecto_destino_id':
-                                                  selectedProyectoDestinoId,
+                                                  isProject ? selectedDestino.id : null,
+                                              'inventario_local_destino_id':
+                                                  !isProject ? selectedDestino.id : null,
                                               'cantidad': cant,
                                               'fecha': DateFormat(
                                                 'yyyy-MM-dd',

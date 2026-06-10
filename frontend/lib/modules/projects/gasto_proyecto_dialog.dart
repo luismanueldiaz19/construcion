@@ -88,7 +88,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
       } else {
         _proveedoresFiltrados = _proveedores
             .where(
-              (p) => p.nombre.toLowerCase().contains(
+              (p) => p.name.toLowerCase().contains(
                 query.toLowerCase(),
               ),
             )
@@ -460,7 +460,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
                   return ListTile(
                     visualDensity: VisualDensity.compact,
                     title: Text(
-                      p.nombre,
+                      p.name,
                       style: TextStyle(
                         fontWeight: isSelected
                             ? FontWeight.bold
@@ -473,7 +473,7 @@ class _GastoProyectoDialogState extends State<GastoProyectoDialog> {
                     onTap: () {
                       setState(() {
                         _proveedorId = p.id;
-                        _searchController.text = p.nombre;
+                        _searchController.text = p.name;
                         _proveedoresFiltrados = [];
                       });
                     },

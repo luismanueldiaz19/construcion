@@ -1,7 +1,10 @@
 import 'partida.dart';
+import 'client.dart';
 
 class Proyecto {
   final int? id;
+  final int? clientId;
+  final Client? client;
   final String nombre;
   final String cliente;
   final String? ubicacion;
@@ -15,7 +18,6 @@ class Proyecto {
   final double supervisionTecnica;
   final String? notas;
   final String? logoPath;
-  final bool esAlmacen;
 
   // Atributos calculados (de la respuesta JSON del backend)
   final double? totalPresupuestoConGlobales;
@@ -28,6 +30,8 @@ class Proyecto {
 
   Proyecto({
     this.id,
+    this.clientId,
+    this.client,
     required this.nombre,
     required this.cliente,
     this.ubicacion,
@@ -41,7 +45,6 @@ class Proyecto {
     this.supervisionTecnica = 0.0,
     this.logoPath,
     this.notas,
-    this.esAlmacen = false,
     this.totalPresupuestoConGlobales,
     this.porcentajeAvanceTotal,
     this.montoEjecutadoTotal,
@@ -53,6 +56,8 @@ class Proyecto {
   factory Proyecto.fromJson(Map<String, dynamic> json) {
     return Proyecto(
       id: json['id'],
+      clientId: json['client_id'],
+      client: json['client'] != null ? Client.fromJson(json['client']) : null,
       nombre: json['nombre'] ?? '',
       cliente: json['cliente'] ?? '',
       ubicacion: json['ubicacion'],
@@ -75,7 +80,6 @@ class Proyecto {
           0.0,
       logoPath: json['logo_path'],
       notas: json['notas'],
-      esAlmacen: json['es_almacen'] == true || json['es_almacen'] == 1,
       totalPresupuestoConGlobales: double.tryParse(
         json['total_presupuesto_con_globales']?.toString() ?? '0',
       ),
@@ -98,6 +102,7 @@ class Proyecto {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'client_id': clientId,
       'nombre': nombre,
       'cliente': cliente,
       'ubicacion': ubicacion,
@@ -111,7 +116,6 @@ class Proyecto {
       'supervision_tecnica': supervisionTecnica,
       'logo_path': logoPath,
       'notas': notas,
-      'es_almacen': esAlmacen,
       'partidas': partidas.map((p) => p.toJson()).toList(),
     };
   }

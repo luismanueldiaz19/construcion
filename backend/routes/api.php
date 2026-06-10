@@ -37,7 +37,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/proyectos/{id}/partidas', [ProyectoController::class, 'partidas']);
     Route::apiResource('materiales', \App\Http\Controllers\Api\MaterialController::class);
     Route::post('materiales/{id}/toggle-estado', [\App\Http\Controllers\Api\MaterialController::class, 'toggleEstado']);
+    Route::apiResource('clients', \App\Http\Controllers\Api\ClientController::class)->except(['destroy']);
+    Route::post('clients/{id}/toggle-active', [\App\Http\Controllers\Api\ClientController::class, 'toggleActive']);
     Route::apiResource('categorias', \App\Http\Controllers\Api\CategoriaController::class);
+    Route::apiResource('inventarios-locales', \App\Http\Controllers\Api\InventarioLocalController::class);
     Route::get('/inventario-proyectos', [InventarioController::class, 'index']);
     Route::get('/inventario-proyectos/{id}', [InventarioController::class, 'show']);
     Route::get('/inventario-proyectos/{id}/pdf', [InventarioController::class, 'downloadPdf']);
@@ -53,6 +56,7 @@ Route::prefix('v1')->group(function () {
 
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);
+    Route::post('proveedores/{id}/toggle-active', [ProveedorController::class, 'toggleActive']);
     Route::get('compras/{id}/pdf', [CompraController::class, 'imprimirTicket']);
     Route::post('compras/{id}/documentos', [CompraController::class, 'uploadDocumento']);
     Route::delete('compras/documentos/{id}', [CompraController::class, 'deleteDocumento']);

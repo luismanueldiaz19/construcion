@@ -13,11 +13,33 @@ return new class extends Migration
     {
         Schema::create('proveedores', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre');
-            $table->string('rnc')->unique()->nullable();
-            $table->string('telefono')->nullable();
-            $table->string('direccion')->nullable();
+            $table->string('code')->unique();
+            $table->enum('type', ['empresa', 'persona_fisica', 'subcontratista']);
+            $table->string('name');
+            $table->string('commercial_name')->nullable();
+            $table->string('rnc')->nullable();
+            $table->string('contact_name')->nullable();
+            $table->string('contact_position')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('mobile')->nullable();
+            $table->string('whatsapp')->nullable();
+            $table->string('email')->nullable();
+            $table->string('country')->nullable();
+            $table->string('province')->nullable();
+            $table->string('city')->nullable();
+            $table->string('sector')->nullable();
+            $table->text('address')->nullable();
+            $table->boolean('allow_credit')->default(true);
+            $table->integer('credit_days')->default(30);
+            $table->decimal('credit_limit',15,2)->default(0);
+            $table->string('bank_name')->nullable();
+            $table->string('account_number')->nullable();
+            $table->string('account_type')->nullable();
+            $table->enum('classification',['excelente', 'bueno', 'regular', 'riesgoso'])->default('bueno');
+            $table->boolean('active')->default(true);
+            $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('compras', function (Blueprint $table) {

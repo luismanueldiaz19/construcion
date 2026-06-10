@@ -32,16 +32,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Asegurar que existe el Almacén General
-        \App\Models\Proyecto::firstOrCreate(
-            ['es_almacen' => true],
+        // Asegurar que existe el Inventario Local General (Almacén Central)
+        \App\Models\InventarioLocal::firstOrCreate(
+            ['name_inventario' => 'ALMACÉN GENERAL'],
             [
-                'nombre' => 'ALMACÉN GENERAL',
-                'cliente' => 'NEO PROJECT S.R.L',
-                'ubicacion' => 'OFICINA CENTRAL / ALMACÉN',
-                'fecha_inicio' => now()->toDateString(),
-                'presupuesto_estimado' => 0.00,
-                'estado' => 'Activo',
+                'location' => 'OFICINA CENTRAL / ALMACÉN',
             ]
         );
     }

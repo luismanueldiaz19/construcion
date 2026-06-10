@@ -48,7 +48,7 @@ class PagoClienteController extends Controller
             }
             
             // 1. Determinar cuentas
-            $cuentaBancoId = $validated['banco_id'] ?? CatalogoCuenta::where('codigo', '1.1.01.02.01')->first()->id;
+            $cuentaBancoId = $validated['banco_id'] ?? CatalogoCuenta::where('codigo', '1.1.01.02')->first()->id;
             $cuentaIngreso = CatalogoCuenta::where('codigo', '4.1.01')->first();
             $cuentaItbis = CatalogoCuenta::where('codigo', '2.1.03')->first();
 

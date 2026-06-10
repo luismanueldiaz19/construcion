@@ -10,6 +10,8 @@ class Transferencia extends Model
         'material_id',
         'proyecto_origen_id',
         'proyecto_destino_id',
+        'inventario_local_origen_id',
+        'inventario_local_destino_id',
         'cantidad',
         'fecha',
         'observaciones'
@@ -28,5 +30,15 @@ class Transferencia extends Model
     public function proyectoDestino()
     {
         return $this->belongsTo(Proyecto::class, 'proyecto_destino_id');
+    }
+
+    public function inventarioLocalOrigen()
+    {
+        return $this->belongsTo(InventarioLocal::class, 'inventario_local_origen_id');
+    }
+
+    public function inventarioLocalDestino()
+    {
+        return $this->belongsTo(InventarioLocal::class, 'inventario_local_destino_id');
     }
 }

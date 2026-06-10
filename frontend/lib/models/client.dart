@@ -1,43 +1,34 @@
-class Proveedor {
+class Client {
   final int? id;
-  final String? code;
+  final String code;
   final String type;
   final String name;
   final String? commercialName;
-  final String? rnc;
-  
+  final String? documentNumber;
   final String? contactName;
   final String? contactPosition;
   final String? phone;
   final String? mobile;
   final String? whatsapp;
   final String? email;
-
   final String? country;
   final String? province;
   final String? city;
   final String? sector;
   final String? address;
-
-  final bool allowCredit;
-  final int creditDays;
   final double creditLimit;
-
-  final String? bankName;
-  final String? accountNumber;
-  final String? accountType;
-
+  final int creditDays;
   final String classification;
   final bool active;
   final String? notes;
 
-  Proveedor({
+  Client({
     this.id,
-    this.code,
-    this.type = 'empresa',
+    required this.code,
+    required this.type,
     required this.name,
     this.commercialName,
-    this.rnc,
+    this.documentNumber,
     this.contactName,
     this.contactPosition,
     this.phone,
@@ -49,25 +40,21 @@ class Proveedor {
     this.city,
     this.sector,
     this.address,
-    this.allowCredit = true,
-    this.creditDays = 30,
     this.creditLimit = 0.0,
-    this.bankName,
-    this.accountNumber,
-    this.accountType,
+    this.creditDays = 0,
     this.classification = 'bueno',
     this.active = true,
     this.notes,
   });
 
-  factory Proveedor.fromJson(Map<String, dynamic> json) {
-    return Proveedor(
+  factory Client.fromJson(Map<String, dynamic> json) {
+    return Client(
       id: json['id'],
-      code: json['code'],
-      type: json['type'] ?? 'empresa',
+      code: json['code'] ?? '',
+      type: json['type'] ?? 'persona_fisica',
       name: json['name'] ?? '',
       commercialName: json['commercial_name'],
-      rnc: json['rnc'],
+      documentNumber: json['document_number'],
       contactName: json['contact_name'],
       contactPosition: json['contact_position'],
       phone: json['phone'],
@@ -79,26 +66,22 @@ class Proveedor {
       city: json['city'],
       sector: json['sector'],
       address: json['address'],
-      allowCredit: json['allow_credit'] == 1 || json['allow_credit'] == true,
-      creditDays: int.tryParse(json['credit_days']?.toString() ?? '30') ?? 30,
       creditLimit: double.tryParse(json['credit_limit']?.toString() ?? '0') ?? 0.0,
-      bankName: json['bank_name'],
-      accountNumber: json['account_number'],
-      accountType: json['account_type'],
+      creditDays: int.tryParse(json['credit_days']?.toString() ?? '0') ?? 0,
       classification: json['classification'] ?? 'bueno',
-      active: json['active'] == 1 || json['active'] == true,
+      active: json['active'] == true || json['active'] == 1,
       notes: json['notes'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'code': code,
       'type': type,
       'name': name,
       'commercial_name': commercialName,
-      'rnc': rnc,
+      'document_number': documentNumber,
       'contact_name': contactName,
       'contact_position': contactPosition,
       'phone': phone,
@@ -110,12 +93,8 @@ class Proveedor {
       'city': city,
       'sector': sector,
       'address': address,
-      'allow_credit': allowCredit,
-      'credit_days': creditDays,
       'credit_limit': creditLimit,
-      'bank_name': bankName,
-      'account_number': accountNumber,
-      'account_type': accountType,
+      'credit_days': creditDays,
       'classification': classification,
       'active': active,
       'notes': notes,

@@ -15,31 +15,46 @@ class ProveedorSeeder extends Seeder
      */
     public function run(): void
     {
-Proveedor::create([
-    'nombre' => 'Ing. Edgar Martinez SRL',
-    'rnc' => '105044031',
-    'telefono' => '808-586-4303',
-    'direccion' => 'Puerto plata',
-]);
-Proveedor::create([
-    'nombre' => 'Capiteria Jose',
-    'rnc' => '6253199-5',
-    'telefono' => '809-555-5555',
-    'direccion' => 'Puerto plata',
-]);
-
-Proveedor::create([
-    'nombre' => 'Pedro (Albañir)',
-    'rnc' => '8595',
-    'telefono' => '809-555-6352',
-    'direccion' => 'Santiago',
-]);
-
-Proveedor::create([
-    'nombre' => 'IMCA Cat Rentals',
-    'rnc' => '5888859-9',
-    'telefono' => '809-560-4622',
-    'direccion' => 'Autopista Duarte KM 11 ½, Villa Peravia, Santo Domingo, Rep. Dom',
-]);
+        Proveedor::create([
+            'code' => 'PROV-0001',
+            'type' => 'empresa',
+            'name' => 'Ing. Edgar Martinez SRL',
+            'rnc' => '105044031',
+            'phone' => '808-586-4303',
+            'city' => 'Puerto Plata',
+            'classification' => 'excelente',
+        ]);
+        
+        Proveedor::create([
+            'code' => 'PROV-0002',
+            'type' => 'empresa',
+            'name' => 'Capiteria Jose',
+            'rnc' => '6253199-5',
+            'phone' => '809-555-5555',
+            'city' => 'Puerto Plata',
+            'classification' => 'bueno',
+        ]);
+        
+        Proveedor::create([
+            'code' => 'PROV-0003',
+            'type' => 'persona_fisica',
+            'name' => 'Pedro (Albañil)',
+            'rnc' => '8595',
+            'phone' => '809-555-6352',
+            'city' => 'Santiago',
+            'classification' => 'bueno',
+        ]);
+        
+        Proveedor::create([
+            'code' => 'PROV-0004',
+            'type' => 'empresa',
+            'name' => 'IMCA Cat Rentals',
+            'rnc' => '5888859-9',
+            'phone' => '809-560-4622',
+            'address' => 'Autopista Duarte KM 11 ½, Villa Peravia',
+            'city' => 'Santo Domingo',
+            'country' => 'Rep. Dom',
+            'classification' => 'excelente',
+        ]);
     }
 }

@@ -7,11 +7,7 @@ class ProveedorDialog extends StatefulWidget {
   final Proveedor? supplier;
   final Function() onSaved;
 
-  const ProveedorDialog({
-    super.key,
-    this.supplier,
-    required this.onSaved,
-  });
+  const ProveedorDialog({super.key, this.supplier, required this.onSaved});
 
   @override
   State<ProveedorDialog> createState() => _ProveedorDialogState();
@@ -28,10 +24,12 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.supplier?.nombre);
+    _nameController = TextEditingController(text: widget.supplier?.name);
     _rncController = TextEditingController(text: widget.supplier?.rnc);
-    _phoneController = TextEditingController(text: widget.supplier?.telefono);
-    _addressController = TextEditingController(text: widget.supplier?.direccion);
+    _phoneController = TextEditingController(text: widget.supplier?.phone);
+    _addressController = TextEditingController(
+      text: widget.supplier?.address,
+    );
   }
 
   @override
@@ -48,9 +46,7 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
     final bool isEdit = widget.supplier != null;
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
         child: SingleChildScrollView(
@@ -188,42 +184,50 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
                             : () async {
                                 if (_nameController.text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('El nombre es obligatorio')),
+                                    const SnackBar(
+                                      content: Text('El nombre es obligatorio'),
+                                    ),
                                   );
                                   return;
                                 }
 
                                 final navigator = Navigator.of(context);
-                                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                final scaffoldMessenger = ScaffoldMessenger.of(
+                                  context,
+                                );
 
                                 setState(() => _isSaving = true);
-                                
-                                final nuevoProveedor = Proveedor(
+
+                                final newSupplier = Proveedor(
                                   id: widget.supplier?.id,
-                                  nombre: _nameController.text,
+                                  name: _nameController.text,
                                   rnc: _rncController.text,
-                                  telefono: _phoneController.text,
-                                  direccion: _addressController.text,
+                                  phone: _phoneController.text,
+                                  address: _addressController.text,
                                 );
 
                                 try {
                                   if (isEdit) {
                                     await _purchaseService.updateProveedor(
                                       widget.supplier!.id!,
-                                      nuevoProveedor,
+                                      newSupplier,
                                     );
                                   } else {
                                     await _purchaseService.createProveedor(
-                                      nuevoProveedor,
+                                      newSupplier,
                                     );
                                   }
-                                  
+
                                   if (mounted) {
                                     navigator.pop();
                                     widget.onSaved();
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
-                                        content: Text(isEdit ? 'Proveedor actualizado' : 'Proveedor registrado'),
+                                        content: Text(
+                                          isEdit
+                                              ? 'Proveedor actualizado'
+                                              : 'Proveedor registrado',
+                                        ),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
@@ -232,7 +236,10 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
                                   if (mounted) {
                                     setState(() => _isSaving = false);
                                     scaffoldMessenger.showSnackBar(
-                                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                      SnackBar(
+                                        content: Text('Error: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
                                     );
                                   }
                                 }
@@ -245,8 +252,22 @@ class _ProveedorDialogState extends State<ProveedorDialog> {
                           ),
                         ),
                         child: _isSaving
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : Text(isEdit ? 'GUARDAR CAMBIOS' : 'REGISTRAR PROVEEDOR', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                isEdit
+                                    ? 'GUARDAR CAMBIOS'
+                                    : 'REGISTRAR PROVEEDOR',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],

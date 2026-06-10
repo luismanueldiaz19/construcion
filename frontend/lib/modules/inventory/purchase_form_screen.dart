@@ -360,7 +360,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         value: _selectedProveedorId,
         items: _proveedores,
         onChanged: (v) => setState(() => _selectedProveedorId = v),
-        displayMapper: (p) => p.nombre,
+        displayMapper: (p) => p.name,
       ),
       DropdownButtonFormField<int>(
         value: _selectedProyectoId,

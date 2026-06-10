@@ -5,7 +5,9 @@ import '../../services/project_service.dart';
 import '../../models/proyecto.dart';
 import '../../models/partida.dart';
 import '../../models/subpartida.dart';
+import '../../models/client.dart';
 import '../../core/app_theme.dart';
+import 'widgets/client_selector.dart';
 
 class ProjectFormScreen extends StatefulWidget {
   const ProjectFormScreen({super.key});
@@ -20,7 +22,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
   int _currentStep = 0;
 
   final _nombreController = TextEditingController();
-  final _clienteController = TextEditingController();
+  Client? _selectedClient;
   final _ubicacionController = TextEditingController();
   final _itbisController = TextEditingController(text: '0');
   final _transporteController = TextEditingController(text: '0');
@@ -103,7 +105,8 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
       final subtotal = _calculateSubtotal();
       final proyecto = Proyecto(
         nombre: _nombreController.text,
-        cliente: _clienteController.text,
+        cliente: _selectedClient?.name ?? '',
+        clientId: _selectedClient?.id,
         ubicacion: _ubicacionController.text,
         presupuestoEstimado: subtotal,
         itbis: double.tryParse(_itbisController.text) ?? 0,
@@ -372,10 +375,9 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildTextField(
-                        controller: _clienteController,
-                        label: 'Cliente',
-                        icon: Icons.person_outline,
+                      child: ClientSelector(
+                        initialClient: _selectedClient,
+                        onChanged: (client) => setState(() => _selectedClient = client),
                       ),
                     ),
                     const SizedBox(width: 16),

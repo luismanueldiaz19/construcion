@@ -1,5 +1,6 @@
 import 'http_service.dart';
 import '../models/consumo_proyecto.dart';
+import '../models/local_inventory.dart';
 
 class InventoryService {
   final HttpService _http = HttpService();
@@ -54,5 +55,18 @@ class InventoryService {
     return (data as List)
         .map((json) => ConsumoProyecto.fromJson(json))
         .toList();
+  }
+
+  Future<List<LocalInventory>> getLocalInventories() async {
+    final data = await _http.get('inventarios-locales');
+    return (data as List).map((json) => LocalInventory.fromJson(json)).toList();
+  }
+
+  Future<void> createLocalInventory(Map<String, dynamic> data) async {
+    await _http.post('inventarios-locales', data);
+  }
+
+  Future<Map<String, dynamic>> getLocalInventoryDetail(int id) async {
+    return await _http.get('inventarios-locales/$id');
   }
 }

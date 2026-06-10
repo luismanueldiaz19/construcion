@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_theme.dart';
-import '../../models/proveedor.dart';
-import '../../services/purchase_service.dart';
+import '../../models/client.dart';
+import '../../services/client_service.dart';
 
-class SuppliersScreen extends StatefulWidget {
-  const SuppliersScreen({super.key});
+class ClientsScreen extends StatefulWidget {
+  const ClientsScreen({super.key});
 
   @override
-  State<SuppliersScreen> createState() => _SuppliersScreenState();
+  State<ClientsScreen> createState() => _ClientsScreenState();
 }
 
-class _SuppliersScreenState extends State<SuppliersScreen> {
-  final PurchaseService _purchaseService = PurchaseService();
-  List<Proveedor> _proveedores = [];
-  List<Proveedor> _filteredProveedores = [];
+class _ClientsScreenState extends State<ClientsScreen> {
+  final ClientService _clientService = ClientService();
+  List<Client> _clients = [];
+  List<Client> _filteredClients = [];
   bool _isLoading = true;
 
   // Search and Filter controllers/states
@@ -30,7 +30,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _commercialNameController =
       TextEditingController();
-  final TextEditingController _rncController = TextEditingController();
+  final TextEditingController _documentNumberController =
+      TextEditingController();
   final TextEditingController _contactNameController = TextEditingController();
   final TextEditingController _contactPositionController =
       TextEditingController();
@@ -51,12 +52,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   );
   final TextEditingController _notesController = TextEditingController();
 
-  String _formType = 'empresa';
+  String _formType = 'persona_fisica';
   String _formClassification = 'bueno';
   bool _formActive = true;
 
-  Proveedor? _editingProveedor;
-  bool _isAddingProveedor = false;
+  Client? _editingClient;
+  bool _isAddingClient = false;
   bool _isSavingForm = false;
 
   bool get _isFilterActive =>
@@ -79,7 +80,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     _codeController.dispose();
     _nameController.dispose();
     _commercialNameController.dispose();
-    _rncController.dispose();
+    _documentNumberController.dispose();
     _contactNameController.dispose();
     _contactPositionController.dispose();
     _phoneController.dispose();
@@ -100,19 +101,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _purchaseService.getProveedores();
+      final data = await _clientService.getClients();
       setState(() {
-        _proveedores = data;
+        _clients = data;
         _isLoading = false;
         _applyFilters();
 
         // Sync form if we are currently editing
-        if (_editingProveedor != null) {
-          final fresh = _proveedores.firstWhere(
-            (c) => c.id == _editingProveedor!.id,
-            orElse: () => _editingProveedor!,
+        if (_editingClient != null) {
+          final fresh = _clients.firstWhere(
+            (c) => c.id == _editingClient!.id,
+            orElse: () => _editingClient!,
           );
-          _selectProveedorForEdit(fresh);
+          _selectClientForEdit(fresh);
         }
       });
     } catch (e) {
@@ -135,31 +136,31 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   }
 
   void _applyFilters() {
-    _filteredProveedores = _proveedores.where((proveedor) {
+    _filteredClients = _clients.where((client) {
       // Search filter
       final query = _searchController.text.toLowerCase();
       final matchesSearch =
           query.isEmpty ||
-          proveedor.name.toLowerCase().contains(query) ||
-          (proveedor.code?.toLowerCase().contains(query) ?? false) ||
-          (proveedor.commercialName?.toLowerCase().contains(query) ?? false) ||
-          (proveedor.rnc?.toLowerCase().contains(query) ?? false);
+          client.name.toLowerCase().contains(query) ||
+          client.code.toLowerCase().contains(query) ||
+          (client.commercialName?.toLowerCase().contains(query) ?? false) ||
+          (client.documentNumber?.toLowerCase().contains(query) ?? false);
 
       // Type filter
       final matchesType =
-          _selectedType == 'Todos' || proveedor.type == _selectedType;
+          _selectedType == 'Todos' || client.type == _selectedType;
 
       // Classification filter
       final matchesClassification =
           _selectedClassification == 'Todos' ||
-          proveedor.classification == _selectedClassification;
+          client.classification == _selectedClassification;
 
       // Status filter
       bool matchesStatus = true;
       if (_selectedStatus == 'Activos') {
-        matchesStatus = proveedor.active;
+        matchesStatus = client.active;
       } else if (_selectedStatus == 'Inactivos') {
-        matchesStatus = !proveedor.active;
+        matchesStatus = !client.active;
       }
 
       return matchesSearch &&
@@ -169,44 +170,44 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     }).toList();
   }
 
-  void _selectProveedorForEdit(Proveedor proveedor) {
+  void _selectClientForEdit(Client client) {
     setState(() {
-      _editingProveedor = proveedor;
-      _isAddingProveedor = false;
-      _codeController.text = proveedor.code ?? '';
-      _nameController.text = proveedor.name;
-      _commercialNameController.text = proveedor.commercialName ?? '';
-      _rncController.text = proveedor.rnc ?? '';
-      _contactNameController.text = proveedor.contactName ?? '';
-      _contactPositionController.text = proveedor.contactPosition ?? '';
-      _phoneController.text = proveedor.phone ?? '';
-      _mobileController.text = proveedor.mobile ?? '';
-      _whatsappController.text = proveedor.whatsapp ?? '';
-      _emailController.text = proveedor.email ?? '';
-      _countryController.text = proveedor.country ?? '';
-      _provinceController.text = proveedor.province ?? '';
-      _cityController.text = proveedor.city ?? '';
-      _sectorController.text = proveedor.sector ?? '';
-      _addressController.text = proveedor.address ?? '';
-      _creditLimitController.text = proveedor.creditLimit.toStringAsFixed(2);
-      _creditDaysController.text = proveedor.creditDays.toString();
-      _notesController.text = proveedor.notes ?? '';
-      _formType = proveedor.type;
-      _formClassification = proveedor.classification;
-      _formActive = proveedor.active;
+      _editingClient = client;
+      _isAddingClient = false;
+      _codeController.text = client.code;
+      _nameController.text = client.name;
+      _commercialNameController.text = client.commercialName ?? '';
+      _documentNumberController.text = client.documentNumber ?? '';
+      _contactNameController.text = client.contactName ?? '';
+      _contactPositionController.text = client.contactPosition ?? '';
+      _phoneController.text = client.phone ?? '';
+      _mobileController.text = client.mobile ?? '';
+      _whatsappController.text = client.whatsapp ?? '';
+      _emailController.text = client.email ?? '';
+      _countryController.text = client.country ?? '';
+      _provinceController.text = client.province ?? '';
+      _cityController.text = client.city ?? '';
+      _sectorController.text = client.sector ?? '';
+      _addressController.text = client.address ?? '';
+      _creditLimitController.text = client.creditLimit.toStringAsFixed(2);
+      _creditDaysController.text = client.creditDays.toString();
+      _notesController.text = client.notes ?? '';
+      _formType = client.type;
+      _formClassification = client.classification;
+      _formActive = client.active;
     });
   }
 
-  void _startAddingProveedor() {
+  void _startAddingClient() {
     setState(() {
-      _editingProveedor = null;
-      _isAddingProveedor = true;
+      _editingClient = null;
+      _isAddingClient = true;
       // Auto-generate a sequential-looking unique client code
       _codeController.text =
-          'PROV-${DateTime.now().millisecondsSinceEpoch % 1000000}';
+          'CLI-${DateTime.now().millisecondsSinceEpoch % 1000000}';
       _nameController.clear();
       _commercialNameController.clear();
-      _rncController.clear();
+      _documentNumberController.clear();
       _contactNameController.clear();
       _contactPositionController.clear();
       _phoneController.clear();
@@ -221,7 +222,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       _creditLimitController.text = '0.00';
       _creditDaysController.text = '0';
       _notesController.clear();
-      _formType = 'empresa';
+      _formType = 'persona_fisica';
       _formClassification = 'bueno';
       _formActive = true;
     });
@@ -229,12 +230,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
 
   void _cancelForm() {
     setState(() {
-      _editingProveedor = null;
-      _isAddingProveedor = false;
+      _editingClient = null;
+      _isAddingClient = false;
       _codeController.clear();
       _nameController.clear();
       _commercialNameController.clear();
-      _rncController.clear();
+      _documentNumberController.clear();
       _contactNameController.clear();
       _contactPositionController.clear();
       _phoneController.clear();
@@ -249,35 +250,33 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       _creditLimitController.text = '0.00';
       _creditDaysController.text = '0';
       _notesController.clear();
-      _formType = 'empresa';
+      _formType = 'persona_fisica';
       _formClassification = 'bueno';
       _formActive = true;
     });
   }
 
-  void _onEditProveedorPressed(Proveedor proveedor, bool isLargeScreen) {
-    _selectProveedorForEdit(proveedor);
+  void _onEditClientPressed(Client client, bool isLargeScreen) {
+    _selectClientForEdit(client);
     if (!isLargeScreen) {
       _showFormBottomSheet();
     }
   }
 
-  void _onCreateProveedorPressed(bool isLargeScreen) {
-    _startAddingProveedor();
+  void _onCreateClientPressed(bool isLargeScreen) {
+    _startAddingClient();
     if (!isLargeScreen) {
       _showFormBottomSheet();
     }
   }
 
-  Future<void> _toggleProveedorStatus(Proveedor proveedor) async {
+  Future<void> _toggleClientStatus(Client client) async {
     try {
-      final updated = await _purchaseService.toggleActiveProveedor(
-        proveedor.id!,
-      );
+      final updated = await _clientService.toggleActive(client.id!);
       setState(() {
-        final index = _proveedores.indexWhere((c) => c.id == proveedor.id);
+        final index = _clients.indexWhere((c) => c.id == client.id);
         if (index != -1) {
-          _proveedores[index] = updated;
+          _clients[index] = updated;
           _applyFilters();
         }
       });
@@ -286,8 +285,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           SnackBar(
             content: Text(
               updated.active
-                  ? 'Proveedor "${updated.name}" activado correctamente.'
-                  : 'Proveedor "${updated.name}" inactivado correctamente.',
+                  ? 'Cliente "${updated.name}" activado correctamente.'
+                  : 'Cliente "${updated.name}" inactivado correctamente.',
             ),
             backgroundColor: updated.active ? Colors.green : Colors.orange,
           ),
@@ -328,7 +327,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: _buildProveedorForm(
+                    child: _buildClientForm(
                       isBottomSheet: true,
                       onStateChanged: () {
                         setModalState(() {});
@@ -374,7 +373,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Filtros de Proveedors',
+                        'Filtros de Clientes',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -404,7 +403,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _selectedType,
                     decoration: InputDecoration(
-                      labelText: 'Tipo de Proveedor',
+                      labelText: 'Tipo de Cliente',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -415,16 +414,20 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                         child: Text('Todos los tipos'),
                       ),
                       DropdownMenuItem(
-                        value: 'empresa',
-                        child: Text('Empresa'),
-                      ),
-                      DropdownMenuItem(
                         value: 'persona_fisica',
                         child: Text('Persona Física'),
                       ),
                       DropdownMenuItem(
-                        value: 'subcontratista',
-                        child: Text('Subcontratista'),
+                        value: 'empresa',
+                        child: Text('Empresa'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'gobierno',
+                        child: Text('Gobierno'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'institucion',
+                        child: Text('Institución'),
                       ),
                     ],
                     onChanged: (val) {
@@ -621,10 +624,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   }
 
   Widget _buildMetricsCards() {
-    final int total = _proveedores.length;
-    final int activos = _proveedores.where((c) => c.active).length;
+    final int total = _clients.length;
+    final int activos = _clients.where((c) => c.active).length;
     final int inactivos = total - activos;
-    final int conCredito = _proveedores.where((c) => c.creditLimit > 0).length;
+    final int conCredito = _clients.where((c) => c.creditLimit > 0).length;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
@@ -643,7 +646,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               childAspectRatio: 2.2,
               children: [
                 _buildMetricCard(
-                  'Proveedors Totales',
+                  'Clientes Totales',
                   total.toString(),
                   Icons.people,
                   Colors.blue,
@@ -676,7 +679,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               SizedBox(
                 width: cardWidth,
                 child: _buildMetricCard(
-                  'Proveedors Totales',
+                  'Clientes Totales',
                   total.toString(),
                   Icons.people,
                   Colors.blue,
@@ -788,11 +791,11 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     return isBottomSheet ? child : Expanded(child: child);
   }
 
-  Widget _buildProveedorForm({
+  Widget _buildClientForm({
     required bool isBottomSheet,
     VoidCallback? onStateChanged,
   }) {
-    final bool isEdit = _editingProveedor != null;
+    final bool isEdit = _editingClient != null;
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -813,7 +816,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      isEdit ? 'Editar Proveedor' : 'Registrar Proveedor',
+                      isEdit ? 'Editar Cliente' : 'Registrar Cliente',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -878,23 +881,27 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                         child: DropdownButtonFormField<String>(
                           initialValue: _formType,
                           decoration: InputDecoration(
-                            labelText: 'Tipo de Proveedor *',
+                            labelText: 'Tipo de Cliente *',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           items: const [
                             DropdownMenuItem(
-                              value: 'empresa',
-                              child: Text('Empresa'),
-                            ),
-                            DropdownMenuItem(
                               value: 'persona_fisica',
                               child: Text('Persona Física'),
                             ),
                             DropdownMenuItem(
-                              value: 'subcontratista',
-                              child: Text('Subcontratista'),
+                              value: 'empresa',
+                              child: Text('Empresa'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'gobierno',
+                              child: Text('Gobierno'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'institucion',
+                              child: Text('Institución'),
                             ),
                           ],
                           onChanged: (val) {
@@ -937,7 +944,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
-                          controller: _rncController,
+                          controller: _documentNumberController,
                           decoration: InputDecoration(
                             labelText: 'RNC / Cédula',
                             prefixIcon: const Icon(
@@ -1257,7 +1264,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   const SizedBox(height: 16),
                   SwitchListTile(
                     value: _formActive,
-                    title: const Text('Proveedor Activo'),
+                    title: const Text('Cliente Activo'),
                     subtitle: const Text(
                       'Alterna si este cliente puede ser utilizado en transacciones contables.',
                     ),
@@ -1294,7 +1301,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   child: ElevatedButton(
                     onPressed: _isSavingForm
                         ? null
-                        : () => _saveProveedor(isBottomSheet),
+                        : () => _saveClient(isBottomSheet),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentColor,
                       foregroundColor: Colors.white,
@@ -1326,24 +1333,24 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     );
   }
 
-  Future<void> _saveProveedor(bool isBottomSheet) async {
+  Future<void> _saveClient(bool isBottomSheet) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     setState(() => _isSavingForm = true);
 
-    final client = Proveedor(
-      id: _editingProveedor?.id,
+    final client = Client(
+      id: _editingClient?.id,
       code: _codeController.text.trim(),
       type: _formType,
       name: _nameController.text.trim(),
       commercialName: _commercialNameController.text.trim().isEmpty
           ? null
           : _commercialNameController.text.trim(),
-      rnc: _rncController.text.trim().isEmpty
+      documentNumber: _documentNumberController.text.trim().isEmpty
           ? null
-          : _rncController.text.trim(),
+          : _documentNumberController.text.trim(),
       contactName: _contactNameController.text.trim().isEmpty
           ? null
           : _contactNameController.text.trim(),
@@ -1387,19 +1394,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     );
 
     try {
-      if (_editingProveedor != null) {
-        await _purchaseService.updateProveedor(_editingProveedor!.id!, client);
+      if (_editingClient != null) {
+        await _clientService.updateClient(_editingClient!.id!, client);
       } else {
-        await _purchaseService.createProveedor(client);
+        await _clientService.createClient(client);
       }
       _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _editingProveedor != null
-                  ? 'Proveedor actualizado con éxito.'
-                  : 'Proveedor registrado con éxito.',
+              _editingClient != null
+                  ? 'Cliente actualizado con éxito.'
+                  : 'Cliente registrado con éxito.',
             ),
             backgroundColor: Colors.green,
           ),
@@ -1439,7 +1446,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           Icon(Icons.people_outline, size: 72, color: Colors.grey[300]),
           const SizedBox(height: 16),
           const Text(
-            'Detalles del Proveedor',
+            'Detalles del Cliente',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1448,15 +1455,15 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Seleccione un cliente de la lista para ver o editar sus datos, o presione "Nuevo Proveedor" para registrar uno.',
+            'Seleccione un cliente de la lista para ver o editar sus datos, o presione "Nuevo Cliente" para registrar uno.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.4),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => _onCreateProveedorPressed(isLargeScreen),
+            onPressed: () => _onCreateClientPressed(isLargeScreen),
             icon: const Icon(Icons.person_add, size: 20),
-            label: const Text('Registrar Proveedor'),
+            label: const Text('Registrar Cliente'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentColor,
               foregroundColor: Colors.white,
@@ -1473,7 +1480,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
 
   String _translateType(String type) {
     switch (type) {
-      case 'empresa':
+      case 'persona_fisica':
         return 'Persona Física';
       case 'empresa':
         return 'Empresa';
@@ -1525,7 +1532,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Directorio de Proveedors'),
+        title: const Text('Directorio de Clientes'),
         backgroundColor: Colors.transparent,
         foregroundColor: AppTheme.textPrimary,
         actions: [
@@ -1563,9 +1570,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
-            onPressed: () => _onCreateProveedorPressed(isLargeScreen),
+            onPressed: () => _onCreateClientPressed(isLargeScreen),
             icon: const Icon(Icons.person_add),
-            label: const Text('Nuevo Proveedor'),
+            label: const Text('Nuevo Cliente'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentColor,
               foregroundColor: Colors.white,
@@ -1601,7 +1608,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
-                              child: _filteredProveedores.isEmpty
+                              child: _filteredClients.isEmpty
                                   ? const Center(
                                       child: Text(
                                         'No se encontraron clientes.',
@@ -1701,21 +1708,20 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                     ),
                                                   ),
                                                 ],
-                                                rows: _filteredProveedores.map((
-                                                  proveedor,
+                                                rows: _filteredClients.map((
+                                                  client,
                                                 ) {
                                                   final bool isSelected =
-                                                      _editingProveedor !=
-                                                          null &&
-                                                      _editingProveedor!.id ==
-                                                          proveedor.id;
+                                                      _editingClient != null &&
+                                                      _editingClient!.id ==
+                                                          client.id;
                                                   return DataRow(
                                                     selected: isSelected,
                                                     onSelectChanged: (selected) {
                                                       if (selected != null &&
                                                           selected) {
-                                                        _onEditProveedorPressed(
-                                                          proveedor,
+                                                        _onEditClientPressed(
+                                                          client,
                                                           isLargeScreen,
                                                         );
                                                       }
@@ -1723,8 +1729,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                     cells: [
                                                       DataCell(
                                                         Text(
-                                                          proveedor.code ??
-                                                              'N/A',
+                                                          client.code,
                                                           style:
                                                               const TextStyle(
                                                                 fontWeight:
@@ -1734,18 +1739,18 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                         ),
                                                       ),
                                                       DataCell(
-                                                        Text(proveedor.name),
+                                                        Text(client.name),
                                                       ),
                                                       DataCell(
                                                         Text(
-                                                          proveedor.rnc ??
+                                                          client.documentNumber ??
                                                               'N/A',
                                                         ),
                                                       ),
                                                       DataCell(
                                                         Text(
                                                           _translateType(
-                                                            proveedor.type,
+                                                            client.type,
                                                           ),
                                                         ),
                                                       ),
@@ -1759,7 +1764,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                           decoration: BoxDecoration(
                                                             color:
                                                                 _getClassificationColor(
-                                                                  proveedor
+                                                                  client
                                                                       .classification,
                                                                 ).withValues(
                                                                   alpha: 0.1,
@@ -1771,12 +1776,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                           ),
                                                           child: Text(
                                                             _translateClassification(
-                                                              proveedor
+                                                              client
                                                                   .classification,
                                                             ),
                                                             style: TextStyle(
                                                               color: _getClassificationColor(
-                                                                proveedor
+                                                                client
                                                                     .classification,
                                                               ),
                                                               fontWeight:
@@ -1790,21 +1795,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                       DataCell(
                                                         Text(
                                                           f.format(
-                                                            proveedor
-                                                                .creditLimit,
+                                                            client.creditLimit,
                                                           ),
                                                         ),
                                                       ),
                                                       DataCell(
                                                         Switch(
-                                                          value:
-                                                              proveedor.active,
+                                                          value: client.active,
                                                           activeThumbColor:
                                                               AppTheme
                                                                   .accentColor,
                                                           onChanged: (val) {
-                                                            _toggleProveedorStatus(
-                                                              proveedor,
+                                                            _toggleClientStatus(
+                                                              client,
                                                             );
                                                           },
                                                         ),
@@ -1816,8 +1819,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                             color: Colors.blue,
                                                           ),
                                                           onPressed: () =>
-                                                              _onEditProveedorPressed(
-                                                                proveedor,
+                                                              _onEditClientPressed(
+                                                                client,
                                                                 isLargeScreen,
                                                               ),
                                                         ),
@@ -1847,9 +1850,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                             ),
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
-                              child:
-                                  (_isAddingProveedor ||
-                                      _editingProveedor != null)
+                              child: (_isAddingClient || _editingClient != null)
                                   ? Container(
                                       decoration: BoxDecoration(
                                         color: Colors.white,
@@ -1867,7 +1868,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: _buildProveedorForm(
+                                      child: _buildClientForm(
                                         isBottomSheet: false,
                                       ),
                                     )

@@ -7,14 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class Proyecto extends Model
 {
     protected $fillable = [
-        'nombre', 'cliente', 'ubicacion', 'fecha_inicio', 'fecha_fin', 
+        'nombre', 'cliente', 'client_id', 'ubicacion', 'fecha_inicio', 'fecha_fin', 
         'presupuesto_estimado', 'estado', 'itbis', 'transporte', 'otros_costos', 'supervision_tecnica',
-        'logo_path', 'notas', 'es_almacen'
+        'logo_path', 'notas'
     ];
 
     protected $casts = [
-        'es_almacen' => 'boolean',
     ];
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
 
     public function partidas()
     {

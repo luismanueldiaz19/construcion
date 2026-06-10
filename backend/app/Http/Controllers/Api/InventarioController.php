@@ -93,17 +93,25 @@ class InventarioController extends Controller
                 });
 
             // Transferencias Recibidas (Entradas)
-            $transEntradas = \App\Models\Transferencia::with(['material', 'proyectoOrigen'])
+            $transEntradas = \App\Models\Transferencia::with(['material', 'proyectoOrigen', 'inventarioLocalOrigen'])
                 ->where('proyecto_destino_id', $id)
                 ->get()
                 ->map(function($trans) {
                     $costo = \App\Models\CompraDetalle::where('material_id', $trans->material_id)
                         ->latest()
                         ->value('precio_unitario') ?? optional($trans->material)->precio_costo ?? 0;
+                    
+                    $origen = '';
+                    if ($trans->proyecto_origen_id) {
+                        $origen = "Proyecto: " . optional($trans->proyectoOrigen)->nombre;
+                    } elseif ($trans->inventario_local_origen_id) {
+                        $origen = "Almacén: " . optional($trans->inventarioLocalOrigen)->name_inventario;
+                    }
+
                     return [
                         'tipo' => 'Entrada',
                         'fecha' => $trans->fecha,
-                        'referencia' => "Transf. desde: " . optional($trans->proyectoOrigen)->nombre . ($trans->observaciones ? " ({$trans->observaciones})" : ""),
+                        'referencia' => "Transf. desde: " . $origen . ($trans->observaciones ? " ({$trans->observaciones})" : ""),
                         'material' => optional($trans->material)->nombre ?? 'Material Desconocido',
                         'cantidad' => $trans->cantidad,
                         'costo' => $costo,
@@ -128,17 +136,25 @@ class InventarioController extends Controller
                 });
 
             // Transferencias Enviadas (Salidas)
-            $transSalidas = \App\Models\Transferencia::with(['material', 'proyectoDestino'])
+            $transSalidas = \App\Models\Transferencia::with(['material', 'proyectoDestino', 'inventarioLocalDestino'])
                 ->where('proyecto_origen_id', $id)
                 ->get()
                 ->map(function($trans) {
                     $costo = \App\Models\CompraDetalle::where('material_id', $trans->material_id)
                         ->latest()
                         ->value('precio_unitario') ?? optional($trans->material)->precio_costo ?? 0;
+
+                    $destino = '';
+                    if ($trans->proyecto_destino_id) {
+                        $destino = "Proyecto: " . optional($trans->proyectoDestino)->nombre;
+                    } elseif ($trans->inventario_local_destino_id) {
+                        $destino = "Almacén: " . optional($trans->inventarioLocalDestino)->name_inventario;
+                    }
+
                     return [
                         'tipo' => 'Salida',
                         'fecha' => $trans->fecha,
-                        'referencia' => "Transf. a: " . optional($trans->proyectoDestino)->nombre . ($trans->observaciones ? " ({$trans->observaciones})" : ""),
+                        'referencia' => "Transf. a: " . $destino . ($trans->observaciones ? " ({$trans->observaciones})" : ""),
                         'material' => optional($trans->material)->nombre ?? 'Material Desconocido',
                         'cantidad' => $trans->cantidad,
                         'costo' => $costo,
