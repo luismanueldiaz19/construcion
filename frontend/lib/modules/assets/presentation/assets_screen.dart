@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../providers/assets_provider.dart';
 import '../../../core/constants.dart';
 import 'asset_form_screen.dart';
@@ -26,7 +27,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
   Widget build(BuildContext context) {
     final primaryColor = const Color(0xFF1A1C1E);
     final accentColor = const Color(0xFFE31E24);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activos y Equipos'),
@@ -58,8 +59,13 @@ class _AssetsScreenState extends State<AssetsScreen> {
                     backgroundColor: accentColor.withValues(alpha: 0.1),
                     child: Icon(Icons.computer, color: accentColor),
                   ),
-                  title: Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('TCO: \$${asset.tco?.toStringAsFixed(2) ?? "0.00"} - Estado: ${asset.status}'),
+                  title: Text(
+                    asset.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'Costo Total: \$${asset.tco != null ? NumberFormat('#,##0.00', 'en_US').format(asset.tco) : "0.00"} - Estado: ${asset.status}',
+                  ),
                   trailing: IconButton(
                     icon: Icon(Icons.add_circle_outline, color: accentColor),
                     tooltip: 'Registrar Gasto',
@@ -67,7 +73,8 @@ class _AssetsScreenState extends State<AssetsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => AssetExpenseFormScreen(asset: asset),
+                          builder: (context) =>
+                              AssetExpenseFormScreen(asset: asset),
                         ),
                       );
                     },

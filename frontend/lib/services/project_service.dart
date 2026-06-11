@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/proyecto.dart';
 import '../models/partida.dart';
-import '../models/subpartida.dart';
 import '../models/avance_proyecto.dart';
 import '../models/gasto_proyecto.dart';
 import 'http_service.dart';
@@ -65,7 +63,10 @@ class ProjectService {
   }
 
   Future<List<GastoProyecto>> getGastosProyecto(int proyectoId) async {
-    final data = await _http.get('gastos-proyecto', params: {'proyecto_id': proyectoId.toString()});
+    final data = await _http.get(
+      'gastos-proyecto',
+      params: {'proyecto_id': proyectoId.toString()},
+    );
     return (data as List).map((json) => GastoProyecto.fromJson(json)).toList();
   }
 
