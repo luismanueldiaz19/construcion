@@ -50,6 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _autofillCredentials() {
+    // Esto quita el cursor del texto antes de modificarlo para evitar el crash rojo
+    FocusScope.of(context).unfocus();
     setState(() {
       _usernameController.text = "ludeveloper";
       _passwordController.text = "199512";
