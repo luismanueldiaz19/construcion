@@ -129,7 +129,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (image != null) {
       try {
         setState(() => _isLoading = true);
-        await _projectService.uploadLogo(_proyecto.id!, image);
+        print(
+          ">>> Iniciando subida de logo para el proyecto ${_proyecto.id}...",
+        );
+        final url = await _projectService.uploadLogo(_proyecto.id!, image);
+        print(">>> Logo subido con éxito. URL devuelta: $url");
         await _refresh(notifyParent: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1520,6 +1524,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                         );
                                       },
                                   errorBuilder: (context, error, stackTrace) {
+                                    print(
+                                      ">>> Error al cargar la imagen: $host/storage/${_proyecto.logoPath}",
+                                    );
+                                    print(">>> Detalle: $error");
                                     return const Center(
                                       child: Icon(
                                         Icons.broken_image,
