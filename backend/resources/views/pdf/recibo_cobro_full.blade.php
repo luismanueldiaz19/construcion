@@ -1,97 +1,209 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <title>Recibo de Cobro - {{ $data['id'] }}</title>
     <style>
-        @page { margin: 1cm; }
-        body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 12px; color: #333; margin: 0; padding: 0; line-height: 1.5; }
-        
-        .header-table { width: 100%; border: none; margin-bottom: 30px; }
-        .logo-area { width: 150px; text-align: left; }
-        .company-info { text-align: left; vertical-align: top; padding-left: 10px; }
-        .title-area { text-align: center; vertical-align: top; }
-        
-        .company-name { font-size: 20px; font-weight: bold; color: #003366; margin-bottom: 2px; }
-        .receipt-label { font-size: 24px; font-weight: bold; color: #003366; margin-bottom: 5px; }
-        
-        .details-box { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 30px; background-color: #f9f9f9; }
-        .details-row { margin-bottom: 10px; display: table; width: 100%; }
-        .details-label { display: table-cell; width: 30%; font-weight: bold; color: #555; }
-        .details-value { display: table-cell; width: 70%; border-bottom: 1px solid #eee; }
-
-        .monto-box { margin-top: 20px; text-align: right; padding: 20px; border-top: 2px solid #003366; }
-        .monto-label { font-size: 16px; font-weight: bold; }
-        .monto-value { font-size: 24px; font-weight: bold; color: #28a745; }
-
-        .footer { margin-top: 100px; text-align: center; }
-        .signature-line { border-top: 1px solid #333; width: 250px; margin: 0 auto 5px auto; }
-        .signature-label { font-weight: bold; font-size: 12px; }
-        
-        .watermark { position: absolute; top: 40%; left: 25%; font-size: 80px; color: rgba(40, 167, 69, 0.1); transform: rotate(-45deg); z-index: -1; }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 13px;
+            color: #2c3e50;
+            margin: 30px;
+        }
+        .header-top {
+            width: 100%;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+        }
+        .logo-text {
+            font-size: 28px;
+            font-weight: 900;
+            color: #2c3e50;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+        .company-details {
+            color: #7f8c8d;
+            font-size: 11px;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        .badge {
+            background-color: #27ae60;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .info-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #27ae60;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .details-table td {
+            padding: 10px 0;
+            vertical-align: top;
+        }
+        .details-label {
+            width: 25%;
+            font-size: 10px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .details-value {
+            width: 75%;
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: bold;
+            border-bottom: 1px solid #ecf0f1;
+            padding-bottom: 4px;
+        }
+        .total-section {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .total-box {
+            background-color: #27ae60;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 6px;
+            font-size: 24px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .signatures {
+            width: 100%;
+            margin-top: 80px;
+            text-align: center;
+        }
+        .sig-line {
+            width: 50%;
+            border-top: 1px solid #7f8c8d;
+            margin: 0 auto;
+            padding-top: 8px;
+            color: #34495e;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .footer {
+            width: 100%;
+            text-align: center;
+            margin-top: 60px;
+            font-size: 10px;
+            color: #95a5a6;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 15px;
+        }
+        .watermark { 
+            position: absolute; 
+            top: 40%; 
+            left: 20%; 
+            font-size: 90px; 
+            font-weight: bold;
+            color: rgba(39, 174, 96, 0.06); 
+            transform: rotate(-35deg); 
+            z-index: -1; 
+            letter-spacing: 5px;
+        }
     </style>
 </head>
 <body>
-    <div class="watermark">PAGADO</div>
+    <div class="watermark">RECIBIDO / PAGADO</div>
 
-    <table class="header-table">
+    <table class="header-top">
         <tr>
-            <td class="logo-area">
-                <img src="{{ public_path('images/logo.png') }}" style="max-width: 150px; max-height: 80px;">
+            <td style="width: 50%; vertical-align: top;">
+                <img src="{{ public_path('images/logo.png') }}" style="max-height: 60px; margin-bottom: 10px;" alt="NEO PROJECT">
+                <div class="company-details">
+                    RNC: 132-XXXXX-X<br>
+                    Gestión, Construcción y Remodelación<br>
+                    Tel: (809) 000-0000
+                </div>
             </td>
-            <td class="company-info">
-                <div class="company-name">Neo Project S.R.L</div>
-                <div>RNC: 132-XXXXX-X</div>
-                <div>Construcción y Remodelación</div>
-                <div>Tel: (809) 000-0000</div>
-            </td>
-            <td class="title-area">
-                <div class="receipt-label">RECIBO DE PAGO</div>
-                <div style="font-size: 14px;"><strong>No:</strong> #{{ str_pad($data['id'], 5, '0', STR_PAD_LEFT) }}</div>
-                <div style="font-size: 14px;"><strong>Fecha:</strong> {{ \Carbon\Carbon::parse($data['fecha'])->format('d/m/Y') }}</div>
+            <td style="width: 50%; text-align: right; vertical-align: top;">
+                <div style="margin-bottom: 15px;">
+                    <span class="badge">Recibo Oficial de Ingreso</span>
+                </div>
+                <div style="font-size: 14px;">
+                    <strong>Recibo N°:</strong> <span style="color: #e74c3c; font-weight: bold;">#{{ str_pad($data['id'], 6, '0', STR_PAD_LEFT) }}</span>
+                </div>
+                <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">
+                    Fecha de emisión: {{ \Carbon\Carbon::parse($data['fecha'])->format('d/m/Y') }}
+                </div>
             </td>
         </tr>
     </table>
 
-    <div class="details-box">
-        <div class="details-row">
-            <div class="details-label">RECIBIDO DE:</div>
-            <div class="details-value">{{ $data['entidad'] }}</div>
-        </div>
-        <div class="details-row">
-            <div class="details-label">CONCEPTO DE:</div>
-            <div class="details-value">{{ $data['subtitulo'] }}</div>
-        </div>
-        <div class="details-row">
-            <div class="details-label">PROYECTO:</div>
-            <div class="details-value">{{ $data['proyecto']->nombre ?? 'N/A' }}</div>
-        </div>
-        <div class="details-row">
-            <div class="details-label">MÉTODO DE PAGO:</div>
-            <div class="details-value">{{ $data['metodo'] }}</div>
-        </div>
-        @if($data['referencia'])
-        <div class="details-row">
-            <div class="details-label">REFERENCIA:</div>
-            <div class="details-value">{{ $data['referencia'] }}</div>
-        </div>
-        @endif
+    <div class="info-card">
+        <table class="details-table">
+            <tr>
+                <td class="details-label">RECIBIDO DE:</td>
+                <td class="details-value" style="font-size: 16px;">{{ $data['entidad'] }}</td>
+            </tr>
+            <tr>
+                <td class="details-label">CONCEPTO DE:</td>
+                <td class="details-value">{{ $data['subtitulo'] }}</td>
+            </tr>
+            <tr>
+                <td class="details-label">PROYECTO:</td>
+                <td class="details-value">{{ $data['proyecto']->nombre ?? 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="details-label">MÉTODO DE PAGO:</td>
+                <td class="details-value">
+                    <span style="background: #e8f8f5; color: #16a085; padding: 3px 8px; border-radius: 4px; font-size: 11px; display: inline-block; border: 1px solid #b2e8d9;">
+                        {{ $data['metodo'] }}
+                    </span>
+                </td>
+            </tr>
+            @if(!empty($data['referencia']))
+            <tr>
+                <td class="details-label">REFERENCIA:</td>
+                <td class="details-value">{{ $data['referencia'] }}</td>
+            </tr>
+            @endif
+        </table>
     </div>
 
-    <div class="monto-box">
-        <span class="monto-label">VALOR RECIBIDO:</span>
-        <br>
-        <span class="monto-value">RD$ {{ number_format($data['monto'], 2) }}</span>
-    </div>
+    <table class="total-section">
+        <tr>
+            <td style="width: 45%; vertical-align: middle;">
+                <div style="font-style: italic; color: #7f8c8d; font-size: 11px; padding-right: 20px;">
+                    Este documento es un comprobante oficial de pago recibido por Neo Project S.R.L. y sirve como descargo del monto especificado.
+                </div>
+            </td>
+            <td style="width: 55%; text-align: right; vertical-align: middle;">
+                <div style="color: #7f8c8d; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px;">Valor Recibido</div>
+                <div class="total-box">
+                    RD$ {{ number_format($data['monto'], 2) }}
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    <div style="margin-top: 40px; font-style: italic; color: #666;">
-        Este documento es un comprobante oficial de pago recibido por Neo Project S.R.L.
-    </div>
+    <table class="signatures">
+        <tr>
+            <td style="width: 100%; vertical-align: bottom; height: 80px;">
+                <div class="sig-line">
+                    <strong>Firma Autorizada / Sello</strong><br>
+                    <span style="color: #7f8c8d;">NEO PROJECT S.R.L</span>
+                </div>
+            </td>
+        </tr>
+    </table>
 
     <div class="footer">
-        <div class="signature-line"></div>
-        <div class="signature-label">Firma Autorizada / Sello</div>
-        <div style="font-size: 10px; margin-top: 5px; color: #999;">Generado el {{ date('d/m/Y H:i:s') }}</div>
+        Generado automáticamente por el Sistema el {{ date('d/m/Y') }} a las {{ date('H:i:s') }}
     </div>
 </body>
 </html>

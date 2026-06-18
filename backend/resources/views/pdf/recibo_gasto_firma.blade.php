@@ -1,148 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
     <title>Recibo de Gasto #{{ str_pad($gasto->id, 6, '0', STR_PAD_LEFT) }}</title>
     <style>
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 14px;
-            color: #333;
+            font-size: 13px;
+            color: #2c3e50;
             margin: 0;
             padding: 20px;
         }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #1a1a1a;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+        .container {
+            /* DOMPDF breaks with width:100% + padding. Letting block layout handle it. */
         }
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #003366;
-            margin-bottom: 5px;
+        .header-top {
+            width: 100%;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
         }
-        .receipt-title {
-            font-size: 18px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #555;
+        .logo-text {
+            font-size: 28px;
+            font-weight: 900;
+            color: #2c3e50;
+            letter-spacing: 1px;
+            margin: 0;
         }
-        .receipt-details {
-            text-align: right;
+        .badge {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
             font-size: 12px;
-            margin-top: -40px;
-            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
-        .info-table {
+        .info-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 18px;
+            margin-bottom: 30px;
+        }
+        .table-details {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
-        }
-        .info-table th, .info-table td {
-            text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
-        }
-        .info-table th {
-            width: 30%;
-            color: #555;
-        }
-        .amount-box {
-            background-color: #f9f9f9;
-            border: 2px solid #ddd;
-            padding: 15px;
-            text-align: center;
             margin-bottom: 30px;
-            border-radius: 5px;
         }
-        .amount-box .amount {
-            font-size: 28px;
+        .table-details th {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            text-align: left;
+            padding: 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-top: 1px solid #bdc3c7;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        .table-details td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #ecf0f1;
+            color: #34495e;
+            vertical-align: top;
+        }
+        .total-box {
+            background-color: #27ae60;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 6px;
+            font-size: 24px;
             font-weight: bold;
-            color: #d9534f;
+            display: inline-block;
         }
-        .signature-section {
+        .signatures {
+            width: 100%;
             margin-top: 80px;
             text-align: center;
         }
-        .signature-line {
-            width: 300px;
-            border-top: 1px solid #000;
+        .sig-line {
+            width: 70%;
+            border-top: 1px solid #7f8c8d;
             margin: 0 auto;
-            padding-top: 10px;
-        }
-        .signature-text {
-            font-size: 12px;
-            font-weight: bold;
+            padding-top: 8px;
+            color: #34495e;
+            font-size: 11px;
+            text-transform: uppercase;
         }
         .footer {
-            margin-top: 40px;
+            width: 100%;
             text-align: center;
+            margin-top: 60px;
             font-size: 10px;
-            color: #888;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
+            color: #95a5a6;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 15px;
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        
+        <table class="header-top">
+            <tr>
+                <td style="width: 50%; vertical-align: middle;">
+                    <h1 class="logo-text">NEO PROJECT S.R.L</h1>
+                    <div style="color: #7f8c8d; font-size: 11px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">
+                        Gestión y Control de Obras
+                    </div>
+                </td>
+                <td style="width: 50%; text-align: right; vertical-align: middle;">
+                    <div style="margin-bottom: 12px;">
+                        <span class="badge">Comprobante Oficial de Pago</span>
+                    </div>
+                    <div style="font-size: 14px;">
+                        <strong>Recibo N°:</strong> <span style="color: #e74c3c; font-weight: bold;">#{{ str_pad($gasto->id, 6, '0', STR_PAD_LEFT) }}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">
+                        Fecha de emisión: {{ \Carbon\Carbon::parse($gasto->fecha)->format('d/m/Y') }}
+                    </div>
+                </td>
+            </tr>
+        </table>
 
-    <div class="header">
-        <div class="company-name">NEO PROJECT S.R.L</div>
-        <div class="receipt-title">Comprobante de Pago</div>
+        <div class="info-card">
+            <table style="width: 100%;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">Beneficiario / Proveedor</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #2c3e50;">{{ $gasto->proveedor->name ?? 'Trabajador / Proveedor General' }}</div>
+                        <div style="font-size: 12px; color: #7f8c8d; margin-top: 3px;">Pagado vía: {{ $gasto->metodo_pago }}</div>
+                    </td>
+                    <td style="width: 50%; vertical-align: top; text-align: right;">
+                        <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">Proyecto Destino</div>
+                        <div style="font-size: 15px; font-weight: bold; color: #2c3e50;">{{ $gasto->proyecto->nombre ?? 'N/A' }}</div>
+                        @if($gasto->subpartida)
+                        <div style="font-size: 12px; color: #34495e; margin-top: 3px;">Partida: {{ $gasto->subpartida->descripcion }}</div>
+                        @endif
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <table class="table-details">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Descripción del Concepto</th>
+                    <th style="width: 30%; text-align: center;">Tipo de Gasto</th>
+                    <th style="width: 30%; text-align: right;">Monto Aplicado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-size: 14px;">
+                        <strong>{{ $gasto->descripcion }}</strong>
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="background: #e8f4f8; color: #2980b9; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; border: 1px solid #bde4f0; margin: 0 auto;">
+                            {{ $gasto->tipo_gasto }}
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-size: 16px; font-weight: bold;">
+                        RD$ {{ number_format($gasto->monto, 2) }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table style="width: 100%; margin-top: 10px;">
+            <tr>
+                <td style="width: 40%; vertical-align: top;">
+                    <div style="border: 2px dashed #bdc3c7; padding: 25px 15px; border-radius: 6px; color: #95a5a6; font-size: 12px; text-align: center; text-transform: uppercase; letter-spacing: 1px; width: 90%; margin: 0 auto;">
+                        Sello de la empresa
+                    </div>
+                </td>
+                <td style="width: 60%; text-align: right; vertical-align: middle;">
+                    <div style="color: #7f8c8d; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px;">Total Desembolsado</div>
+                    <div class="total-box">
+                        RD$ {{ number_format($gasto->monto, 2) }}
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="signatures">
+            <tr>
+                <td style="width: 50%; vertical-align: bottom; height: 60px;">
+                    <div class="sig-line">
+                        <strong>Firma Autorizada</strong><br>
+                        <span style="color: #7f8c8d;">NEO PROJECT S.R.L</span>
+                    </div>
+                </td>
+                <td style="width: 50%; vertical-align: bottom; height: 60px;">
+                    <div class="sig-line">
+                        <strong>Recibí Conforme</strong><br>
+                        <span style="color: #7f8c8d;">{{ $gasto->proveedor->name ?? 'Firma / Cédula del Beneficiario' }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="footer">
+            Este recibo es un documento oficial de control interno de desembolsos. Válido para auditoría y control de costos.<br>
+            Generado automáticamente por el Sistema el {{ date('d/m/Y') }} a las {{ date('H:i:s') }}
+        </div>
     </div>
-
-    <div class="receipt-details">
-        <strong>Recibo No:</strong> #{{ str_pad($gasto->id, 6, '0', STR_PAD_LEFT) }}<br>
-        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($gasto->fecha)->format('d/m/Y') }}
-    </div>
-
-    <table class="info-table">
-        <tr>
-            <th>Proyecto:</th>
-            <td>{{ $gasto->proyecto->nombre ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <th>Beneficiario (Trabajador/Proveedor):</th>
-            <td>{{ $gasto->proveedor->name ?? 'Trabajador Independiente / Maestro' }}</td>
-        </tr>
-        <tr>
-            <th>Tipo de Gasto:</th>
-            <td>{{ $gasto->tipo_gasto }}</td>
-        </tr>
-        @if($gasto->subpartida)
-        <tr>
-            <th>Subpartida:</th>
-            <td>{{ $gasto->subpartida->codigo }} - {{ $gasto->subpartida->nombre }}</td>
-        </tr>
-        @endif
-        <tr>
-            <th>Método de Pago:</th>
-            <td>{{ $gasto->metodo_pago }}</td>
-        </tr>
-        <tr>
-            <th>Descripción / Concepto:</th>
-            <td>{{ $gasto->descripcion }}</td>
-        </tr>
-    </table>
-
-    <div class="amount-box">
-        <div style="font-size: 14px; text-transform: uppercase; margin-bottom: 5px; color: #777;">Monto Pagado</div>
-        <div class="amount">${{ number_format($gasto->monto, 2) }}</div>
-    </div>
-
-    <div class="signature-section">
-        <div class="signature-line"></div>
-        <div class="signature-text">Firma del Beneficiario / Trabajador</div>
-        <div style="margin-top: 5px; font-size: 12px; color: #555;">{{ $gasto->proveedor->name ?? '__________________________________' }}</div>
-    </div>
-
-    <div class="footer">
-        Este documento sirve como constancia del desembolso de fondos para los gastos del proyecto.<br>
-        Generado el {{ date('d/m/Y H:i:s') }}
-    </div>
-
 </body>
 </html>

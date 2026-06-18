@@ -521,7 +521,7 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
                     Colors.green[700]!,
                   ),
                   _buildMontoCol(
-                    'Pendiente',
+                    'Saldo Contrato',
                     f.format(double.tryParse(cuenta['saldo'].toString()) ?? 0),
                     Colors.red[700]!,
                   ),
