@@ -25,6 +25,8 @@ import 'modules/dashboard/dashboard_provider.dart';
 import 'modules/projects/projects_provider.dart';
 import 'modules/assets/providers/assets_provider.dart';
 import 'modules/settings/settings_screen.dart';
+import 'modules/users/providers/users_provider.dart';
+import 'modules/users/users_screen.dart';
 import 'widgets/custom_sidebar.dart';
 
 void main() {
@@ -35,6 +37,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => ProjectsProvider()),
         ChangeNotifierProvider(create: (_) => AssetsProvider()),
+        ChangeNotifierProvider(create: (_) => UsersProvider()),
       ],
       child: const ConstruccionERP(),
     ),
@@ -95,6 +98,7 @@ class _MainLayoutState extends State<MainLayout> {
     const LocalInventoriesScreen(),
     const ClientsScreen(),
     const AssetsScreen(),
+    const UsersScreen(),
   ];
 
   @override

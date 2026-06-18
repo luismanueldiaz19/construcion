@@ -60,7 +60,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
       _expandedSection = 'FINANZAS Y CONTABILIDAD';
     } else if (widget.selectedIndex == 17) {
       _expandedSection = 'ACTIVOS FIJOS';
-    } else if (widget.selectedIndex == 14) {
+    } else if (widget.selectedIndex == 14 || widget.selectedIndex == 18) {
       _expandedSection = 'CONFIGURACIÓN';
     }
   }
@@ -280,6 +280,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                       Icons.admin_panel_settings_outlined,
                                       Icons.admin_panel_settings,
                                       'Ajustes del Sistema',
+                                      accentColor,
+                                    ),
+                                    _buildMenuItem(
+                                      18,
+                                      Icons.people_alt_outlined,
+                                      Icons.people_alt,
+                                      'Gestión de Usuarios',
                                       accentColor,
                                     ),
                                   ],

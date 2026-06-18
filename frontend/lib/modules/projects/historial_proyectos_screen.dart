@@ -236,9 +236,14 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                               ),
                             ],
                             rows: _proyectos.map((proyecto) {
-                              final monto = proyecto.totalPresupuestoConGlobales ?? 0;
-                              final fecha = proyecto.id != null // Simulación de fecha si no hay created_at en el modelo directo
-                                  ? DateFormat('dd/MM/yyyy').format(DateTime.now()) 
+                              final monto =
+                                  proyecto.totalPresupuestoConGlobales ?? 0;
+                              final fecha =
+                                  proyecto.id !=
+                                      null // Simulación de fecha si no hay created_at en el modelo directo
+                                  ? DateFormat(
+                                      'dd/MM/yyyy',
+                                    ).format(DateTime.now())
                                   : 'N/A';
 
                               return DataRow(
@@ -312,17 +317,36 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
                                             final confirm = await showDialog<bool>(
                                               context: context,
                                               builder: (context) => AlertDialog(
-                                                title: const Text('Eliminar Proyecto'),
-                                                content: Text('¿Estás seguro de eliminar "${proyecto.nombre}"?'),
+                                                title: const Text(
+                                                  'Eliminar Proyecto',
+                                                ),
+                                                content: Text(
+                                                  '¿Estás seguro de eliminar "${proyecto.nombre}"?',
+                                                ),
                                                 actions: [
                                                   TextButton(
-                                                    onPressed: () => Navigator.pop(context, false),
-                                                    child: const Text('CANCELAR'),
+                                                    onPressed: () =>
+                                                        Navigator.pop(
+                                                          context,
+                                                          false,
+                                                        ),
+                                                    child: const Text(
+                                                      'CANCELAR',
+                                                    ),
                                                   ),
                                                   TextButton(
-                                                    onPressed: () => Navigator.pop(context, true),
-                                                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                                    child: const Text('ELIMINAR'),
+                                                    onPressed: () =>
+                                                        Navigator.pop(
+                                                          context,
+                                                          true,
+                                                        ),
+                                                    style: TextButton.styleFrom(
+                                                      foregroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                    child: const Text(
+                                                      'ELIMINAR',
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -330,17 +354,32 @@ class _HistorialProyectosScreenState extends State<HistorialProyectosScreen> {
 
                                             if (confirm == true) {
                                               try {
-                                                await _projectService.deleteProyecto(proyecto.id!);
+                                                await _projectService
+                                                    .deleteProyecto(
+                                                      proyecto.id!,
+                                                    );
                                                 if (mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(content: Text('Proyecto eliminado')),
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Proyecto eliminado',
+                                                      ),
+                                                    ),
                                                   );
                                                   _fetchHistorial(); // Refresh list
                                                 }
                                               } catch (e) {
                                                 if (mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(content: Text('Error: $e')),
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'Error: $e',
+                                                      ),
+                                                    ),
                                                   );
                                                 }
                                               }

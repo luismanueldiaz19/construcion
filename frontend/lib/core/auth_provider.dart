@@ -56,6 +56,37 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> registerUser(String name, String username, String email, String password) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _httpService.post('register', {
+        'name': name.trim(),
+        'username': username.trim(),
+        'email': email.trim(),
+        'password': password.trim(),
+      });
+
+      if (response != null && response['user'] != null) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = "Error al registrar el usuario.";
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     try {
       if (HttpService.token != null) {
