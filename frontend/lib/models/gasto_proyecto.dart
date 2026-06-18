@@ -1,3 +1,6 @@
+import 'proveedor.dart';
+import 'subpartida.dart';
+
 class GastoProyecto {
   final int? id;
   final int proyectoId;
@@ -11,8 +14,8 @@ class GastoProyecto {
   final String metodoPago;
   final String estado;
   final int? bancoId;
-  final Map<String, dynamic>? proveedor;
-  final Map<String, dynamic>? subpartida;
+  final Proveedor? proveedor;
+  final Subpartida? subpartida;
 
   GastoProyecto({
     this.id,
@@ -45,8 +48,8 @@ class GastoProyecto {
       metodoPago: json['metodo_pago'] ?? '',
       estado: json['estado'] ?? 'PAGADO',
       bancoId: json['banco_id'],
-      proveedor: json['proveedor'],
-      subpartida: json['subpartida'],
+      proveedor: json['proveedor'] != null ? Proveedor.fromJson(json['proveedor']) : null,
+      subpartida: json['subpartida'] != null ? Subpartida.fromJson(json['subpartida']) : null,
     );
   }
 
@@ -64,6 +67,8 @@ class GastoProyecto {
       'metodo_pago': metodoPago,
       'estado': estado,
       'banco_id': bancoId,
+      'proveedor': proveedor?.toJson(),
+      'subpartida': subpartida?.toJson(),
     };
   }
 }

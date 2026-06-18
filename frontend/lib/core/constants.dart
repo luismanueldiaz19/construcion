@@ -1,7 +1,7 @@
-final String host = "http://127.0.0.1:8000";
-// final String host = "https://neo-proyect.site";
+// final String host = "http://127.0.0.1:8000";
+final String host = "https://neo-proyect.site";
 
 final logoPath = "assets/logo.png";
 
-
-// 2.24.86.23
+// php artisan migrate:fresh --seed
+// php artisan migrate:fresh --seed

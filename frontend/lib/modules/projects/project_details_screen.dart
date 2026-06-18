@@ -11,6 +11,7 @@ import '../../services/project_service.dart';
 import '../../services/inventory_service.dart';
 import '../../services/accounting_service.dart';
 import 'gasto_proyecto_dialog.dart';
+import 'widgets/gasto_card.dart';
 import '../../models/avance_proyecto.dart';
 import '../../models/gasto_proyecto.dart';
 import '../../models/consumo_proyecto.dart';
@@ -879,6 +880,20 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
+  // Función para abrir el PDF del gasto
+  Future<void> _openGastoPdf(int id) async {
+    final url = Uri.parse('$host/api/v1/gastos-proyecto/$id/pdf');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el recibo PDF')),
+        );
+      }
+    }
+  }
+
   Widget _buildTabGastos(NumberFormat f) {
     final double totalGastado = _gastos.fold(0.0, (sum, g) => sum + g.monto);
     final double moGastado = _gastos
@@ -1022,63 +1037,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             )
           else
             ..._gastos.map((g) {
-              IconData icon = Icons.payments;
-              Color color = Colors.blue;
-              if (g.tipoGasto.contains('Mano de Obra')) {
-                icon = Icons.engineering;
-                color = Colors.orange;
-              } else if (g.tipoGasto.contains('Alquiler')) {
-                icon = Icons.construction;
-                color = Colors.purple;
-              } else if (g.tipoGasto.contains('Transporte')) {
-                icon = Icons.local_shipping;
-                color = Colors.cyan;
-              }
-
-              final fechaStr = g.fecha.toIso8601String().split('T')[0];
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey.shade100),
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: color.withOpacity(0.1),
-                    child: Icon(icon, color: color),
-                  ),
-                  title: Text(
-                    g.descripcion ?? 'Gasto sin descripción',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    "${g.proveedor?['nombre'] ?? 'Sin proveedor'} • $fechaStr",
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        f.format(g.monto),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      Text(
-                        g.metodoPago,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              return GastoCard(gasto: g, onPrint: () => _openGastoPdf(g.id!));
             }).toList(),
         ],
       ),
@@ -1139,19 +1098,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   color: Color(0xFF1A1A1A),
                 ),
               ),
-              if (_proyecto.estado == 'Activo' && saldoPendiente > 0.01)
-                ElevatedButton.icon(
-                  onPressed: _showPagoDialog,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Registrar Pago'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1447,7 +1393,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.1),
                 child: Icon(icon, color: color),
               ),
               title: Text(
@@ -1455,7 +1401,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                "${g.proveedor?['nombre'] ?? 'Sin proveedor'} • $fechaStr",
+                "${g.proveedor?.name ?? 'Sin proveedor'} • $fechaStr",
               ),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1721,46 +1667,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            Builder(
-              builder: (context) {
-                final totalConImpuestos =
-                    _proyecto.totalPresupuestoConGlobales ?? 0;
-                final cobrado = _proyecto.totalCobrado ?? 0;
-                final saldoPendiente = totalConImpuestos - cobrado;
-
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      if (_proyecto.estado == 'Activo') ...[
-                        ElevatedButton.icon(
-                          onPressed: () => _showGastoDialog(context),
-                          icon: const Icon(Icons.add_shopping_cart, size: 18),
-                          label: const Text('Registrar Gasto'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orangeAccent,
-                            foregroundColor: Colors.black87,
-                          ),
-                        ),
-                        if (saldoPendiente > 0.01)
-                          ElevatedButton.icon(
-                            onPressed: () => _showPagoDialog(),
-                            icon: const Icon(Icons.payments, size: 18),
-                            label: const Text('Pago Cliente'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.greenAccent,
-                              foregroundColor: Colors.black87,
-                            ),
-                          ),
-                      ],
-                    ],
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -1775,7 +1681,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),

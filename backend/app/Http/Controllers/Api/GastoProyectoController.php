@@ -102,4 +102,15 @@ class GastoProyectoController extends Controller
         $gastoProyecto->delete();
         return response()->noContent();
     }
+
+    public function imprimirRecibo($id)
+    {
+        $gasto = GastoProyecto::with(['proyecto', 'subpartida', 'proveedor'])->findOrFail($id);
+
+        // Generar PDF usando el formato de factura (A4/Carta)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.recibo_gasto_firma', compact('gasto'))
+            ->setPaper('letter', 'portrait');
+            
+        return $pdf->stream("recibo_gasto_{$gasto->id}.pdf");
+    }
 }

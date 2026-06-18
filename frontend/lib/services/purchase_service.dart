@@ -57,8 +57,9 @@ class PurchaseService {
     return await _http.get('compras$queryString');
   }
 
-  Future<List<dynamic>> getComprasPendientes() async {
-    return await _http.get('compras-pendientes');
+  Future<List<Compra>> getComprasPendientes() async {
+    final List<dynamic> data = await _http.get('compras-pendientes');
+    return data.map((json) => Compra.fromJson(json)).toList();
   }
 
   Future<Map<String, dynamic>> getCompra(int id) async {

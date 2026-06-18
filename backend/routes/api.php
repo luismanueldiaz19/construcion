@@ -35,6 +35,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::apiResource('proyectos', ProyectoController::class);
     Route::apiResource('gastos-proyecto', GastoProyectoController::class);
+    Route::get('gastos-proyecto/{id}/pdf', [GastoProyectoController::class, 'imprimirRecibo']);
     Route::post('proyectos/{id}/pago-cliente', [ProyectoController::class, 'pagoCliente']);
     Route::post('proyectos/{id}/provisionar-todo', [ProyectoController::class, 'provisionarTodo']);
     Route::post('proyectos/{id}/logo', [ProyectoController::class, 'uploadLogo']);

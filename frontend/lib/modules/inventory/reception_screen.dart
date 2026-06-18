@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_theme.dart';
+import '../../models/compra.dart';
 import '../../services/purchase_service.dart';
 
 class ReceptionScreen extends StatefulWidget {
@@ -12,7 +13,7 @@ class ReceptionScreen extends StatefulWidget {
 
 class _ReceptionScreenState extends State<ReceptionScreen> {
   final PurchaseService _purchaseService = PurchaseService();
-  List<dynamic> _comprasPendientes = [];
+  List<Compra> _comprasPendientes = [];
   bool _isLoading = true;
 
   @override
@@ -65,28 +66,28 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "FACTURA #${c['id']}",
+                              "FACTURA #${c.id}",
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.blueGrey,
                               ),
                             ),
                             Text(
-                              c['fecha'],
+                              c.fecha,
                               style: const TextStyle(color: Colors.grey),
                             ),
                           ],
                         ),
                         const Divider(),
                         Text(
-                          "Proveedor: ${c['proveedor']['nombre']}",
+                          "Proveedor: ${c.proveedor?.name ?? 'Desconocido'}",
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          "Proyecto: ${c['proyecto']['nombre']}",
+                          "Proyecto: ${c.proyecto?.nombre ?? 'Desconocido'}",
                           style: const TextStyle(color: Colors.blue),
                         ),
                         const SizedBox(height: 12),
@@ -97,26 +98,28 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                             fontSize: 12,
                           ),
                         ),
-                        ...(c['detalles'] as List)
-                            .map(
-                              (d) {
-                                double total = double.parse(d['cantidad'].toString());
-                                double recibido = double.parse((d['cantidad_recibida'] ?? 0).toString());
-                                return Text(
-                                  "• ${d['material']['nombre']}: $recibido / $total ${d['material']['unidad']}",
-                                  style: TextStyle(
-                                    color: recibido >= total ? Colors.green : (recibido > 0 ? Colors.orange : Colors.black87),
-                                  ),
-                                );
-                              }
-                            )
-                            .toList(),
+                        ...(c.detalles ?? []).map((d) {
+                          double total = double.parse(d['cantidad'].toString());
+                          double recibido = double.parse(
+                            (d['cantidad_recibida'] ?? 0).toString(),
+                          );
+                          return Text(
+                            "• ${d['material']['nombre']}: $recibido / $total ${d['material']['unidad']}",
+                            style: TextStyle(
+                              color: recibido >= total
+                                  ? Colors.green
+                                  : (recibido > 0
+                                        ? Colors.orange
+                                        : Colors.black87),
+                            ),
+                          );
+                        }).toList(),
                         const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "Total: ${f.format(double.parse(c['total'].toString()))}",
+                              "Total: ${f.format(c.total)}",
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -141,21 +144,26 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
     );
   }
 
-  void _confirmarRecepcion(Map<String, dynamic> compra) {
+  void _confirmarRecepcion(Compra compra) {
     final personController = TextEditingController();
     final Map<int, TextEditingController> itemControllers = {};
 
-    for (var d in compra['detalles']) {
-      double pendiente = double.parse(d['cantidad'].toString()) -
+    for (var d in compra.detalles ?? []) {
+      double pendiente =
+          double.parse(d['cantidad'].toString()) -
           double.parse((d['cantidad_recibida'] ?? 0).toString());
       if (pendiente > 0) {
-        itemControllers[d['id']] = TextEditingController(text: pendiente.toString());
+        itemControllers[d['id']] = TextEditingController(
+          text: pendiente.toString(),
+        );
       }
     }
 
     if (itemControllers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Todos los materiales ya han sido recibidos')),
+        const SnackBar(
+          content: Text('Todos los materiales ya han sido recibidos'),
+        ),
       );
       return;
     }
@@ -163,7 +171,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Recibir Materiales - Factura #${compra['id']}'),
+        title: Text('Recibir Materiales - Factura #${compra.id}'),
         content: SizedBox(
           width: 500,
           child: SingleChildScrollView(
@@ -187,11 +195,14 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                 ),
                 const Divider(),
                 ...itemControllers.entries.map((entry) {
-                  final d = (compra['detalles'] as List)
-                      .firstWhere((element) => element['id'] == entry.key);
+                  final d = (compra.detalles ?? []).firstWhere(
+                    (element) => element['id'] == entry.key,
+                  );
                   double total = double.parse(d['cantidad'].toString());
-                  double yaRecibido = double.parse((d['cantidad_recibida'] ?? 0).toString());
-                  
+                  double yaRecibido = double.parse(
+                    (d['cantidad_recibida'] ?? 0).toString(),
+                  );
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: Row(
@@ -201,10 +212,19 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(d['material']['nombre'], 
-                                style: const TextStyle(fontWeight: FontWeight.w500)),
-                              Text('Pendiente: ${total - yaRecibido} ${d['material']['unidad']}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text(
+                                d['material']['nombre'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'Pendiente: ${total - yaRecibido} ${d['material']['unidad']}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -212,7 +232,9 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                         Expanded(
                           child: TextField(
                             controller: entry.value,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             decoration: const InputDecoration(
                               labelText: 'Cantidad',
                               isDense: true,
@@ -237,7 +259,9 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
             onPressed: () async {
               if (personController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Por favor ingrese quién recibe')),
+                  const SnackBar(
+                    content: Text('Por favor ingrese quién recibe'),
+                  ),
                 );
                 return;
               }
@@ -246,10 +270,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
               itemControllers.forEach((id, controller) {
                 double qty = double.tryParse(controller.text) ?? 0;
                 if (qty > 0) {
-                  items.add({
-                    'compra_detalle_id': id,
-                    'cantidad': qty,
-                  });
+                  items.add({'compra_detalle_id': id, 'cantidad': qty});
                 }
               });
 
@@ -257,7 +278,7 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
 
               try {
                 await _purchaseService.registrarRecepcion({
-                  'compra_id': compra['id'],
+                  'compra_id': compra.id,
                   'fecha': DateFormat('yyyy-MM-dd').format(DateTime.now()),
                   'recibido_por': personController.text,
                   'items': items,
@@ -272,7 +293,10 @@ class _ReceptionScreenState extends State<ReceptionScreen> {
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
