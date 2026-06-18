@@ -136,7 +136,8 @@ class HttpService {
     } else if (e is String) {
       throw e;
     } else {
-      throw 'Ha ocurrido un error inesperado.';
+      // Mostrar el error real para poder diagnosticarlo mejor
+      throw 'Error inesperado: ${e.toString()}';
     }
   }
 }

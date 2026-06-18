@@ -20,3 +20,13 @@ Route::get('/reports/compras/pdf', [\App\Http\Controllers\Api\ReportController::
 Route::get('/reports/gastos/pdf', [\App\Http\Controllers\Api\ReportController::class, 'gastosPdf']);
 Route::get('/reports/partida/{id}/pdf', [\App\Http\Controllers\Api\ReportController::class, 'partidaPdf']);
 Route::get('/reports/proyecto/{id}/pdf', [\App\Http\Controllers\Api\ReportController::class, 'proyectoPdf']);
+
+// =========================================================
+// RUTA PARA EL FRONTEND (FLUTTER WEB)
+// =========================================================
+// Esta ruta atrapa todo lo demás que no sea la API o los PDFs
+// y carga la aplicación web de Flutter. Flutter se encarga
+// internamente del resto de las rutas en el navegador.
+Route::get('/{any}', function () {
+    return view('app');
+})->where('any', '.*');
