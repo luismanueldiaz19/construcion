@@ -37,17 +37,17 @@ class HttpService {
       final uri = Uri.parse('$baseUrl/$endpoint');
       final bodyStr = json.encode(body);
 
-      print('========== HTTP POST DEBUG ==========');
-      print('URL: $uri');
-      print('PAYLOAD: $bodyStr');
+      // print('========== HTTP POST DEBUG ==========');
+      // print('URL: $uri');
+      // print('PAYLOAD: $bodyStr');
 
       final response = await http
           .post(uri, headers: _headers, body: bodyStr)
           .timeout(timeout);
 
-      print('STATUS CODE: ${response.statusCode}');
-      print('RESPONSE BODY: ${response.body}');
-      print('=====================================');
+      // print('STATUS CODE: ${response.statusCode}');
+      // print('RESPONSE BODY: ${response.body}');
+      // print('=====================================');
 
       return _handleResponse(response);
     } catch (e) {
