@@ -323,8 +323,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                ProjectDetailsScreen(proyecto: proyecto),
+                            builder: (context) => ProjectDetailsScreen(
+                              proyecto: proyecto,
+                              onRefresh: _refresh,
+                            ),
                           ),
                         ),
                         child: Padding(
@@ -442,6 +444,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                               builder: (context) =>
                                                   ProjectDetailsScreen(
                                                     proyecto: proyecto,
+                                                    onRefresh: _refresh,
                                                   ),
                                             ),
                                           );
@@ -567,12 +570,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                         Colors.red.shade700,
                                       ),
                                       const PopupMenuDivider(),
-                                      _buildPopupMenuItem(
-                                        'eliminar',
-                                        Icons.delete_outline,
-                                        'Eliminar Proyecto',
-                                        Colors.red,
-                                      ),
+                                      if (proyecto.estado == 'Cotización' ||
+                                          proyecto.estado == 'Cancelado')
+                                        _buildPopupMenuItem(
+                                          'eliminar',
+                                          Icons.delete_outline,
+                                          'Eliminar Proyecto',
+                                          Colors.red,
+                                        ),
                                     ],
                                   ),
                                 ],

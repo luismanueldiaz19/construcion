@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 import '../models/compra.dart';
 import '../models/proveedor.dart';
 import 'http_service.dart';
@@ -78,9 +79,24 @@ class PurchaseService {
     return await _http.get('gastos/$id');
   }
 
-  Future<dynamic> uploadDocumentoCompra(int compraId, String filePath) async {
-    final file = await http.MultipartFile.fromPath('documento', filePath);
-    return await _http.multipart('compras/$compraId/documentos', files: [file]);
+  Future<dynamic> uploadDocumentoCompra(int compraId, PlatformFile file) async {
+    http.MultipartFile multipartFile;
+    if (file.bytes != null) {
+      multipartFile = http.MultipartFile.fromBytes(
+        'documento',
+        file.bytes!,
+        filename: file.name,
+      );
+    } else {
+      multipartFile = await http.MultipartFile.fromPath(
+        'documento',
+        file.path!,
+      );
+    }
+    return await _http.multipart(
+      'compras/$compraId/documentos',
+      files: [multipartFile],
+    );
   }
 
   Future<void> deleteDocumentoCompra(int documentoId) async {

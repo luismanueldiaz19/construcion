@@ -396,7 +396,7 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                                             ? categoriaController.text
                                             : null,
                                         partidaId: selectedPartidaId,
-                                        filePath: pickedFile!.path!,
+                                        file: pickedFile!,
                                       );
                                       if (mounted) {
                                         Navigator.pop(dialogContext);
@@ -470,7 +470,9 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
     final filtered = _filteredDocuments;
 
     return Scaffold(
-      backgroundColor: widget.embedded ? Colors.transparent : AppTheme.backgroundColor,
+      backgroundColor: widget.embedded
+          ? Colors.transparent
+          : AppTheme.backgroundColor,
       body: CustomScrollView(
         slivers: [
           if (!widget.embedded) _buildSliverAppBar(),
@@ -534,7 +536,7 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
               Opacity(
                 opacity: 0.5,
                 child: Image.network(
-                  '$host/storage/${widget.logoPath}',
+                  '$host/api/v1/file?path=${widget.logoPath}',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
                       const Center(child: FlutterLogo(size: 80)),
@@ -604,8 +606,11 @@ class _ProjectDocumentsScreenState extends State<ProjectDocumentsScreen> {
                     children: [
                       IconButton(
                         icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
-                        onPressed: () => setState(() => _isGridView = !_isGridView),
-                        tooltip: _isGridView ? 'Vista de Lista' : 'Vista de Cuadrícula',
+                        onPressed: () =>
+                            setState(() => _isGridView = !_isGridView),
+                        tooltip: _isGridView
+                            ? 'Vista de Lista'
+                            : 'Vista de Cuadrícula',
                       ),
                       IconButton(
                         icon: const Icon(Icons.refresh),

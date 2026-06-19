@@ -1,6 +1,8 @@
 import '../../services/document_service.dart';
 import '../models/document_model.dart';
 
+import 'package:file_picker/file_picker.dart';
+
 class DocumentRepository {
   final DocumentService _documentService = DocumentService();
 
@@ -15,7 +17,7 @@ class DocumentRepository {
     required String tipo,
     String? categoria,
     int? partidaId,
-    required String filePath,
+    required PlatformFile file,
   }) async {
     await _documentService.uploadDocumento(
       proyectoId: proyectoId,
@@ -23,7 +25,7 @@ class DocumentRepository {
       tipo: tipo,
       categoria: categoria,
       partidaId: partidaId,
-      filePath: filePath,
+      file: file,
     );
   }
 

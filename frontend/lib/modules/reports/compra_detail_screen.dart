@@ -498,7 +498,7 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
                           ),
                           onPressed: () async {
                             final url = Uri.parse(
-                              '$host/storage/${doc['file_path']}',
+                              '$host/api/v1/file?path=${doc['file_path']}',
                             );
                             if (await canLaunchUrl(url)) {
                               await launchUrl(url);
@@ -537,11 +537,11 @@ class _CompraDetailScreenState extends State<CompraDetailScreen> {
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
       );
 
-      if (result != null && result.files.single.path != null) {
+      if (result != null && result.files.isNotEmpty) {
         setState(() => _isLoading = true);
         await _purchaseService.uploadDocumentoCompra(
           widget.compraId,
-          result.files.single.path!,
+          result.files.single,
         );
         await _loadCompra(); // Recargar para ver el nuevo documento
         if (mounted) {

@@ -6,7 +6,9 @@ import '../../models/client.dart';
 import '../../services/client_service.dart';
 
 class ClientsScreen extends StatefulWidget {
-  const ClientsScreen({super.key});
+  final bool autoOpenAdd;
+
+  const ClientsScreen({super.key, this.autoOpenAdd = false});
 
   @override
   State<ClientsScreen> createState() => _ClientsScreenState();
@@ -71,6 +73,14 @@ class _ClientsScreenState extends State<ClientsScreen> {
     super.initState();
     _loadData();
     _searchController.addListener(_onFilterChanged);
+
+    if (widget.autoOpenAdd) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final double width = MediaQuery.of(context).size.width;
+        _onCreateClientPressed(width > 1150);
+      });
+    }
   }
 
   @override

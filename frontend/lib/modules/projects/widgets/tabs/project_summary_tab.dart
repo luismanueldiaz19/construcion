@@ -101,7 +101,7 @@ class ProjectSummaryTab extends StatelessWidget {
                               fit: StackFit.expand,
                               children: [
                                 Image.network(
-                                  '$host/storage/${proyecto.logoPath}',
+                                  '$host/api/v1/file?path=${proyecto.logoPath}',
                                   fit: BoxFit.contain,
                                   loadingBuilder: (context, child, loadingProgress) {
                                     if (loadingProgress == null) return child;

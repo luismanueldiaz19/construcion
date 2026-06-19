@@ -83,4 +83,12 @@ Route::prefix('v1')->group(function () {
     Route::get('/proyectos/{id}/documentos', [\App\Http\Controllers\Api\DocumentoController::class, 'index']);
     Route::post('/documentos', [\App\Http\Controllers\Api\DocumentoController::class, 'store']);
     Route::delete('/documentos/{id}', [\App\Http\Controllers\Api\DocumentoController::class, 'destroy']);
+
+    Route::get('/file', function (Request $request) {
+        $path = $request->query('path');
+        if (!$path) abort(404);
+        $fullPath = storage_path('app/public/' . $path);
+        if (!file_exists($fullPath)) abort(404);
+        return response()->file($fullPath);
+    });
 });

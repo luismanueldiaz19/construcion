@@ -1,6 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'http_service.dart';
 
+import 'package:file_picker/file_picker.dart';
+
 class DocumentService {
   final HttpService _http = HttpService();
 
@@ -14,7 +16,7 @@ class DocumentService {
     required String tipo,
     String? categoria,
     int? partidaId,
-    required String filePath,
+    required PlatformFile file,
   }) async {
     final fields = {
       'proyecto_id': proyectoId.toString(),
@@ -24,10 +26,21 @@ class DocumentService {
     if (categoria != null) fields['categoria'] = categoria;
     if (partidaId != null) fields['partida_id'] = partidaId.toString();
 
+    http.MultipartFile multipartFile;
+    if (file.bytes != null) {
+      multipartFile = http.MultipartFile.fromBytes(
+        'archivo',
+        file.bytes!,
+        filename: file.name,
+      );
+    } else {
+      multipartFile = await http.MultipartFile.fromPath('archivo', file.path!);
+    }
+
     await _http.multipart(
       'documentos',
       fields: fields,
-      files: [await http.MultipartFile.fromPath('archivo', filePath)],
+      files: [multipartFile],
     );
   }
 

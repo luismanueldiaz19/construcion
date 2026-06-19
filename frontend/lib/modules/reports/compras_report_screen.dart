@@ -1271,7 +1271,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
                       ),
                       onPressed: () async {
                         final url = Uri.parse(
-                          '$host/storage/${doc['file_path']}',
+                          '$host/api/v1/file?path=${doc['file_path']}',
                         );
                         if (await canLaunchUrl(url)) {
                           await launchUrl(url);
@@ -1444,13 +1444,13 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
       );
 
-      if (result != null && result.files.single.path != null) {
+      if (result != null && result.files.isNotEmpty) {
         setState(() => _isLoadingDetail = true);
         if (onStateChanged != null) onStateChanged();
 
         await _purchaseService.uploadDocumentoCompra(
           _selectedCompraDetail!['id'],
-          result.files.single.path!,
+          result.files.single,
         );
 
         final detail = await _purchaseService.getCompra(

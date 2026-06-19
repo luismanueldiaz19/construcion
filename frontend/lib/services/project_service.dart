@@ -75,10 +75,16 @@ class ProjectService {
   }
 
   Future<String> uploadLogo(int proyectoId, XFile image) async {
-    final file = await http.MultipartFile.fromPath(
+    final bytes = await image.readAsBytes();
+    final extension = image.name.contains('.')
+        ? image.name.split('.').last
+        : 'jpeg';
+
+    final file = http.MultipartFile.fromBytes(
       'logo',
-      image.path,
-      contentType: MediaType('image', image.path.split('.').last),
+      bytes,
+      filename: image.name.isNotEmpty ? image.name : 'logo.$extension',
+      contentType: MediaType('image', extension),
     );
 
     final data = await _http.multipart(

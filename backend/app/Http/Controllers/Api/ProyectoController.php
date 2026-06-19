@@ -214,12 +214,15 @@ class ProyectoController extends Controller
         return DB::transaction(function () use ($id) {
             $proyecto = Proyecto::findOrFail($id);
 
+            if (!in_array($proyecto->estado, ['Cotización', 'Cancelado'])) {
+                abort(403, 'Solo se pueden eliminar proyectos en estado de Cotización o Cancelado.');
+            }
+
             // 1. Eliminar Asientos Contables relacionados con el proyecto
-            // Buscamos asientos donde el proyecto esté como centro de costo o vinculado al pago
+            // Buscamos asientos donde el proyecto esté vinculado al pago u otro origen
             $pagoIds = \App\Models\PagoCliente::where('proyecto_id', $id)->pluck('id');
-            \App\Models\AsientoContable::where('proyecto_id', $id)
-                ->orWhere(function($q) use ($pagoIds) {
-                    $q->where('origin_type', 'Ingreso')->whereIn('origin_id', $pagoIds);
+            \App\Models\AsientoContable::where(function($q) use ($pagoIds) {
+                    $q->where('referencia_tipo', 'Ingreso')->whereIn('referencia_id', $pagoIds);
                 })
                 ->each(function($asiento) {
                     $asiento->detalles()->delete();

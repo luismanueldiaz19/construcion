@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/client.dart';
 import '../../../services/client_service.dart';
+import '../../clients/clients_screen.dart';
 
 class ClientSelector extends StatefulWidget {
   final Client? initialClient;
@@ -54,7 +55,9 @@ class _ClientSelectorState extends State<ClientSelector> {
           color: Colors.grey.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _selectedClient != null ? AppTheme.primaryColor : Colors.grey.withValues(alpha: 0.2),
+            color: _selectedClient != null
+                ? AppTheme.primaryColor
+                : Colors.grey.withValues(alpha: 0.2),
             width: _selectedClient != null ? 2 : 1,
           ),
         ),
@@ -62,7 +65,9 @@ class _ClientSelectorState extends State<ClientSelector> {
           children: [
             Icon(
               Icons.person_search_outlined,
-              color: _selectedClient != null ? AppTheme.primaryColor : Colors.grey,
+              color: _selectedClient != null
+                  ? AppTheme.primaryColor
+                  : Colors.grey,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -71,18 +76,19 @@ class _ClientSelectorState extends State<ClientSelector> {
                 children: [
                   Text(
                     'Cliente (Opcional)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _selectedClient?.name ?? 'Seleccionar Cliente',
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: _selectedClient != null ? FontWeight.bold : FontWeight.normal,
-                      color: _selectedClient != null ? Colors.black87 : Colors.grey,
+                      fontWeight: _selectedClient != null
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _selectedClient != null
+                          ? Colors.black87
+                          : Colors.grey,
                     ),
                   ),
                 ],
@@ -131,7 +137,10 @@ class _ClientSearchModalState extends State<_ClientSearchModal> {
   Future<void> _loadClients([String search = '']) async {
     setState(() => _isLoading = true);
     try {
-      final clients = await _clientService.getClients(search: search, active: true);
+      final clients = await _clientService.getClients(
+        search: search,
+        active: true,
+      );
       setState(() {
         _clients = clients;
       });
@@ -167,14 +176,35 @@ class _ClientSearchModalState extends State<_ClientSearchModal> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Seleccionar Cliente',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text(
+                    'Crear',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primaryColor,
+                  ),
+                  onPressed: () async {
+                    // Cierra el teclado antes de navegar si está abierto
+                    FocusScope.of(context).unfocus();
+
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const ClientsScreen(autoOpenAdd: true),
+                      ),
+                    );
+                    // Recargar los clientes al regresar de la pantalla de creación
+                    _loadClients();
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -206,22 +236,32 @@ class _ClientSearchModalState extends State<_ClientSearchModal> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _clients.isEmpty
-                    ? const Center(child: Text('No se encontraron clientes'))
-                    : ListView.builder(
-                        itemCount: _clients.length,
-                        itemBuilder: (context, index) {
-                          final client = _clients[index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                              child: Icon(Icons.person, color: AppTheme.primaryColor),
-                            ),
-                            title: Text(client.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('${client.documentNumber ?? "Sin doc"} • ${client.classification}'),
-                            onTap: () => widget.onSelected(client),
-                          );
-                        },
-                      ),
+                ? const Center(child: Text('No se encontraron clientes'))
+                : ListView.builder(
+                    itemCount: _clients.length,
+                    itemBuilder: (context, index) {
+                      final client = _clients[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: AppTheme.primaryColor.withValues(
+                            alpha: 0.1,
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                        title: Text(
+                          client.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '${client.documentNumber ?? "Sin doc"} • ${client.classification}',
+                        ),
+                        onTap: () => widget.onSelected(client),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

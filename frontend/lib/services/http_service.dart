@@ -34,15 +34,24 @@ class HttpService {
 
   Future<dynamic> post(String endpoint, dynamic body) async {
     try {
+      final uri = Uri.parse('$baseUrl/$endpoint');
+      final bodyStr = json.encode(body);
+
+      print('========== HTTP POST DEBUG ==========');
+      print('URL: $uri');
+      print('PAYLOAD: $bodyStr');
+
       final response = await http
-          .post(
-            Uri.parse('$baseUrl/$endpoint'),
-            headers: _headers,
-            body: json.encode(body),
-          )
+          .post(uri, headers: _headers, body: bodyStr)
           .timeout(timeout);
+
+      print('STATUS CODE: ${response.statusCode}');
+      print('RESPONSE BODY: ${response.body}');
+      print('=====================================');
+
       return _handleResponse(response);
     } catch (e) {
+      print('HTTP POST EXCEPTION: $e');
       _handleError(e);
     }
   }
