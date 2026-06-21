@@ -4,6 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
+        "build:web": "powershell -ExecutionPolicy Bypass -File ../compilar_web.ps1",
         "dev": "vite"
     },
     "devDependencies": {
