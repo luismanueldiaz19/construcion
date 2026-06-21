@@ -2,7 +2,7 @@ Write-Host "Iniciando compilación de Flutter Web..." -ForegroundColor Cyan
 
 # 1. Navegar y compilar Flutter Web
 Push-Location "$PSScriptRoot\frontend"
-flutter build web --release --web-renderer canvaskit
+flutter build web --release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error en la compilación de Flutter Web." -ForegroundColor Red
     Pop-Location
