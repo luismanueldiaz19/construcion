@@ -2,6 +2,3 @@
 final String host = "https://neo-proyect.site";
 
 final logoPath = "assets/logo.png";
-
-// php artisan migrate:fresh --seed
-// php artisan migrate:fresh --seed
