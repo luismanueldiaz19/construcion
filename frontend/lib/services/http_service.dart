@@ -109,6 +109,9 @@ class HttpService {
         Uri.parse('$baseUrl/$endpoint'),
       );
       request.headers.addAll({'Accept': 'application/json'});
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
 
       if (fields != null) request.fields.addAll(fields);
       if (files != null) request.files.addAll(files);
@@ -120,18 +123,18 @@ class HttpService {
       _handleError(e);
     }
   }
-
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);
     } else {
       String message = 'Error ${response.statusCode}';
+      Map<String, dynamic>? body;
       try {
-        final body = json.decode(response.body);
-        message = body['message'] ?? body['error'] ?? message;
+        body = json.decode(response.body);
+        message = body?['message'] ?? body?['error'] ?? message;
       } catch (_) {}
-      throw message;
+      throw HttpServiceException(message, response.statusCode, body);
     }
   }
 
@@ -149,4 +152,15 @@ class HttpService {
       throw 'Error inesperado: ${e.toString()}';
     }
   }
+}
+
+class HttpServiceException implements Exception {
+  final String message;
+  final int statusCode;
+  final Map<String, dynamic>? body;
+
+  HttpServiceException(this.message, this.statusCode, [this.body]);
+
+  @override
+  String toString() => message;
 }

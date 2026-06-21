@@ -96,6 +96,7 @@ class PagosController extends Controller
                 'metodo' => $pago->metodo_pago,
                 'referencia' => '', 
                 'monto' => $pago->monto,
+                'comprobante_path' => $pago->comprobante_path,
                 'subtitulo' => 'RECIBO DE COBRO - ' . ($pago->proyecto->nombre ?? 'N/A'),
                 'detalles' => [
                     'Proyecto' => $pago->proyecto->nombre ?? 'N/A',

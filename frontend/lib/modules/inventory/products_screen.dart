@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import '../../core/app_theme.dart';
 import '../../services/inventory_service.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+import '../../services/http_service.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -856,6 +860,476 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
+  void _showImportDialog() {
+    PlatformFile? selectedFile;
+    bool isImporting = false;
+    String? errorMessage;
+    Map<String, dynamic>? importResult;
+    Map<String, dynamic>? importErrors;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.upload_file,
+                    color: AppTheme.accentColor,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Importación Masiva',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 600,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Instrucciones
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue[100]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info,
+                                  color: Colors.blue[700],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Guía de Formato de Excel / CSV',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[900],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'El archivo debe contener las siguientes columnas (no importa el orden o las minúsculas/mayúsculas):\n\n'
+                              '• Código (Opcional): Si ya existe en el sistema, actualizará los datos del producto. Si no, se crea.\n'
+                              '• Nombre (Obligatorio): Nombre del producto.\n'
+                              '• Descripción (Opcional): Detalles o especificación.\n'
+                              '• Categoría (Opcional): Si no existe, se creará automáticamente.\n'
+                              '• Unidad (Obligatorio): Unidad de medida (Ej: UND, M, GL).\n'
+                              '• Precio Costo (Obligatorio/Decimal): Costo del producto.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.5,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final url = Uri.parse(
+                                  _inventoryService.getImportTemplateUrl(),
+                                );
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url);
+                                } else {
+                                  setDialogState(() {
+                                    errorMessage =
+                                        'No se pudo abrir el enlace de descarga: $url';
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.download, size: 16),
+                              label: const Text(
+                                'Descargar Plantilla Compatible',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.blue[800],
+                                side: BorderSide(color: Colors.blue[300]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Selector de archivo
+                      const Text(
+                        'Seleccionar Archivo (Excel o CSV):',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: isImporting
+                            ? null
+                            : () async {
+                                try {
+                                  FilePickerResult? result = await FilePicker
+                                      .platform
+                                      .pickFiles(
+                                        type: FileType.custom,
+                                        allowedExtensions: [
+                                          'xlsx',
+                                          'xls',
+                                          'csv',
+                                          'txt',
+                                        ],
+                                        withData: true,
+                                      );
+                                  if (result != null &&
+                                      result.files.isNotEmpty) {
+                                    setDialogState(() {
+                                      selectedFile = result.files.first;
+                                      errorMessage = null;
+                                      importResult = null;
+                                      importErrors = null;
+                                    });
+                                  }
+                                } catch (e) {
+                                  setDialogState(() {
+                                    errorMessage =
+                                        'Error al seleccionar archivo: $e';
+                                  });
+                                }
+                              },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 24,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: selectedFile != null
+                                  ? AppTheme.accentColor
+                                  : Colors.grey[300]!,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            color: selectedFile != null
+                                ? AppTheme.primaryColor.withOpacity(0.02)
+                                : Colors.grey[50],
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                selectedFile != null
+                                    ? Icons.insert_drive_file
+                                    : Icons.cloud_upload_outlined,
+                                size: 40,
+                                color: selectedFile != null
+                                    ? AppTheme.accentColor
+                                    : Colors.grey[400],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                selectedFile != null
+                                    ? selectedFile!.name
+                                    : 'Haz clic aquí para seleccionar tu hoja de cálculo',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: selectedFile != null
+                                      ? AppTheme.textPrimary
+                                      : Colors.grey[600],
+                                  fontWeight: selectedFile != null
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              if (selectedFile != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Tamaño: ${(selectedFile!.size / 1024).toStringAsFixed(1)} KB',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Mensaje de error general
+                      if (errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red[100]!),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red[900],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Resultados exitosos
+                      if (importResult != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green[100]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    importResult!['message'] ??
+                                        'Importación Exitosa',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[900],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                '• Nuevos productos registrados: ${importResult!['inserted'] ?? 0}\n'
+                                '• Productos existentes actualizados: ${importResult!['updated'] ?? 0}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.4,
+                                  color: Colors.green[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Desglose de errores fila por fila
+                      if (importErrors != null && importErrors!.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Errores detectados en el archivo:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.red[100]!),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.red[50]!.withOpacity(0.2),
+                          ),
+                          child: ListView(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.all(10),
+                            children: importErrors!.entries.map((entry) {
+                              final filaName = entry.key;
+                              final filaErrors = entry.value as List<dynamic>;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red[400],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        filaName,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: filaErrors
+                                            .map<Widget>(
+                                              (err) => Text(
+                                                '• $err',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.red[900],
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isImporting ? null : () => Navigator.pop(context),
+                  child: const Text('Cerrar'),
+                ),
+                ElevatedButton(
+                  onPressed: (selectedFile == null || isImporting)
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isImporting = true;
+                            errorMessage = null;
+                            importResult = null;
+                            importErrors = null;
+                          });
+
+                          try {
+                            List<int> bytes = selectedFile!.bytes ?? [];
+                            if (bytes.isEmpty && selectedFile!.path != null) {
+                              bytes = await File(
+                                selectedFile!.path!,
+                              ).readAsBytes();
+                            }
+
+                            if (bytes.isEmpty) {
+                              throw 'No se pudo leer el contenido del archivo.';
+                            }
+
+                            final res = await _inventoryService
+                                .importMateriales(bytes, selectedFile!.name);
+
+                            setDialogState(() {
+                              isImporting = false;
+                              importResult = res;
+                              selectedFile = null;
+                            });
+
+                            _loadData();
+                          } catch (e) {
+                            setDialogState(() {
+                              isImporting = false;
+                              if (e is HttpServiceException) {
+                                errorMessage = e.message;
+                                if (e.body != null &&
+                                    e.body!['errors'] != null) {
+                                  importErrors = e.body!['errors'];
+                                }
+                              } else {
+                                errorMessage = e.toString();
+                              }
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: isImporting
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Subir e Importar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showNewCategoryDialog({
     required Function(Map<String, dynamic>) onCreated,
   }) {
@@ -967,6 +1441,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
           ),
           const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: _showImportDialog,
+            icon: const Icon(
+              Icons.file_upload_outlined,
+              color: AppTheme.textSecondary,
+              size: 20,
+            ),
+            label: const Text(
+              'Importar Excel',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.grey[300]!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: () => _onCreateProductPressed(isLargeScreen),
             icon: const Icon(Icons.add_box),
@@ -987,10 +1481,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Buscador de Texto libre directo en la pantalla
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre o código de producto...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
                 _buildFilterChips(),
                 Expanded(
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: Padding(
@@ -1001,207 +1518,39 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: Colors.grey[200]!),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: _filteredMateriales.isEmpty
-                                  ? const Center(
-                                      child: Text(
-                                        'No se encontraron productos.',
-                                        style: TextStyle(
-                                          color: AppTheme.textSecondary,
-                                          fontSize: 16,
-                                        ),
+                            child: _filteredMateriales.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'No se encontraron productos.',
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 16,
                                       ),
-                                    )
-                                  : Column(
-                                      children: [
-                                        Expanded(
-                                          child: LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              return SingleChildScrollView(
-                                                scrollDirection: Axis.vertical,
-                                                child: SingleChildScrollView(
-                                                  scrollDirection:
-                                                      Axis.horizontal,
-                                                  child: ConstrainedBox(
-                                                    constraints: BoxConstraints(
-                                                      minWidth:
-                                                          constraints.maxWidth,
-                                                    ),
-                                                    child: DataTable(
-                                                      showCheckboxColumn: false,
-                                                      headingRowColor:
-                                                          WidgetStateProperty.all(
-                                                            Colors.grey[100],
-                                                          ),
-                                                      columns: const [
-                                                        DataColumn(
-                                                          label: Text('Código'),
-                                                        ),
-                                                        DataColumn(
-                                                          label: Text(
-                                                            'Producto',
-                                                          ),
-                                                        ),
-                                                        DataColumn(
-                                                          label: Text(
-                                                            'Categoría',
-                                                          ),
-                                                        ),
-                                                        DataColumn(
-                                                          label: Text(
-                                                            'U. Medida',
-                                                          ),
-                                                        ),
-                                                        DataColumn(
-                                                          label: Text(
-                                                            'Precio Costo',
-                                                          ),
-                                                        ),
-                                                        DataColumn(
-                                                          label: Text('Estado'),
-                                                        ),
-                                                      ],
-                                                      rows: _filteredMateriales.map((
-                                                        m,
-                                                      ) {
-                                                        final bool isActive =
-                                                            m['estado'] ==
-                                                                'activo' ||
-                                                            m['estado'] ==
-                                                                true ||
-                                                            m['estado'] == 1;
-                                                        final bool isSelected =
-                                                            _editingProduct !=
-                                                                null &&
-                                                            _editingProduct!['id'] ==
-                                                                m['id'];
-                                                        return DataRow(
-                                                          selected: isSelected,
-                                                          onSelectChanged:
-                                                              (selected) {
-                                                                if (selected !=
-                                                                        null &&
-                                                                    selected) {
-                                                                  _onEditProductPressed(
-                                                                    m,
-                                                                    isLargeScreen,
-                                                                  );
-                                                                }
-                                                              },
-                                                          cells: [
-                                                            DataCell(
-                                                              Text(
-                                                                m['codigo'] ??
-                                                                    'N/A',
-                                                              ),
-                                                            ),
-                                                            DataCell(
-                                                              Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .center,
-                                                                children: [
-                                                                  Text(
-                                                                    m['nombre'],
-                                                                    style: const TextStyle(
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                    ),
-                                                                  ),
-                                                                  if (m['descripcion'] !=
-                                                                          null &&
-                                                                      m['descripcion']
-                                                                          .toString()
-                                                                          .isNotEmpty)
-                                                                    Text(
-                                                                      m['descripcion'],
-                                                                      style: const TextStyle(
-                                                                        fontSize:
-                                                                            11,
-                                                                        color: Colors
-                                                                            .grey,
-                                                                      ),
-                                                                    ),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                            DataCell(
-                                                              Text(
-                                                                m['categoria']?['nombre'] ??
-                                                                    'Sin Categoría',
-                                                              ),
-                                                            ),
-                                                            DataCell(
-                                                              Text(
-                                                                m['unidad'] ??
-                                                                    '',
-                                                              ),
-                                                            ),
-                                                            DataCell(
-                                                              Text(
-                                                                currencyFormat.format(
-                                                                  double.tryParse(
-                                                                        m['precio_costo']?.toString() ??
-                                                                            '0',
-                                                                      ) ??
-                                                                      0,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            DataCell(
-                                                              Chip(
-                                                                label: Text(
-                                                                  isActive
-                                                                      ? 'ACTIVO'
-                                                                      : 'INACTIVO',
-                                                                  style: const TextStyle(
-                                                                    fontSize:
-                                                                        10,
-                                                                    color: Colors
-                                                                        .white,
-                                                                  ),
-                                                                ),
-                                                                backgroundColor:
-                                                                    isActive
-                                                                    ? Colors
-                                                                          .green
-                                                                    : Colors
-                                                                          .red,
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      }).toList(),
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
                                     ),
-                            ),
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _filteredMateriales.length,
+                                    itemBuilder: (context, index) {
+                                      final m = _filteredMateriales[index];
+                                      return _buildProductCard(
+                                        m,
+                                        currencyFormat,
+                                        isLargeScreen,
+                                      );
+                                    },
+                                  ),
                           ),
                         ),
                       ),
                       if (isLargeScreen)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 16.0,
-                            right: 16.0,
-                            bottom: 16.0,
-                          ),
-                          child: SizedBox(
-                            width: 380,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              top: 16.0,
+                              right: 16.0,
+                              bottom: 16.0,
+                            ),
                             child: _editingProduct != null || _isAddingProduct
                                 ? _buildProductForm(isBottomSheet: false)
                                 : _buildPlaceholderForm(),
@@ -1212,6 +1561,200 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildProductCard(
+    dynamic m,
+    NumberFormat currencyFormat,
+    bool isLargeScreen,
+  ) {
+    final bool isActive =
+        m['estado'] == 'activo' || m['estado'] == true || m['estado'] == 1;
+    final bool isSelected =
+        _editingProduct != null && _editingProduct!['id'] == m['id'];
+
+    Color cardColor = isSelected
+        ? AppTheme.primaryColor.withValues(alpha: 0.02)
+        : Colors.white;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? AppTheme.accentColor : Colors.grey[200]!,
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _onEditProductPressed(m, isLargeScreen),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              // Icono de Producto
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.inventory_2,
+                  size: 20,
+                  color: Colors.blue[700],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Detalles
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Badges
+                    Row(
+                      children: [
+                        if (m['codigo'] != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              m['codigo'],
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(
+                              alpha: 0.08,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            m['categoria']?['nombre'] ?? 'Sin Categoría',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        if (m['unidad'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[50],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              m['unidad'],
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[800],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Nombre
+                    Text(
+                      m['nombre'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    // Descripción
+                    if (m['descripcion'] != null &&
+                        m['descripcion'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        m['descripcion'],
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Precio y Estado
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    currencyFormat.format(
+                      double.tryParse(m['precio_costo']?.toString() ?? '0') ??
+                          0,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.green[50] : Colors.red[50],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isActive ? 'ACTIVO' : 'INACTIVO',
+                      style: TextStyle(
+                        color: isActive ? Colors.green[700] : Colors.red[700],
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

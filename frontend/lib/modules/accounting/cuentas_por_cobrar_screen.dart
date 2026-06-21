@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_theme.dart';
 import '../../services/accounting_service.dart';
+import '../../core/constants.dart';
+import '../../widgets/quick_date_filter.dart';
 
 class CuentasPorCobrarScreen extends StatefulWidget {
   const CuentasPorCobrarScreen({super.key});
@@ -14,16 +19,20 @@ class CuentasPorCobrarScreen extends StatefulWidget {
 class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
   final AccountingService _accountingService = AccountingService();
   List<dynamic> _cuentas = [];
+  List<dynamic> _historialGlobal = [];
   List<dynamic> _bancos = [];
   bool _isLoading = true;
+  bool _isLoadingHistorial = false;
   bool _isSubmitting = false;
   String _filter = '';
+  DateFilterOption _selectedDateFilter = DateFilterOption.todos;
 
   dynamic _selectedCuenta;
   int? _selectedBancoId;
   DateTime _fechaPago = DateTime.now();
   String _metodoPago = 'Transferencia';
   double _porcentajePago = 100.0;
+  PlatformFile? _comprobanteFile;
 
   final _montoController = TextEditingController();
   final _conceptoController = TextEditingController();
@@ -41,15 +50,43 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
     super.dispose();
   }
 
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+    );
+    if (result != null) {
+      setState(() {
+        _comprobanteFile = result.files.first;
+      });
+    }
+  }
+
+  void _removeFile() {
+    setState(() {
+      _comprobanteFile = null;
+    });
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _accountingService.getCuentasPorCobrar();
-      final bancosData = await _accountingService.getBancos();
+      final results = await Future.wait([
+        _accountingService.getCuentasPorCobrar(),
+        _accountingService.getBancos(),
+        _accountingService.getAllPagosHistorial(),
+      ]);
+      final data = results[0];
+      final bancosData = results[1];
+      final historialData = results[2];
+
       if (!mounted) return;
       setState(() {
         _cuentas = data;
         _bancos = bancosData;
+        _historialGlobal = historialData
+            .where((item) => item['tipo'] == 'Cobro')
+            .toList();
 
         // Sincronizar cuenta seleccionada si existe
         if (_selectedCuenta != null) {
@@ -59,7 +96,9 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
           );
           if (updated != null) {
             _selectedCuenta = updated;
-            _montoController.text = updated['saldo'].toString();
+            _montoController.text =
+                (double.tryParse(updated['saldo'].toString()) ?? 0)
+                    .toStringAsFixed(2);
           } else {
             _selectedCuenta = null;
           }
@@ -84,9 +123,64 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
     }
   }
 
+  Future<void> _confirmDeleteComprobante(int id) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar comprobante?'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar el archivo adjunto de este pago? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCELAR'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        await _accountingService.deleteComprobantePago(id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Comprobante eliminado correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        await _loadData();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al eliminar comprobante: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+  }
+
   List<dynamic> get _filteredCuentas {
-    if (_filter.isEmpty) return _cuentas;
-    return _cuentas.where((c) {
+    final pendientes = _cuentas
+        .where((c) => (double.tryParse(c['saldo'].toString()) ?? 0) > 0.01)
+        .toList();
+    if (_filter.isEmpty) return pendientes;
+    return pendientes.where((c) {
       final proyecto = c['proyecto'].toString().toLowerCase();
       final cliente = c['cliente'].toString().toLowerCase();
       return proyecto.contains(_filter.toLowerCase()) ||
@@ -98,10 +192,12 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
     setState(() {
       _selectedCuenta = cuenta;
       _porcentajePago = 100.0;
-      _montoController.text = cuenta['saldo'].toString();
+      _montoController.text = (double.tryParse(cuenta['saldo'].toString()) ?? 0)
+          .toStringAsFixed(2);
       _conceptoController.text = '';
       _fechaPago = DateTime.now();
       _metodoPago = 'Transferencia';
+      _comprobanteFile = null;
     });
 
     showModalBottomSheet(
@@ -160,6 +256,22 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
 
     setState(() => _isSubmitting = true);
     try {
+      http.MultipartFile? fileParam;
+      if (_comprobanteFile != null) {
+        if (_comprobanteFile!.bytes != null) {
+          fileParam = http.MultipartFile.fromBytes(
+            'comprobante',
+            _comprobanteFile!.bytes!,
+            filename: _comprobanteFile!.name,
+          );
+        } else if (_comprobanteFile!.path != null) {
+          fileParam = await http.MultipartFile.fromPath(
+            'comprobante',
+            _comprobanteFile!.path!,
+          );
+        }
+      }
+
       await _accountingService.createPago({
         'proyecto_id': _selectedCuenta['id'],
         'monto': monto,
@@ -167,7 +279,7 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
         'metodo_pago': _metodoPago,
         'banco_id': _selectedBancoId,
         'comentario': _conceptoController.text,
-      });
+      }, file: fileParam);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -205,125 +317,315 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
     final width = MediaQuery.of(context).size.width;
     final isLargeScreen = width > 950;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        foregroundColor: AppTheme.textPrimary,
-        title: const Text('Cuentas por Cobrar (CXC)'),
-        actions: [
-          IconButton(
-            onPressed: _loadData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualizar Datos',
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: AppTheme.textPrimary,
+          title: const Text('Cuentas por Cobrar (CXC)'),
+          bottom: const TabBar(
+            labelColor: AppTheme.primaryColor,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppTheme.primaryColor,
+            tabs: [
+              Tab(text: 'Pendientes de Cobro'),
+              Tab(text: 'Historial General'),
+            ],
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : isLargeScreen
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Columna Izquierda: Tarjetas de resumen, buscador y listado
-                Expanded(
-                  child: Column(
-                    children: [
-                      _buildSummaryCards(f),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Buscar por proyecto o cliente...',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          onChanged: (v) => setState(() => _filter = v),
-                        ),
-                      ),
-                      Expanded(
-                        child: _filteredCuentas.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'No hay cuentas por cobrar pendientes',
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                itemCount: _filteredCuentas.length,
-                                itemBuilder: (context, index) {
-                                  final cuenta = _filteredCuentas[index];
-                                  return _buildCuentaCard(
-                                    cuenta,
-                                    f,
-                                    isLargeScreen,
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Columna Derecha: Formulario de Registro de Cobro
-                Padding(
-                  padding: const EdgeInsets.only(
-                    top: 16.0,
-                    right: 16.0,
-                    bottom: 16.0,
-                  ),
-                  child: SizedBox(
-                    width: 460,
-                    child: _selectedCuenta != null
-                        ? _buildPaymentFormPanel(isBottomSheet: false)
-                        : _buildPlaceholderPanel(),
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              children: [
-                _buildSummaryCards(f),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por proyecto o cliente...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    onChanged: (v) => setState(() => _filter = v),
-                  ),
-                ),
-                Expanded(
-                  child: _filteredCuentas.isEmpty
-                      ? const Center(
-                          child: Text('No hay cuentas por cobrar pendientes'),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _filteredCuentas.length,
-                          itemBuilder: (context, index) {
-                            final cuenta = _filteredCuentas[index];
-                            return _buildCuentaCard(cuenta, f, isLargeScreen);
-                          },
-                        ),
-                ),
-              ],
+          actions: [
+            IconButton(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Actualizar Datos',
             ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+                children: [
+                  _buildPendientesTab(f, isLargeScreen),
+                  _buildHistorialGlobalTab(f),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPendientesTab(NumberFormat f, bool isLargeScreen) {
+    return isLargeScreen
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Columna Izquierda: Tarjetas de resumen, buscador y listado
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildSummaryCards(f),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Buscar por proyecto o cliente...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        onChanged: (v) => setState(() => _filter = v),
+                      ),
+                    ),
+                    Expanded(
+                      child: _filteredCuentas.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No hay cuentas por cobrar pendientes',
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              itemCount: _filteredCuentas.length,
+                              itemBuilder: (context, index) {
+                                final cuenta = _filteredCuentas[index];
+                                return _buildCuentaCard(
+                                  cuenta,
+                                  f,
+                                  isLargeScreen,
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              // Columna Derecha: Formulario de Registro de Cobro
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: 16.0,
+                  right: 16.0,
+                  bottom: 16.0,
+                ),
+                child: SizedBox(
+                  width: 460,
+                  child: _selectedCuenta != null
+                      ? _buildPaymentFormPanel(isBottomSheet: false)
+                      : _buildPlaceholderPanel(),
+                ),
+              ),
+            ],
+          )
+        : Column(
+            children: [
+              _buildSummaryCards(f),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por proyecto o cliente...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  onChanged: (v) => setState(() => _filter = v),
+                ),
+              ),
+              Expanded(
+                child: _filteredCuentas.isEmpty
+                    ? const Center(
+                        child: Text('No hay cuentas por cobrar pendientes'),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _filteredCuentas.length,
+                        itemBuilder: (context, index) {
+                          final cuenta = _filteredCuentas[index];
+                          return _buildCuentaCard(cuenta, f, isLargeScreen);
+                        },
+                      ),
+              ),
+            ],
+          );
+  }
+
+  Widget _buildHistorialGlobalTab(NumberFormat f) {
+    if (_isLoadingHistorial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final list = _historialGlobal.where((pago) {
+      final dateStr = pago['fecha']?.toString();
+      if (dateStr == null) return false;
+      final date = DateTime.tryParse(dateStr);
+      if (date == null) return false;
+      return QuickDateFilter.isDateInFilter(date, _selectedDateFilter);
+    }).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: QuickDateFilter(
+                  selectedOption: _selectedDateFilter,
+                  onChanged: (option) {
+                    setState(() {
+                      _selectedDateFilter = option;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: list.isEmpty
+              ? const Center(
+                  child: Text('No hay cobros en este rango de fecha'),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: list.length,
+                  itemBuilder: (context, index) {
+                    final pago = list[index];
+                    final pMonto =
+                        double.tryParse(pago['monto'].toString()) ?? 0;
+                    final pFecha =
+                        DateTime.tryParse(pago['fecha'].toString()) ??
+                        DateTime.now();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.arrow_downward,
+                              size: 20,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  pago['proyecto'] ?? 'N/A',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Cliente: ${pago['entidad'] ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${pago['metodo_pago']} • ${DateFormat('dd/MM/yyyy').format(pFecha)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '+${f.format(pMonto)}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          if (pago['original'] != null &&
+                              pago['original']['comprobante_path'] != null) ...[
+                            IconButton(
+                              icon: const Icon(
+                                Icons.attachment,
+                                color: Colors.blue,
+                              ),
+                              tooltip: 'Ver Comprobante Original',
+                              onPressed: () async {
+                                final url = Uri.parse(
+                                  '$host/storage/${pago['original']['comprobante_path']}',
+                                );
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(
+                                    url,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
+                              tooltip: 'Eliminar Comprobante',
+                              onPressed: () =>
+                                  _confirmDeleteComprobante(pago['id']),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          IconButton(
+                            icon: const Icon(
+                              Icons.picture_as_pdf,
+                              color: Colors.red,
+                            ),
+                            tooltip: 'Ver Recibo PDF',
+                            onPressed: () async {
+                              final url = Uri.parse(
+                                '$host/api/v1/pagos-historial/Cobro/${pago['id']}/pdf',
+                              );
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(
+                                  url,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -346,7 +648,9 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
           _buildSummaryItem(
             'Proyectos con Saldo',
             _cuentas
-                .where((c) => (double.tryParse(c['saldo'].toString()) ?? 0) > 0)
+                .where(
+                  (c) => (double.tryParse(c['saldo'].toString()) ?? 0) > 0.01,
+                )
                 .length
                 .toString(),
             Colors.blue[700]!,
@@ -447,10 +751,13 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
             setState(() {
               _selectedCuenta = cuenta;
               _porcentajePago = 100.0;
-              _montoController.text = cuenta['saldo'].toString();
+              _montoController.text =
+                  (double.tryParse(cuenta['saldo'].toString()) ?? 0)
+                      .toStringAsFixed(2);
               _conceptoController.text = '';
               _fechaPago = DateTime.now();
               _metodoPago = 'Transferencia';
+              _comprobanteFile = null;
             });
           } else {
             _openPaymentBottomSheet(cuenta);
@@ -855,6 +1162,65 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
         ),
         const SizedBox(height: 16),
 
+        // Selector de Comprobante (Opcional)
+        if (_metodoPago == 'Transferencia') ...[
+          _comprobanteFile == null
+              ? SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFile,
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('Adjuntar Comprobante (Opcional)'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.grey[300]!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                )
+              : Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.blue.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.description, color: Colors.blue),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _comprobanteFile!.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _removeFile,
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        tooltip: 'Eliminar archivo',
+                      ),
+                    ],
+                  ),
+                ),
+          const SizedBox(height: 16),
+        ],
+
         // Fecha de Pago
         InkWell(
           onTap: _isSubmitting
@@ -963,14 +1329,19 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
             padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Text(
               'No se han registrado cobros para este proyecto.',
-              style: TextStyle(fontSize: 13, color: Colors.grey, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           )
         else
           Column(
             children: pagos.map<Widget>((pago) {
               final pMonto = double.tryParse(pago['monto'].toString()) ?? 0;
-              final pFecha = DateTime.tryParse(pago['fecha'].toString()) ?? DateTime.now();
+              final pFecha =
+                  DateTime.tryParse(pago['fecha'].toString()) ?? DateTime.now();
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
@@ -987,7 +1358,11 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
                         color: Colors.green[50],
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.arrow_downward, size: 16, color: Colors.green[700]),
+                      child: Icon(
+                        Icons.arrow_downward,
+                        size: 16,
+                        color: Colors.green[700],
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1006,7 +1381,10 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
                           const SizedBox(height: 2),
                           Text(
                             '${pago['metodo_pago']} • ${DateFormat('dd/MM/yyyy').format(pFecha)}',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -1018,6 +1396,49 @@ class _CuentasPorCobrarScreenState extends State<CuentasPorCobrarScreen> {
                         fontWeight: FontWeight.bold,
                         color: Colors.green[700],
                       ),
+                    ),
+                    if (pago['comprobante_path'] != null) ...[
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.attachment, color: Colors.blue),
+                        tooltip: 'Ver Comprobante Original',
+                        onPressed: () async {
+                          final url = Uri.parse(
+                            '$host/storage/${pago['comprobante_path']}',
+                          );
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        tooltip: 'Eliminar Comprobante',
+                        onPressed: () => _confirmDeleteComprobante(pago['id']),
+                      ),
+                    ],
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                      tooltip: 'Ver Recibo PDF',
+                      onPressed: () async {
+                        final url = Uri.parse(
+                          '$host/api/v1/pagos-historial/Cobro/${pago['id']}/pdf',
+                        );
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),

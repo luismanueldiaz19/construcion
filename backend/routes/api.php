@@ -46,6 +46,8 @@ Route::prefix('v1')->group(function () {
     Route::post('proyectos/{id}/partidas', [ProyectoController::class, 'addPartida']);
     Route::post('partidas/{id}/subpartidas', [ProyectoController::class, 'addSubpartida']);
     Route::get('/proyectos/{id}/partidas', [ProyectoController::class, 'partidas']);
+    Route::post('materiales/import', [\App\Http\Controllers\Api\MaterialController::class, 'import']);
+    Route::get('materiales/import-template', [\App\Http\Controllers\Api\MaterialController::class, 'importTemplate']);
     Route::apiResource('materiales', \App\Http\Controllers\Api\MaterialController::class);
     Route::post('materiales/{id}/toggle-estado', [\App\Http\Controllers\Api\MaterialController::class, 'toggleEstado']);
     Route::apiResource('clients', \App\Http\Controllers\Api\ClientController::class)->except(['destroy']);
@@ -59,6 +61,7 @@ Route::prefix('v1')->group(function () {
     Route::get('compras-pendientes', [CompraController::class, 'pendientes']);
     Route::post('/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'store']);
     Route::post('/pagos', [\App\Http\Controllers\Api\PagoClienteController::class, 'store']);
+    Route::delete('/pagos/{id}/comprobante', [\App\Http\Controllers\Api\PagoClienteController::class, 'deleteComprobante']);
     Route::get('/subpartidas/{id}/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'history']);
     Route::get('/contabilidad/catalogo', [ContabilidadController::class, 'catalogo']);
     Route::get('/contabilidad/asientos', [ContabilidadController::class, 'asientos']);

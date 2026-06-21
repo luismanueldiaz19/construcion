@@ -29,8 +29,13 @@ class AccountingService {
     return await _http.get('cuentas-por-pagar');
   }
 
-  Future<void> createPago(Map<String, dynamic> data) async {
-    await _http.post('pagos', data);
+  Future<void> createPago(Map<String, dynamic> data, {dynamic file}) async {
+    if (file != null) {
+      final fields = data.map((key, value) => MapEntry(key, value.toString()));
+      await _http.multipart('pagos', fields: fields, files: [file]);
+    } else {
+      await _http.post('pagos', data);
+    }
   }
 
   Future<List<dynamic>> getAllPagosHistorial() async {
@@ -39,5 +44,9 @@ class AccountingService {
 
   Future<void> registrarPagoCompra(Map<String, dynamic> data) async {
     await _http.post('pagos-compras', data);
+  }
+
+  Future<void> deleteComprobantePago(int id) async {
+    await _http.delete('pagos/$id/comprobante');
   }
 }

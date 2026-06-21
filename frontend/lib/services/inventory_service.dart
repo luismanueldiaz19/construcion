@@ -1,6 +1,7 @@
 import 'http_service.dart';
 import '../models/consumo_proyecto.dart';
 import '../models/local_inventory.dart';
+import 'package:http/http.dart' as http;
 
 class InventoryService {
   final HttpService _http = HttpService();
@@ -68,5 +69,19 @@ class InventoryService {
 
   Future<Map<String, dynamic>> getLocalInventoryDetail(int id) async {
     return await _http.get('inventarios-locales/$id');
+  }
+
+  Future<Map<String, dynamic>> importMateriales(List<int> fileBytes, String filename) async {
+    final file = http.MultipartFile.fromBytes(
+      'file',
+      fileBytes,
+      filename: filename,
+    );
+    final data = await _http.multipart('materiales/import', files: [file]);
+    return data;
+  }
+
+  String getImportTemplateUrl() {
+    return '${_http.baseUrl}/materiales/import-template';
   }
 }

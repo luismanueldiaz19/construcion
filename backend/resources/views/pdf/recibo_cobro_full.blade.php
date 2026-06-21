@@ -202,6 +202,13 @@
         </tr>
     </table>
 
+    @if(!empty($data['comprobante_path']) && in_array(strtolower(pathinfo($data['comprobante_path'], PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png']))
+        <div style="page-break-before: auto; margin-top: 40px; text-align: center;">
+            <div style="color: #7f8c8d; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-bottom: 10px; letter-spacing: 1px;">Comprobante Adjunto</div>
+            <img src="{{ public_path('storage/' . $data['comprobante_path']) }}" style="max-width: 100%; max-height: 400px; border: 1px solid #ecf0f1; border-radius: 8px; padding: 5px;">
+        </div>
+    @endif
+
     <div class="footer">
         Generado automáticamente por el Sistema el {{ date('d/m/Y') }} a las {{ date('H:i:s') }}
     </div>

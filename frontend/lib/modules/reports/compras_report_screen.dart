@@ -9,6 +9,7 @@ import '../../services/project_service.dart';
 import '../../models/compra.dart';
 import '../../models/proyecto.dart';
 import '../../models/proveedor.dart';
+import '../../widgets/quick_date_filter.dart';
 
 class ComprasReportScreen extends StatefulWidget {
   const ComprasReportScreen({super.key});
@@ -31,6 +32,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
     start: DateTime(DateTime.now().year, DateTime.now().month, 1),
     end: DateTime(DateTime.now().year, DateTime.now().month + 1, 0),
   );
+  DateFilterOption _selectedDateFilter = DateFilterOption.esteMes;
 
   // Paginación
   int _currentPage = 1;
@@ -73,6 +75,49 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  DateTimeRange? _getDateRangeFromOption(DateFilterOption option) {
+    final now = DateTime.now();
+    switch (option) {
+      case DateFilterOption.todos:
+        return null;
+      case DateFilterOption.ultimos7Dias:
+        return DateTimeRange(
+          start: now.subtract(const Duration(days: 7)),
+          end: now,
+        );
+      case DateFilterOption.esteMes:
+        return DateTimeRange(
+          start: DateTime(now.year, now.month, 1),
+          end: DateTime(now.year, now.month + 1, 0, 23, 59, 59),
+        );
+      case DateFilterOption.mesPasado:
+        return DateTimeRange(
+          start: DateTime(now.year, now.month - 1, 1),
+          end: DateTime(now.year, now.month, 0, 23, 59, 59),
+        );
+      case DateFilterOption.hace2Meses:
+        return DateTimeRange(
+          start: DateTime(now.year, now.month - 2, 1),
+          end: DateTime(now.year, now.month - 1, 0, 23, 59, 59),
+        );
+      case DateFilterOption.hace3Meses:
+        return DateTimeRange(
+          start: DateTime(now.year, now.month - 3, 1),
+          end: DateTime(now.year, now.month - 2, 0, 23, 59, 59),
+        );
+      case DateFilterOption.esteAno:
+        return DateTimeRange(
+          start: DateTime(now.year, 1, 1),
+          end: DateTime(now.year, 12, 31, 23, 59, 59),
+        );
+      case DateFilterOption.anoPasado:
+        return DateTimeRange(
+          start: DateTime(now.year - 1, 1, 1),
+          end: DateTime(now.year - 1, 12, 31, 23, 59, 59),
+        );
+    }
   }
 
   Future<void> _loadData() async {
@@ -255,6 +300,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
         start: DateTime(DateTime.now().year, DateTime.now().month, 1),
         end: DateTime(DateTime.now().year, DateTime.now().month + 1, 0),
       );
+      _selectedDateFilter = DateFilterOption.esteMes;
       _currentPage = 1;
     });
     _loadData();
@@ -422,6 +468,7 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
                       if (range != null) {
                         setState(() {
                           _selectedDateRange = range;
+                          _selectedDateFilter = DateFilterOption.todos;
                         });
                         _applyFilters();
                         setModalState(() {});
@@ -674,6 +721,27 @@ class _ComprasReportScreenState extends State<ComprasReportScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Buscador de Fecha Rápido (QuickDateFilter)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: QuickDateFilter(
+                          selectedOption: _selectedDateFilter,
+                          onChanged: (option) {
+                            setState(() {
+                              _selectedDateFilter = option;
+                              _selectedDateRange = _getDateRangeFromOption(option);
+                              _currentPage = 1;
+                            });
+                            _loadData();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 _buildFilterChips(),
                 Expanded(
                   child: Row(

@@ -27,9 +27,10 @@ class PagoClienteController extends Controller
             'metodo_pago' => 'required|string',
             'banco_id' => 'nullable|exists:catalogo_cuentas,id',
             'comentario' => 'nullable|string',
+            'comprobante' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
-        return DB::transaction(function () use ($validated) {
+        return DB::transaction(function () use ($validated, $request) {
             $proyecto = \App\Models\Proyecto::withSum('pagos', 'monto')->findOrFail($validated['proyecto_id']);
             
             $totalContrato = $proyecto->presupuesto_estimado 
@@ -47,6 +48,11 @@ class PagoClienteController extends Controller
                 ], 422);
             }
             
+            $comprobantePath = null;
+            if ($request->hasFile('comprobante')) {
+                $comprobantePath = $request->file('comprobante')->store('comprobantes_pagos', 'public');
+            }
+
             // 1. Determinar cuentas
             $cuentaBancoId = $validated['banco_id'] ?? CatalogoCuenta::where('codigo', '1.1.01.02')->first()->id;
             $cuentaIngreso = CatalogoCuenta::where('codigo', '4.1.01')->first();
@@ -69,6 +75,7 @@ class PagoClienteController extends Controller
                 'monto' => $validated['monto'],
                 'metodo_pago' => $validated['metodo_pago'],
                 'cuenta_contable_id' => $cuentaBancoId,
+                'comprobante_path' => $comprobantePath,
             ]);
 
             // 3. Registrar Asiento Desglosado
@@ -104,5 +111,18 @@ class PagoClienteController extends Controller
 
             return $pago;
         });
+    }
+
+    public function deleteComprobante($id)
+    {
+        $pago = PagoCliente::findOrFail($id);
+        
+        if ($pago->comprobante_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($pago->comprobante_path);
+            $pago->comprobante_path = null;
+            $pago->save();
+        }
+
+        return response()->json(['message' => 'Comprobante eliminado']);
     }
 }
