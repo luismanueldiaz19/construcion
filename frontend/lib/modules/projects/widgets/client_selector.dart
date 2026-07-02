@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/client.dart';
 import '../../../services/client_service.dart';
-import '../../clients/clients_screen.dart';
+import '../../clients/screens/clients_screen.dart';
 
 class ClientSelector extends StatefulWidget {
   final Client? initialClient;
