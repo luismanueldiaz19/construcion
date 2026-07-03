@@ -145,7 +145,7 @@
     <table>
         <tr>
             <td class="label">Proveedor:</td>
-            <td class="value">{{ $pago->cuentaPorPagar->proveedor->nombre }}</td>
+            <td class="value">{{ $pago->cuentaPorPagar->proveedor->name ?? 'N/A' }}</td>
         </tr>
         <tr>
             <td class="label">Compra ID:</td>

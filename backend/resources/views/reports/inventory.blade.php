@@ -5,9 +5,13 @@
     <title>Reporte de Inventario - {{ $proyecto->nombre }}</title>
     <style>
         body { font-family: 'Helvetica', sans-serif; font-size: 12px; color: #333; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
-        .header h1 { margin: 0; color: #2c3e50; text-transform: uppercase; }
-        .project-info { margin-bottom: 20px; }
+        .header-table { width: 100%; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; margin-bottom: 20px; }
+        .company-info { text-align: left; vertical-align: top; }
+        .company-name { font-size: 22px; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }
+        .company-details { font-size: 10px; color: #555; line-height: 1.4; }
+        .report-info { text-align: right; vertical-align: top; }
+        .report-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 5px; text-transform: uppercase; }
+        .report-meta { font-size: 10px; color: #555; line-height: 1.4; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th { background-color: #2c3e50; color: white; padding: 8px; text-align: left; }
         td { border: 1px solid #ddd; padding: 8px; }
@@ -22,10 +26,40 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Reporte de Inventario</h1>
-        <div>Emitido el: {{ now()->format('d/m/Y H:i') }}</div>
-    </div>
+    <table class="header-table">
+        <tr>
+            <td style="width: 20%; vertical-align: top;">
+                @php
+                    $imagePath = public_path('assets/assets/logo.png');
+                    $logoBase64 = '';
+                    if(file_exists($imagePath)) {
+                        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+                    }
+                @endphp
+                @if($logoBase64)
+                    <img src="{{ $logoBase64 }}" style="max-height: 80px; max-width: 140px; object-fit: contain;">
+                @else
+                    <div style="font-size:12px;color:red;border:1px solid red;padding:10px;">Logo no encontrado</div>
+                @endif
+            </td>
+            <td class="company-info" style="width: 40%;">
+                <div class="company-name">NEO PROJECT S.R.L</div>
+                <div class="company-details">
+                    <strong>RNC:</strong> 131181181<br>
+                    <strong>Dirección:</strong> Manolo Tavares Justo No. 15, Puerto Plata<br>
+                    <strong>Teléfono:</strong> 809-320-1668<br>
+                    <strong>Celular:</strong> 809-223-8039
+                </div>
+            </td>
+            <td class="report-info" style="width: 40%;">
+                <div class="report-title">Reporte de Inventario</div>
+                <div class="report-meta">
+                    <strong>Fecha de Emisión:</strong> {{ date('d/m/Y') }}<br>
+                    <strong>Hora:</strong> {{ date('H:i') }}
+                </div>
+            </td>
+        </tr>
+    </table>
 
     <div class="project-info">
         <strong>PROYECTO:</strong> {{ $proyecto->nombre }}<br>

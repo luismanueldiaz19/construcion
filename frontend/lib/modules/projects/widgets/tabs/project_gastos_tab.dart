@@ -37,13 +37,37 @@ class ProjectGastosTab extends StatelessWidget {
               if (useGrid) {
                 return Row(
                   children: [
-                    Expanded(child: DetailStatCard(title: 'Total Gastado', value: f.format(totalGastado), color: Colors.redAccent)),
+                    Expanded(
+                      child: DetailStatCard(
+                        title: 'Total Gastado',
+                        value: f.format(totalGastado),
+                        color: Colors.redAccent,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: DetailStatCard(title: 'Mano de Obra', value: f.format(moGastado), color: Colors.orange)),
+                    Expanded(
+                      child: DetailStatCard(
+                        title: 'Mano de Obra',
+                        value: f.format(moGastado),
+                        color: Colors.orange,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: DetailStatCard(title: 'Alquiler de Equipos', value: f.format(alquilerGastado), color: Colors.purple)),
+                    Expanded(
+                      child: DetailStatCard(
+                        title: 'Alquiler de Equipos',
+                        value: f.format(alquilerGastado),
+                        color: Colors.purple,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: DetailStatCard(title: 'Otros Egresos', value: f.format(otrosGastado), color: Colors.cyan)),
+                    Expanded(
+                      child: DetailStatCard(
+                        title: 'Otros Egresos',
+                        value: f.format(otrosGastado),
+                        color: Colors.cyan,
+                      ),
+                    ),
                   ],
                 );
               } else {
@@ -51,17 +75,41 @@ class ProjectGastosTab extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: DetailStatCard(title: 'Total Gastado', value: f.format(totalGastado), color: Colors.redAccent)),
+                        Expanded(
+                          child: DetailStatCard(
+                            title: 'Total Gastado',
+                            value: f.format(totalGastado),
+                            color: Colors.redAccent,
+                          ),
+                        ),
                         const SizedBox(width: 12),
-                        Expanded(child: DetailStatCard(title: 'Mano de Obra', value: f.format(moGastado), color: Colors.orange)),
+                        Expanded(
+                          child: DetailStatCard(
+                            title: 'Mano de Obra',
+                            value: f.format(moGastado),
+                            color: Colors.orange,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: DetailStatCard(title: 'Alquiler', value: f.format(alquilerGastado), color: Colors.purple)),
+                        Expanded(
+                          child: DetailStatCard(
+                            title: 'Alquiler',
+                            value: f.format(alquilerGastado),
+                            color: Colors.purple,
+                          ),
+                        ),
                         const SizedBox(width: 12),
-                        Expanded(child: DetailStatCard(title: 'Otros', value: f.format(otrosGastado), color: Colors.cyan)),
+                        Expanded(
+                          child: DetailStatCard(
+                            title: 'Otros',
+                            value: f.format(otrosGastado),
+                            color: Colors.cyan,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -77,8 +125,35 @@ class ProjectGastosTab extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Historial de Gastos (MO / Alquiler / Otros)',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A1A),
+                  ),
                 ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.print, color: Colors.deepOrange),
+                label: const Text(
+                  'Imprimir',
+                  style: TextStyle(color: Colors.deepOrange),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.deepOrange.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  backgroundColor: Colors.deepOrange.shade50,
+                ),
+                onPressed: () async {
+                  final url =
+                      '$host/reports/gastos/pdf?proyecto_id=${provider.proyecto!.id}';
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
               ),
               const SizedBox(width: 12),
               if (provider.proyecto!.estado == 'Activo')
@@ -89,7 +164,9 @@ class ProjectGastosTab extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
                     foregroundColor: Colors.black87,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
             ],
@@ -105,14 +182,20 @@ class ProjectGastosTab extends StatelessWidget {
             )
           else
             ...gastos.map((g) {
-              return GastoCard(gasto: g, onPrint: () => _openGastoPdf(context, g.id!));
+              return GastoCard(
+                gasto: g,
+                onPrint: () => _openGastoPdf(context, g.id!),
+              );
             }).toList(),
         ],
       ),
     );
   }
 
-  void _showGastoDialog(BuildContext context, ProjectDetailsProvider provider) async {
+  void _showGastoDialog(
+    BuildContext context,
+    ProjectDetailsProvider provider,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => GastoProyectoDialog(proyecto: provider.proyecto!),

@@ -55,14 +55,28 @@
 <body>
     <table class="header-table">
         <tr>
-            <td class="logo-area">
-                <img src="{{ public_path('images/logo.png') }}" style="max-width: 150px; max-height: 80px;">
+            <td class="logo-area" style="width: 20%; vertical-align: top;">
+                @php
+                    $imagePath = public_path('assets/assets/logo.png');
+                    $logoBase64 = '';
+                    if(file_exists($imagePath)) {
+                        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+                    }
+                @endphp
+                @if($logoBase64)
+                    <img src="{{ $logoBase64 }}" style="max-height: 80px; max-width: 140px; object-fit: contain;">
+                @else
+                    <div style="font-size:12px;color:red;border:1px solid red;padding:10px;">Logo no encontrado</div>
+                @endif
             </td>
-            <td class="company-info">
-                <div class="company-name">Neo Project</div>
-                <div>RNC: 132-XXXXX-X</div>
-                <div>Dirección: Calle Principal #10, Puerto Plata</div>
-                <div>Tel: (809) 000-0000</div>
+            <td class="company-info" style="width: 40%;">
+                <div class="company-name">NEO PROJECT S.R.L</div>
+                <div style="font-size: 11px;">
+                    <strong>RNC:</strong> 131181181<br>
+                    <strong>Dirección:</strong> Manolo Tavares Justo No. 15, Puerto Plata<br>
+                    <strong>Teléfono:</strong> 809-320-1668<br>
+                    <strong>Celular:</strong> 809-223-8039
+                </div>
             </td>
             <td class="budget-title-area">
                 <div class="budget-label">PRESUPUESTO</div>
@@ -71,7 +85,16 @@
             </td>
             <td class="right-logo">
                 @if($proyecto->logo_path)
-                    <img src="{{ public_path('storage/' . $proyecto->logo_path) }}" style="max-width: 120px; max-height: 60px;">
+                    @php
+                        $projImagePath = public_path('storage/' . $proyecto->logo_path);
+                        $projLogoBase64 = '';
+                        if(file_exists($projImagePath)) {
+                            $projLogoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($projImagePath));
+                        }
+                    @endphp
+                    @if($projLogoBase64)
+                        <img src="{{ $projLogoBase64 }}" style="width: 120px; height: 80px; object-fit: cover; border-radius: 4px;">
+                    @endif
                 @endif
             </td>
         </tr>

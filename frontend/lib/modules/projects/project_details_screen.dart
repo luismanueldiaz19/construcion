@@ -78,72 +78,33 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     }
   }
 
-  void _showAddPartidaDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => ChangeNotifierProvider.value(
-        value: _provider,
-        child: const AddPartidaDialog(),
-      ),
-    );
-    if (result == true) {
-      _provider.refresh();
-    }
-  }
+  // void _showAddPartidaDialog() async {
+  //   final result = await showDialog<bool>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (ctx) => ChangeNotifierProvider.value(
+  //       value: _provider,
+  //       child: const AddPartidaDialog(),
+  //     ),
+  //   );
+  //   if (result == true) {
+  //     _provider.refresh();
+  //   }
+  // }
 
-  void _showAddSubpartidaDialog(int partidaId) async {
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => ChangeNotifierProvider.value(
-        value: _provider,
-        child: AddSubpartidaDialog(partidaId: partidaId),
-      ),
-    );
-    if (result == true) {
-      _provider.refresh();
-    }
-  }
-
-  void _confirmarProvision() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Provisionar todo al 100%?'),
-        content: const Text(
-          'Esta acción marcará todas las sub-partidas como completadas al 100% para fines de prueba y reporte. ¿Deseas continuar?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _provider
-                  .provisionarTodo100()
-                  .then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Provisionado correctamente'),
-                      ),
-                    );
-                  })
-                  .catchError((e) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(e.toString())));
-                  });
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('SÍ, PROVISIONAR TODO'),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showAddSubpartidaDialog(int partidaId) async {
+  //   final result = await showDialog<bool>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (ctx) => ChangeNotifierProvider.value(
+  //       value: _provider,
+  //       child: AddSubpartidaDialog(partidaId: partidaId),
+  //     ),
+  //   );
+  //   if (result == true) {
+  //     _provider.refresh();
+  //   }
+  // }
 
   bool get _isReadonly {
     if (_provider.proyecto == null) return true;
@@ -181,34 +142,34 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               title: Text(proyecto.nombre),
               automaticallyImplyLeading: !widget.embedded,
               actions: [
-                IconButton(
-                  onPressed: () async {
-                    final url = Uri.parse(
-                      '$host/reports/proyecto/${proyecto.id}/pdf',
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    } else {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'No se pudo abrir el reporte completo del proyecto',
+                Padding(
+                  padding: const EdgeInsets.only(right: 15),
+                  child: IconButton(
+                    onPressed: () async {
+                      final url = Uri.parse(
+                        '$host/reports/proyecto/${proyecto.id}/pdf',
+                      );
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'No se pudo abrir el reporte completo del proyecto',
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       }
-                    }
-                  },
-                  icon: const Icon(Icons.picture_as_pdf, color: Colors.black54),
-                  tooltip: 'Imprimir Reporte Completo',
-                ),
-                if (!_isReadonly)
-                  IconButton(
-                    onPressed: _confirmarProvision,
-                    icon: const Icon(Icons.bolt, color: Colors.orangeAccent),
-                    tooltip: 'Provisionar Todo al 100% (Prueba)',
+                    },
+                    icon: const Icon(
+                      Icons.print_outlined,
+                      color: Colors.black54,
+                    ),
+                    tooltip: 'Imprimir Reporte Completo',
                   ),
+                ),
               ],
             ),
             body: provider.isLoading && provider.proyecto == null
@@ -432,8 +393,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         return const ProjectSummaryTab();
       case 1:
         return ProjectPartidasTab(
-          onAddPartida: _showAddPartidaDialog,
-          onAddSubpartida: _showAddSubpartidaDialog,
+          // onAddPartida: _showAddPartidaDialog,
+          // onAddSubpartida: _showAddSubpartidaDialog,
         );
       case 2:
         return const ProjectGastosTab();

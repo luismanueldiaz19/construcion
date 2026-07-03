@@ -100,9 +100,24 @@
         <!-- Encabezado -->
         <table class="header-table">
             <tr>
-                <td>
-                    <img src="{{ public_path('images/logo.png') }}" style="max-height: 60px;">
-                    <div style="color: #666; margin-top: 5px;">Gestión de Construcción e Ingeniería</div>
+                <td style="width: 50%;">
+                    @php
+                        $imagePath = public_path('assets/assets/logo.png');
+                        $logoBase64 = '';
+                        if(file_exists($imagePath)) {
+                            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+                        }
+                    @endphp
+                    @if($logoBase64)
+                        <img src="{{ $logoBase64 }}" style="max-height: 70px; max-width: 150px; object-fit: contain;">
+                    @else
+                        <div style="font-size:12px;color:red;border:1px solid red;padding:10px;">Logo no encontrado</div>
+                    @endif
+                    <div style="color: #666; margin-top: 5px; font-weight: bold;">NEO PROJECT S.R.L</div>
+                    <div style="color: #666; font-size: 10px;">
+                        RNC: 131181181 | Manolo Tavares Justo No. 15<br>
+                        Tel: 809-320-1668 | Cel: 809-223-8039
+                    </div>
                 </td>
                 <td class="text-right">
                     <div class="invoice-title">COMPROBANTE DE GASTO / PAGO</div>
@@ -126,7 +141,7 @@
                     <h3>Detalles del Pago</h3>
                     <div><strong>Tipo de Gasto:</strong> {{ $gasto->tipo_gasto }}</div>
                     <div><strong>Método de Pago:</strong> {{ $gasto->metodo_pago }}</div>
-                    <div><strong>Proveedor/Beneficiario:</strong> {{ $gasto->proveedor->nombre ?? 'N/A' }}</div>
+                    <div><strong>Proveedor/Beneficiario:</strong> {{ $gasto->proveedor->name ?? 'N/A' }}</div>
                 </td>
             </tr>
         </table>

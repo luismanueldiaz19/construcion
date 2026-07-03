@@ -58,8 +58,12 @@ class Compra {
       codigo: json['codigo'],
       comprobante: json['comprobante'],
       nota: json['nota'],
-      proveedor: json['proveedor'] != null ? Proveedor.fromJson(json['proveedor']) : null,
-      proyecto: json['proyecto'] != null ? Proyecto.fromJson(json['proyecto']) : null,
+      proveedor: json['proveedor'] != null
+          ? Proveedor.fromJson(json['proveedor'])
+          : null,
+      proyecto: json['proyecto'] != null
+          ? Proyecto.fromJson(json['proyecto'])
+          : null,
       detalles: json['detalles'] as List<dynamic>?,
       documentos: json['documentos'] as List<dynamic>?,
     );

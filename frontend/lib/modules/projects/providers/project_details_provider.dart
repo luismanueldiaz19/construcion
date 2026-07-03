@@ -77,18 +77,7 @@ class ProjectDetailsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> provisionarTodo100() async {
-    if (_proyecto == null) return;
-    _setLoading(true);
-    try {
-      await _projectService.provisionarTodo100(_proyecto!.id!);
-      await refresh();
-    } catch (e) {
-      _error = 'Error al provisionar: $e';
-      _setLoading(false);
-      rethrow;
-    }
-  }
+
 
   Future<void> pickAndUploadLogo() async {
     if (_proyecto == null) return;

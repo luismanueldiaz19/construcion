@@ -5,9 +5,13 @@
     <title>Reporte de Costos Partida - Neo Project</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 11px; color: #333; margin: 0; padding: 0; }
-        .header { width: 100%; border-bottom: 2px solid #003366; padding-bottom: 10px; margin-bottom: 20px; }
-        .company-name { font-size: 20px; font-weight: bold; color: #003366; }
-        .report-title { text-align: right; font-size: 16px; color: #555; }
+        .header-table { width: 100%; border-bottom: 2px solid #003366; padding-bottom: 15px; margin-bottom: 20px; }
+        .company-info { text-align: left; vertical-align: top; }
+        .company-name { font-size: 22px; font-weight: bold; color: #003366; margin-bottom: 5px; }
+        .company-details { font-size: 10px; color: #555; line-height: 1.4; }
+        .report-info { text-align: right; vertical-align: top; }
+        .report-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 5px; text-transform: uppercase; }
+        .report-meta { font-size: 10px; color: #555; line-height: 1.4; }
         .partida-info { background-color: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; }
         .partida-info h2 { margin-top: 0; color: #003366; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
@@ -22,19 +26,40 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <table style="width: 100%; border: none;">
-            <tr>
-                <td style="border: none;">
-                    <img src="{{ public_path('images/logo.png') }}" style="max-height: 50px;">
-                    <div>Análisis de Costos Reales por Partida</div>
-                </td>
-                <td style="border: none;" class="text-right">
-                    <div>Fecha: {{ date('d/m/Y H:i') }}</div>
-                </td>
-            </tr>
-        </table>
-    </div>
+    <table class="header-table">
+        <tr>
+            <td style="width: 20%; vertical-align: top;">
+                @php
+                    $imagePath = public_path('assets/assets/logo.png');
+                    $logoBase64 = '';
+                    if(file_exists($imagePath)) {
+                        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+                    }
+                @endphp
+                @if($logoBase64)
+                    <img src="{{ $logoBase64 }}" style="max-height: 80px; max-width: 140px; object-fit: contain;">
+                @else
+                    <div style="font-size:12px;color:red;border:1px solid red;padding:10px;">Logo no encontrado</div>
+                @endif
+            </td>
+            <td class="company-info" style="width: 40%;">
+                <div class="company-name">NEO PROJECT S.R.L</div>
+                <div class="company-details">
+                    <strong>RNC:</strong> 131181181<br>
+                    <strong>Dirección:</strong> Manolo Tavares Justo No. 15, Puerto Plata<br>
+                    <strong>Teléfono:</strong> 809-320-1668<br>
+                    <strong>Celular:</strong> 809-223-8039
+                </div>
+            </td>
+            <td class="report-info" style="width: 40%;">
+                <div class="report-title">Análisis de Costos Reales</div>
+                <div class="report-meta">
+                    <strong>Fecha de Emisión:</strong> {{ date('d/m/Y') }}<br>
+                    <strong>Hora:</strong> {{ date('H:i') }}
+                </div>
+            </td>
+        </tr>
+    </table>
 
     <div class="partida-info">
         <h2>Partida: {{ $partida->descripcion }}</h2>
@@ -101,7 +126,7 @@
             <tr>
                 <td>{{ \Carbon\Carbon::parse($g->fecha)->format('d/m/Y') }}</td>
                 <td>{{ $g->subpartida->descripcion }}</td>
-                <td>{{ $g->proveedor->nombre ?? 'N/A' }}</td>
+                <td>{{ $g->proveedor->name ?? 'N/A' }}</td>
                 <td>{{ $g->descripcion }}</td>
                 <td class="text-right">${{ number_format($g->monto, 2) }}</td>
             </tr>

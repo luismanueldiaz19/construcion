@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte de Compras - Neo Project</title>
+    <title>Reporte de Pagos de Clientes - Neo Project</title>
     <style>
         body { font-family: 'Helvetica', Arial, sans-serif; font-size: 11px; color: #333; margin: 0; padding: 0; }
         .header { width: 100%; border-bottom: 2px solid #0056b3; padding-bottom: 15px; margin-bottom: 25px; }
@@ -39,7 +39,6 @@
             <tr>
                 <td style="width: 20%; vertical-align: top;">
                     @php
-                        // Corregida la ruta del logo y convertido a base64 para evitar bloqueos del DomPDF
                         $imagePath = public_path('assets/assets/logo.png');
                         $logoBase64 = '';
                         if(file_exists($imagePath)) {
@@ -62,7 +61,7 @@
                     </div>
                 </td>
                 <td class="report-info" style="width: 40%;">
-                    <div class="report-title">Historial de Compras</div>
+                    <div class="report-title">Historial de Cobros</div>
                     <div class="report-meta">
                         <strong>Fecha de Emisión:</strong> {{ date('d/m/Y') }}<br>
                         <strong>Hora:</strong> {{ date('H:i') }}
@@ -77,8 +76,7 @@
         @if(isset($filtros['fecha_inicio']) || isset($filtros['fecha_fin']))
             Periodo: {{ $filtros['fecha_inicio'] ?? '...' }} al {{ $filtros['fecha_fin'] ?? '...' }} &nbsp;|&nbsp;
         @endif
-        @if(isset($filtros['estado'])) Estado: {{ $filtros['estado'] }} &nbsp;|&nbsp; @endif
-        Resultados: {{ count($compras) }} registros.
+        Resultados: {{ count($pagos) }} registros.
     </div>
 
     <table class="data-table">
@@ -86,43 +84,27 @@
             <tr>
                 <th>ID</th>
                 <th>Fecha</th>
+                <th>Cliente</th>
                 <th>Proyecto</th>
-                <th>Proveedor</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-                <th class="text-right">Subtotal</th>
-                <th class="text-right">ITBIS</th>
-                <th class="text-right">Total</th>
+                <th>Método de Pago</th>
+                <th>Cuenta</th>
+                <th class="text-right">Monto</th>
             </tr>
         </thead>
         <tbody>
-            @php
-                $sumSubtotal = 0;
-                $sumItbis = 0;
-            @endphp
-            @forelse($compras as $compra)
-            @php
-                $sumSubtotal += $compra->subtotal;
-                $sumItbis += $compra->itbis;
-            @endphp
+            @forelse($pagos as $pago)
             <tr>
-                <td>#{{ $compra->id }}</td>
-                <td>{{ \Carbon\Carbon::parse($compra->fecha)->format('d/m/Y') }}</td>
-                <td>{{ $compra->proyecto->nombre ?? 'N/A' }}</td>
-                <td>{{ $compra->proveedor->name ?? 'N/A' }}</td>
-                <td>{{ $compra->tipo_compra }}</td>
-                <td>
-                    <span style="color: {{ $compra->estado == 'Pagado' ? 'green' : ($compra->estado == 'Pendiente' ? 'orange' : 'inherit') }}">
-                        {{ $compra->estado }}
-                    </span>
-                </td>
-                <td class="text-right">${{ number_format($compra->subtotal, 2) }}</td>
-                <td class="text-right">${{ number_format($compra->itbis, 2) }}</td>
-                <td class="text-right" style="font-weight: bold;">${{ number_format($compra->total, 2) }}</td>
+                <td>#{{ $pago->id }}</td>
+                <td>{{ \Carbon\Carbon::parse($pago->fecha)->format('d/m/Y') }}</td>
+                <td>{{ $pago->proyecto->client->name ?? $pago->proyecto->cliente ?? 'N/A' }}</td>
+                <td>{{ $pago->proyecto->nombre ?? 'N/A' }}</td>
+                <td>{{ $pago->metodo_pago }}</td>
+                <td>{{ $pago->cuentaContable->nombre ?? 'N/A' }}</td>
+                <td class="text-right" style="font-weight: bold;">${{ number_format($pago->monto, 2) }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="9" class="text-center" style="padding: 20px;">No se encontraron registros de compras con los filtros seleccionados.</td>
+                <td colspan="7" class="text-center" style="padding: 20px;">No se encontraron registros de cobros con los filtros seleccionados.</td>
             </tr>
             @endforelse
         </tbody>
@@ -131,31 +113,20 @@
     <div class="clearfix">
         <div class="totals-container">
             <table class="totals-table">
-                <tr>
-                    <td class="label">Total Subtotal:</td>
-                    <td class="amount">${{ number_format($sumSubtotal, 2) }}</td>
-                </tr>
-                <tr>
-                    <td class="label">Total ITBIS:</td>
-                    <td class="amount">${{ number_format($sumItbis, 2) }}</td>
-                </tr>
                 <tr class="grand-total">
-                    <td class="label" style="color: white;">GRAN TOTAL COMPRAS:</td>
+                    <td class="label" style="color: white;">GRAN TOTAL COBRADO:</td>
                     <td class="amount">${{ number_format($total, 2) }}</td>
                 </tr>
             </table>
         </div>
     </div>
-    
-    <div style="margin-top: 80px; text-align: center; font-size: 12px; width: 100%;">
-        <div style="width: 250px; border-top: 1px solid #333; margin: 0 auto; padding-top: 5px;">
-            Firma de Autorización / Revisión
-        </div>
-    </div>
 
     <div class="footer">
-        Este documento es un reporte generado por el sistema. Documento informativo, no válido como factura fiscal. <br>
-        Fecha de impresión: {{ date('d/m/Y H:i:s') }}
+        NEO PROJECT S.R.L - Reporte generado automáticamente el {{ date('d/m/Y') }} a las {{ date('H:i') }}
+        <br><br><br>
+        <div style="width: 200px; margin: 0 auto; border-top: 1px solid #333; padding-top: 5px;">
+            Firma de Autorización / Revisión
+        </div>
     </div>
 </body>
 </html>

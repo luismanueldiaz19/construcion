@@ -31,6 +31,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   void _refresh() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<ProjectsProvider>().fetchProyectos(
         estado: 'Activo,Cotización',
       );

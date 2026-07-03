@@ -94,10 +94,6 @@ class ProjectService {
     return data['logo_url'];
   }
 
-  Future<void> provisionarTodo100(int proyectoId) async {
-    await _http.post('proyectos/$proyectoId/provisionar-todo', {});
-  }
-
   Future<void> removeLogo(int proyectoId) async {
     await _http.delete('proyectos/$proyectoId/logo');
   }

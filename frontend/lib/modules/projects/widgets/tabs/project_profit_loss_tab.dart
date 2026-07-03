@@ -4,6 +4,10 @@ import '../../../../models/proyecto.dart';
 import '../../../../models/gasto_proyecto.dart';
 import '../../../../models/consumo_proyecto.dart';
 import '../../../../services/accounting_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/constants.dart';
+import '../../../../widgets/metric_info_button.dart';
+
 class ProjectProfitLossTab extends StatefulWidget {
   final Proyecto proyecto;
   final List<GastoProyecto> gastos;
@@ -156,14 +160,28 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'ESTADO DE RESULTADOS',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A1C1E),
-                                  letterSpacing: 0.5,
-                                ),
+                              Row(
+                                children: [
+                                  const Text(
+                                    'ESTADO DE RESULTADOS',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1A1C1E),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const MetricInfoButton(
+                                    title: 'Estado de Resultados',
+                                    definition:
+                                        'Es un reporte financiero que muestra detalladamente los ingresos, costos y gastos de este proyecto, indicando la rentabilidad.',
+                                    formula:
+                                        'Utilidad Neta = Ingresos - Costos - Gastos',
+                                    source:
+                                        'Módulo de Contabilidad, incluyendo facturas de compras, consumos de inventario y nómina (asientos contables de las cuentas 4, 5 y 6).',
+                                  ),
+                                ],
                               ),
                               Text(
                                 'Período: ${_formatPeriod(widget.proyecto)}',
@@ -176,13 +194,45 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.refresh,
-                            color: Colors.blueGrey,
-                          ),
-                          onPressed: _loadData,
-                          tooltip: 'Actualizar Estado de Resultados',
+                        Row(
+                          children: [
+                            OutlinedButton.icon(
+                              icon: const Icon(
+                                Icons.print,
+                                color: Colors.deepOrange,
+                              ),
+                              label: const Text(
+                                'Imprimir',
+                                style: TextStyle(color: Colors.deepOrange),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.deepOrange.shade300,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                backgroundColor: Colors.deepOrange.shade50,
+                              ),
+                              onPressed: () async {
+                                final url =
+                                    '$host/reports/estado-resultados/pdf?proyecto_id=${widget.proyecto.id}';
+                                final uri = Uri.parse(url);
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri);
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.refresh,
+                                color: Colors.blueGrey,
+                              ),
+                              onPressed: _loadData,
+                              tooltip: 'Actualizar Estado de Resultados',
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -383,17 +433,17 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
     final contrato =
         widget.proyecto.totalPresupuestoConGlobales ??
         widget.proyecto.presupuestoEstimado;
-        
+
     // Ingreso neto contable (sin impuestos)
     final ingresosNetos =
         double.tryParse(_data?['ingresos']?.toString() ?? '0') ?? 0;
-        
+
     // Total de dinero recibido del cliente
     final cobrado = widget.proyecto.totalCobrado ?? 0;
-    
+
     // Lo que falta por cobrar del proyecto entero
     final pendiente = contrato - cobrado;
-    
+
     // Porcentaje de dinero recibido vs el total del contrato
     final avanceFinanciero = contrato > 0 ? (cobrado / contrato * 100) : 0.0;
 
@@ -405,13 +455,27 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Información del Contrato y Cobros',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C2F33),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Información del Contrato y Cobros',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C2F33),
+                  ),
+                ),
+                MetricInfoButton(
+                  title: 'Contrato y Cobros',
+                  definition:
+                      'Resume la información financiera general del contrato con el cliente.',
+                  formula:
+                      'Pendiente = Monto Total - Cobrado.\nAvance Financiero = (Cobrado / Monto Total) * 100',
+                  source:
+                      'Monto Total y Cobrado provienen del registro del proyecto y los recibos de pago. Ingresos Contables proviene del libro mayor (Cuentas de Ingresos).',
+                ),
+              ],
             ),
             const Divider(height: 24),
             _buildContractRow(
@@ -572,13 +636,26 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Comparativa Presupuesto vs Real (Costo Directo)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C2F33),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Comparativa Presupuesto vs Real (Costo Directo)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C2F33),
+                  ),
+                ),
+                MetricInfoButton(
+                  title: 'Comparativa Presupuesto vs Real',
+                  definition:
+                      'Compara los costos presupuestados con los costos reales de los materiales, mano de obra y equipos.',
+                  formula: 'Diferencia = Presupuesto - Real',
+                  source:
+                      'Presupuesto: Subpartidas del proyecto. Real: Gastos y Consumos registrados agrupados por tipo.',
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Table(
@@ -724,7 +801,9 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
     final margenBruto = ingresos > 0 ? (utilidadBruta / ingresos * 100) : 0.0;
     final margenNeto = ingresos > 0 ? (utilidadNeta / ingresos * 100) : 0.0;
     final cobrado = widget.proyecto.totalCobrado ?? 0;
-    final cuentasPorCobrar = ingresos - cobrado;
+    // Cuentas por cobrar debe ser el total del proyecto menos lo cobrado,
+    // para evitar que quede negativo por la diferencia del ITBIS no incluido en los ingresos contables.
+    final cuentasPorCobrar = contrato - cobrado;
     final costoRealVsPresupuesto = contrato > 0
         ? (totalReal / contrato * 100)
         : 0.0;
@@ -754,21 +833,39 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                   'Margen Bruto',
                   '${margenBruto.toStringAsFixed(1)}%',
                   Colors.blue,
+                  definition:
+                      'Representa el porcentaje de ganancia directa antes de gastos generales.',
+                  formula: '(Utilidad Bruta / Ingresos Operativos) * 100',
+                  source:
+                      'Utilidad Bruta = Ingresos Operativos - Costos de Operación.',
                 ),
                 _buildIndicatorBadge(
                   'Margen Neto',
                   '${margenNeto.toStringAsFixed(1)}%',
                   margenNeto >= 0 ? Colors.green : Colors.red,
+                  definition:
+                      'Ganancia neta final por cada peso ingresado, luego de descontar todos los costos y gastos.',
+                  formula: '(Utilidad Neta / Ingresos Operativos) * 100',
+                  source: 'Utilidad Neta = Utilidad Bruta - Gastos Generales.',
                 ),
                 _buildIndicatorBadge(
                   'Cuentas por Cobrar',
                   _formatCurrency(cuentasPorCobrar),
                   Colors.orange,
+                  definition:
+                      'Monto restante que el cliente debe pagar para saldar el proyecto por completo.',
+                  formula: 'Total del Contrato - Total Cobrado',
+                  source: 'Pagos del cliente vs Monto acordado del proyecto.',
                 ),
                 _buildIndicatorBadge(
                   'Costo Real vs Presupuesto',
                   '${costoRealVsPresupuesto.toStringAsFixed(1)}%',
                   costoRealVsPresupuesto <= 100 ? Colors.teal : Colors.red,
+                  definition:
+                      'Porcentaje de ejecución del costo directo frente al presupuesto original.',
+                  formula: '(Costo Directo Real / Presupuesto Total) * 100',
+                  source:
+                      'Comparación de Costos Reales vs Subpartidas Presupuestadas.',
                 ),
               ],
             ),
@@ -778,7 +875,14 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
     );
   }
 
-  Widget _buildIndicatorBadge(String label, String value, Color color) {
+  Widget _buildIndicatorBadge(
+    String label,
+    String value,
+    Color color, {
+    String? definition,
+    String? formula,
+    String? source,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -786,26 +890,41 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: color,
+          if (definition != null && formula != null && source != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: MetricInfoButton(
+                title: label,
+                definition: definition,
+                formula: formula,
+                source: source,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -842,13 +961,29 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Gráfico Ejecutivo de Flujo (Ingresos vs Costos vs Utilidad)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C2F33),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Gráfico Ejecutivo de Flujo (Ingresos vs Costos vs Utilidad)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C2F33),
+                    ),
+                  ),
+                ),
+                MetricInfoButton(
+                  title: 'Gráfico Ejecutivo',
+                  definition:
+                      'Representación visual rápida de la rentabilidad del proyecto.',
+                  formula:
+                      'Visualiza la proporción entre Ingresos Operativos, Costos de Operación y la Utilidad resultante.',
+                  source:
+                      'Datos provenientes del Estado de Resultados (Cuentas 4, 5 y 6).',
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             Row(
@@ -932,8 +1067,9 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
   }
 
   Widget _buildReportCard() {
-    if (_data == null)
+    if (_data == null) {
       return const Center(child: Text('No hay datos disponibles'));
+    }
 
     return Card(
       elevation: 4,
@@ -1114,5 +1250,3 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
     );
   }
 }
-
-

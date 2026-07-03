@@ -267,24 +267,7 @@ class ProyectoController extends Controller
         return Proyecto::with('partidas.subpartidas')->findOrFail($id)->partidas;
     }
 
-    public function provisionarTodo($id)
-    {
-        $proyecto = \App\Models\Proyecto::with('partidas.subpartidas')->findOrFail($id);
-        foreach ($proyecto->partidas as $partida) {
-            foreach ($partida->subpartidas as $sub) {
-                \App\Models\AvanceProyecto::updateOrCreate(
-                    ['subpartida_id' => $sub->id],
-                    [
-                        'partida_id' => $sub->partida_id,
-                        'fecha' => now(),
-                        'porcentaje' => 100,
-                        'valor_ejecutado' => $sub->total_presupuestado
-                    ]
-                );
-            }
-        }
-        return response()->json(['message' => 'Proyecto provisionado al 100%']);
-    }
+
 
     public function addPartida(Request $request, $id)
     {

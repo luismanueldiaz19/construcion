@@ -12,177 +12,68 @@ class ProjectSummaryTab extends StatelessWidget {
     final provider = Provider.of<ProjectDetailsProvider>(context);
     final f = NumberFormat.currency(symbol: '\$');
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeader(context, provider, f),
-          const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 900) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildProfitabilityCard(provider, f)),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildCashFlowCard(provider, f),
-                          const SizedBox(height: 24),
-                          _buildIndirectsBreakdown(provider, f),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              } else {
-                return Column(
-                  children: [
-                    _buildProfitabilityCard(provider, f),
-                    const SizedBox(height: 24),
-                    _buildCashFlowCard(provider, f),
-                    const SizedBox(height: 24),
-                    _buildIndirectsBreakdown(provider, f),
-                  ],
-                );
-              }
-            },
-          ),
-        ],
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [_buildHeader(context, provider, f)],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, ProjectDetailsProvider provider, NumberFormat f) {
+  Widget _buildHeader(
+    BuildContext context,
+    ProjectDetailsProvider provider,
+    NumberFormat f,
+  ) {
     final proyecto = provider.proyecto!;
-    
+
     return Card(
-      color: const Color(0xFF003366),
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(32.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // TOP ROW: Logo and Title
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () async {
-                    try {
-                      await provider.pickAndUploadLogo();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Logo actualizado correctamente')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(e.toString())),
-                        );
-                      }
-                    }
-                  },
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: proyecto.logoPath == null
-                        ? const Icon(Icons.add_a_photo, color: Colors.white54)
-                        : ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                Image.network(
-                                  '$host/api/v1/file?path=${proyecto.logoPath}',
-                                  fit: BoxFit.contain,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Center(
-                                      child: Icon(Icons.broken_image, color: Colors.redAccent),
-                                    );
-                                  },
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black26,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, color: Colors.white, size: 16),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () async {
-                                        try {
-                                          await provider.removeLogo();
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Logo eliminado')),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text(e.toString())),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-                ),
+                _buildLogo(context, provider),
                 const SizedBox(width: 24),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              proyecto.nombre ?? '',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          // Edit notas can be implemented later or triggered from parent
-                        ],
+                      Text(
+                        proyecto.nombre ?? '',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                      if (proyecto.notas != null && proyecto.notas.toString().isNotEmpty)
+                      if (proyecto.notas != null &&
+                          proyecto.notas.toString().isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
                             proyecto.notas!,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                              height: 1.4,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                     ],
@@ -190,46 +81,69 @@ class ProjectSummaryTab extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
+            // MIDDLE ROW: Client, Location, Status
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _buildInfoColumn('Cliente', proyecto.cliente ?? 'N/A', Colors.white),
+                  child: _buildInfoColumn(
+                    'Cliente',
+                    proyecto.cliente ?? 'N/A',
+                    Colors.black87,
+                    icon: Icons.person_outline,
+                  ),
                 ),
                 Expanded(
-                  child: _buildInfoColumn('Ubicación', proyecto.ubicacion ?? 'N/A', Colors.white),
+                  child: _buildInfoColumn(
+                    'Ubicación',
+                    proyecto.ubicacion ?? 'N/A',
+                    Colors.black87,
+                    icon: Icons.location_on_outlined,
+                  ),
                 ),
                 Expanded(
                   child: InkWell(
                     onTap: () => _showChangeEstadoDialog(context, provider),
+                    borderRadius: BorderRadius.circular(8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
+                          children: [
                             Text(
                               'Estado',
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.sync_alt, size: 12, color: Colors.white54),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 14,
+                              color: Colors.grey.shade400,
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _getEstadoColor(proyecto.estado).withValues(alpha: 0.2),
-                            border: Border.all(color: _getEstadoColor(proyecto.estado)),
-                            borderRadius: BorderRadius.circular(4),
+                            color: _getEstadoColor(
+                              proyecto.estado,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             proyecto.estado ?? '',
                             style: TextStyle(
                               color: _getEstadoColor(proyecto.estado),
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -239,34 +153,24 @@ class ProjectSummaryTab extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            const Divider(color: Colors.white24, height: 32),
+            const SizedBox(height: 24),
+            Divider(color: Colors.grey.shade100, height: 1),
+            const SizedBox(height: 24),
+            // BOTTOM ROW: Financials
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: _buildInfoColumn(
                     'Presupuesto Total',
                     f.format(
-                      double.tryParse(proyecto.totalPresupuestoConGlobales?.toString() ?? '0') ?? 0,
+                      double.tryParse(
+                            proyecto.totalPresupuestoConGlobales?.toString() ??
+                                '0',
+                          ) ??
+                          0,
                     ),
-                    Colors.greenAccent,
-                  ),
-                ),
-                Expanded(
-                  child: _buildInfoColumn(
-                    'Avance Físico',
-                    '${proyecto.porcentajeAvanceTotal ?? 0}%',
-                    Colors.blueAccent,
-                  ),
-                ),
-                Expanded(
-                  child: _buildInfoColumn(
-                    'Ejecutado',
-                    f.format(
-                      double.tryParse(proyecto.montoEjecutadoTotal?.toString() ?? '0') ?? 0,
-                    ),
-                    Colors.redAccent,
+                    Colors.green.shade700,
+                    valueFontSize: 22,
                   ),
                 ),
               ],
@@ -277,7 +181,110 @@ class ProjectSummaryTab extends StatelessWidget {
     );
   }
 
-  void _showChangeEstadoDialog(BuildContext context, ProjectDetailsProvider provider) async {
+  Widget _buildLogo(BuildContext context, ProjectDetailsProvider provider) {
+    final proyecto = provider.proyecto!;
+    return GestureDetector(
+      onTap: () async {
+        try {
+          await provider.pickAndUploadLogo();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Logo actualizado correctamente')),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(e.toString())));
+          }
+        }
+      },
+      child: Container(
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: proyecto.logoPath == null
+            ? Icon(
+                Icons.add_a_photo_outlined,
+                color: Colors.grey.shade300,
+                size: 32,
+              )
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      '$host/api/v1/file?path=${proyecto.logoPath}',
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.grey.shade300,
+                          ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
+                          onPressed: () async {
+                            try {
+                              await provider.removeLogo();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Logo eliminado'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  void _showChangeEstadoDialog(
+    BuildContext context,
+    ProjectDetailsProvider provider,
+  ) async {
     final proyecto = provider.proyecto!;
     List<String> opciones = [];
     String estadoActual = proyecto.estado;
@@ -288,7 +295,9 @@ class ProjectSummaryTab extends StatelessWidget {
       opciones = ['Terminado'];
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este proyecto ya está finalizado o cancelado.')),
+        const SnackBar(
+          content: Text('Este proyecto ya está finalizado o cancelado.'),
+        ),
       );
       return;
     }
@@ -321,281 +330,66 @@ class ProjectSummaryTab extends StatelessWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString())),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.toString())));
         }
       }
     }
   }
 
-  Widget _buildIndirectsBreakdown(ProjectDetailsProvider provider, NumberFormat f) {
-    final proyecto = provider.proyecto!;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF003366),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'DESGLOSE DE COSTOS INDIRECTOS',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _buildIndirectRow('Supervisión Técnica', proyecto.supervisionTecnica, f),
-          _buildIndirectRow('ITBIS', proyecto.itbis, f),
-          _buildIndirectRow('Transporte', proyecto.transporte, f),
-          _buildIndirectRow('Otros Gastos', proyecto.otrosCostos, f),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIndirectRow(String label, dynamic value, NumberFormat f) {
-    final val = double.tryParse(value?.toString() ?? '0') ?? 0;
-    if (val == 0) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          Text(
-            f.format(val),
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfitabilityCard(ProjectDetailsProvider provider, NumberFormat f) {
-    final proyecto = provider.proyecto!;
-    final ingresoNeto = proyecto.ingresoNetoReal ?? 0;
-
-    final double gastosEfectivo = provider.gastos.fold(0, (sum, g) => sum + g.monto);
-    final double costosMateriales = provider.consumos.fold(0, (sum, c) => sum + c.total);
-    final costoReal = gastosEfectivo + costosMateriales;
-
-    final ganancia = ingresoNeto - costoReal;
-    final margen = ingresoNeto > 0 ? (ganancia / ingresoNeto) * 100 : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF003366),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'ANÁLISIS DE RENTABILIDAD (GANANCIA REAL)',
-            style: TextStyle(
-              color: Colors.greenAccent,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSimpleStat('Ingreso Neto (Sin ITBIS)', f.format(ingresoNeto)),
-              const Text('-', style: TextStyle(color: Colors.white38)),
-              _buildSimpleStat(
-                'Costos Reales (Gastos + Mat.)',
-                f.format(costoReal),
-                valueColor: Colors.redAccent,
-              ),
-            ],
-          ),
-          const Divider(height: 32, color: Colors.white10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Utilidad Neta:', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                  Text(
-                    'Margen: ${margen.toStringAsFixed(1)}%',
-                    style: const TextStyle(color: Colors.white38, fontSize: 10),
-                  ),
-                ],
-              ),
-              Text(
-                f.format(ganancia),
-                style: TextStyle(
-                  color: ganancia >= 0 ? Colors.greenAccent : Colors.redAccent,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCashFlowCard(ProjectDetailsProvider provider, NumberFormat f) {
-    final proyecto = provider.proyecto!;
-    final cobrado = proyecto.totalCobrado ?? 0;
-    final ejecutado = proyecto.montoEjecutadoTotal ?? 0;
-    final balance = cobrado - ejecutado;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF003366),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'BALANCE DE FONDOS VS EJECUCIÓN',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildFlowItem('Cobrado al Cliente', cobrado, Colors.greenAccent, f),
-              const Icon(Icons.compare_arrows, color: Colors.white24),
-              _buildFlowItem('Valor Construido', ejecutado, Colors.blueAccent, f),
-            ],
-          ),
-          const Divider(color: Colors.white12, height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Balance en Manos:', style: TextStyle(color: Colors.white)),
-              Text(
-                f.format(balance),
-                style: TextStyle(
-                  color: balance >= 0 ? Colors.greenAccent : Colors.redAccent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-          if (balance < 0)
-            const Padding(
-              padding: EdgeInsets.only(top: 8.0),
-              child: Text(
-                '⚠️ Estás ejecutando más de lo cobrado',
-                style: TextStyle(color: Colors.redAccent, fontSize: 10),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleStat(String label, String value, {Color valueColor = Colors.white}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
-        Text(
-          value,
-          style: TextStyle(color: valueColor, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFlowItem(String label, double value, Color color, NumberFormat f) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white60, fontSize: 10),
-          ),
-          Text(
-            f.format(value),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
   Color _getEstadoColor(String? estado) {
     switch (estado) {
       case 'Cotización':
-        return Colors.orange;
+        return Colors.orange.shade700;
       case 'Activo':
-        return Colors.greenAccent;
+        return Colors.green.shade700;
       case 'Terminado':
-        return Colors.blueAccent;
+        return Colors.blue.shade700;
       case 'Cancelado':
-        return Colors.redAccent;
+        return Colors.red.shade700;
       default:
-        return Colors.grey;
+        return Colors.grey.shade700;
     }
   }
 
-  Widget _buildInfoColumn(String label, String value, Color valueColor, {IconData? icon}) {
+  Widget _buildInfoColumn(
+    String label,
+    String value,
+    Color valueColor, {
+    IconData? icon,
+    double valueFontSize = 16,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
             if (icon != null) ...[
+              Icon(icon, size: 14, color: Colors.grey.shade500),
               const SizedBox(width: 4),
-              Icon(icon, size: 12, color: Colors.white54),
             ],
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: valueColor, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: valueColor,
+            fontSize: valueFontSize,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
         ),
       ],
     );

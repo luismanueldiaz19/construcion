@@ -1,4 +1,6 @@
 Write-Host "Iniciando compilación de Flutter Web..." -ForegroundColor Cyan
+#comando para hacer la compilacion y hacer el push
+# powershell -ExecutionPolicy Bypass -File .\compilar_web.ps1
 
 # 1. Navegar y compilar Flutter Web
 Push-Location "$PSScriptRoot\frontend"

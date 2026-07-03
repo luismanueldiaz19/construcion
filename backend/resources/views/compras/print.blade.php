@@ -103,9 +103,24 @@
         <!-- Encabezado con Tabla -->
         <table class="header-table">
             <tr>
-                <td>
-                    <img src="{{ public_path('images/logo.png') }}" style="max-height: 60px;">
-                    <div style="color: #666; margin-top: 5px;">Gestión de Construcción e Ingeniería</div>
+                <td style="width: 50%;">
+                    @php
+                        $imagePath = public_path('assets/assets/logo.png');
+                        $logoBase64 = '';
+                        if(file_exists($imagePath)) {
+                            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+                        }
+                    @endphp
+                    @if($logoBase64)
+                        <img src="{{ $logoBase64 }}" style="max-height: 70px; max-width: 150px; object-fit: contain;">
+                    @else
+                        <div style="font-size:12px;color:red;border:1px solid red;padding:10px;">Logo no encontrado</div>
+                    @endif
+                    <div style="color: #666; margin-top: 5px; font-weight: bold;">NEO PROJECT S.R.L</div>
+                    <div style="color: #666; font-size: 10px;">
+                        RNC: 131181181 | Manolo Tavares Justo No. 15<br>
+                        Tel: 809-320-1668 | Cel: 809-223-8039
+                    </div>
                 </td>
                 <td class="text-right">
                     <div class="invoice-title">FACTURA / ORDEN DE COMPRA</div>
@@ -120,9 +135,9 @@
             <tr>
                 <td class="info-box">
                     <h3>Datos del Proveedor</h3>
-                    <div><strong>Nombre:</strong> {{ $compra->proveedor->nombre ?? 'N/A' }}</div>
+                    <div><strong>Nombre:</strong> {{ $compra->proveedor->name ?? 'N/A' }}</div>
                     <div><strong>RNC/Cédula:</strong> {{ $compra->proveedor->rnc ?? 'N/A' }}</div>
-                    <div><strong>Teléfono:</strong> {{ $compra->proveedor->telefono ?? 'N/A' }}</div>
+                    <div><strong>Teléfono:</strong> {{ $compra->proveedor->phone ?? 'N/A' }}</div>
                     <div><strong>Tipo:</strong> {{ $compra->tipo_compra }}</div>
                 </td>
                 <td style="width: 4%;"></td>

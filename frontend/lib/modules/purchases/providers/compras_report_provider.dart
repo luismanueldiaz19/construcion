@@ -135,8 +135,12 @@ class ComprasReportProvider extends ChangeNotifier {
         filters['estado'] = selectedEstado;
       }
       if (selectedDateRange != null) {
-        filters['fecha_inicio'] = DateFormat('yyyy-MM-dd').format(selectedDateRange!.start);
-        filters['fecha_fin'] = DateFormat('yyyy-MM-dd').format(selectedDateRange!.end);
+        filters['fecha_inicio'] = DateFormat(
+          'yyyy-MM-dd',
+        ).format(selectedDateRange!.start);
+        filters['fecha_fin'] = DateFormat(
+          'yyyy-MM-dd',
+        ).format(selectedDateRange!.end);
       }
       if (searchQuery.isNotEmpty) {
         filters['search'] = searchQuery;
@@ -154,9 +158,12 @@ class ComprasReportProvider extends ChangeNotifier {
 
       if (response['summary'] != null) {
         final summary = response['summary'];
-        totalSubtotal = double.tryParse(summary['subtotal']?.toString() ?? '0') ?? 0.0;
-        totalItbis = double.tryParse(summary['itbis']?.toString() ?? '0') ?? 0.0;
-        totalGeneral = double.tryParse(summary['total']?.toString() ?? '0') ?? 0.0;
+        totalSubtotal =
+            double.tryParse(summary['subtotal']?.toString() ?? '0') ?? 0.0;
+        totalItbis =
+            double.tryParse(summary['itbis']?.toString() ?? '0') ?? 0.0;
+        totalGeneral =
+            double.tryParse(summary['total']?.toString() ?? '0') ?? 0.0;
       }
 
       if (selectedCompraDetail != null) {
@@ -268,7 +275,10 @@ class ComprasReportProvider extends ChangeNotifier {
     isLoadingDetail = true;
     notifyListeners();
     try {
-      await _purchaseService.uploadDocumentoCompra(selectedCompraDetail!['id'], file);
+      await _purchaseService.uploadDocumentoCompra(
+        selectedCompraDetail!['id'],
+        file,
+      );
       await loadCompraDetail(selectedCompraDetail!['id']);
     } finally {
       isLoadingDetail = false;

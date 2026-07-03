@@ -40,7 +40,6 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('gastos-proyecto', GastoProyectoController::class);
     Route::get('gastos-proyecto/{id}/pdf', [GastoProyectoController::class, 'imprimirRecibo']);
     Route::post('proyectos/{id}/pago-cliente', [ProyectoController::class, 'pagoCliente']);
-    Route::post('proyectos/{id}/provisionar-todo', [ProyectoController::class, 'provisionarTodo']);
     Route::post('proyectos/{id}/logo', [ProyectoController::class, 'uploadLogo']);
     Route::delete('proyectos/{id}/logo', [ProyectoController::class, 'removeLogo']);
     Route::post('proyectos/{id}/partidas', [ProyectoController::class, 'addPartida']);

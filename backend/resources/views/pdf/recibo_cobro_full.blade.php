@@ -123,11 +123,21 @@
     <table class="header-top">
         <tr>
             <td style="width: 50%; vertical-align: top;">
-                <img src="{{ public_path('images/logo.png') }}" style="max-height: 60px; margin-bottom: 10px;" alt="NEO PROJECT">
+                @php
+                    $imagePath = public_path('assets/assets/logo.png');
+                    $logoBase64 = '';
+                    if(file_exists($imagePath)) {
+                        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+                    }
+                @endphp
+                @if($logoBase64)
+                    <img src="{{ $logoBase64 }}" style="max-height: 60px; margin-bottom: 10px;" alt="NEO PROJECT">
+                @endif
                 <div class="company-details">
-                    RNC: 132-XXXXX-X<br>
-                    Gestión, Construcción y Remodelación<br>
-                    Tel: (809) 000-0000
+                    <strong style="font-size:14px; color:#2c3e50;">NEO PROJECT S.R.L</strong><br>
+                    RNC: 131181181<br>
+                    Manolo Tavares Justo No. 15, Puerto Plata<br>
+                    Tel: 809-320-1668 | Cel: 809-223-8039
                 </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
@@ -179,7 +189,7 @@
         <tr>
             <td style="width: 45%; vertical-align: middle;">
                 <div style="font-style: italic; color: #7f8c8d; font-size: 11px; padding-right: 20px;">
-                    Este documento es un comprobante oficial de pago recibido por Neo Project S.R.L. y sirve como descargo del monto especificado.
+                    Este documento es un comprobante oficial de pago recibido por NEO PROJECT S.R.L y sirve como descargo del monto especificado.
                 </div>
             </td>
             <td style="width: 55%; text-align: right; vertical-align: middle;">

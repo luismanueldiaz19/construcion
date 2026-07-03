@@ -71,6 +71,27 @@ class ProjectPagosTab extends StatelessWidget {
                   color: Color(0xFF1A1A1A),
                 ),
               ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.print, color: Colors.deepOrange),
+                label: const Text(
+                  'Imprimir Historial',
+                  style: TextStyle(color: Colors.deepOrange),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.deepOrange.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: Colors.deepOrange.shade50,
+                ),
+                onPressed: () async {
+                  final url = '$host/reports/pagos-cliente/pdf?proyecto_id=${proyecto.id}';
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
+              ),
             ],
           ),
           const SizedBox(height: 16),

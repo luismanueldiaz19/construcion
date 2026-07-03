@@ -18,6 +18,8 @@ Route::get('/gastos/{id}/print', function ($id) {
 
 Route::get('/reports/compras/pdf', [\App\Http\Controllers\Api\ReportController::class, 'comprasPdf']);
 Route::get('/reports/gastos/pdf', [\App\Http\Controllers\Api\ReportController::class, 'gastosPdf']);
+Route::get('/reports/pagos-cliente/pdf', [\App\Http\Controllers\Api\ReportController::class, 'pagosClientePdf']);
+Route::get('/reports/estado-resultados/pdf', [\App\Http\Controllers\Api\ReportController::class, 'estadoResultadosPdf']);
 Route::get('/reports/partida/{id}/pdf', [\App\Http\Controllers\Api\ReportController::class, 'partidaPdf']);
 Route::get('/reports/proyecto/{id}/pdf', [\App\Http\Controllers\Api\ReportController::class, 'proyectoPdf']);
 

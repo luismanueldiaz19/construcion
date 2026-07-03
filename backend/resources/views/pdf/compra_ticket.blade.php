@@ -55,7 +55,7 @@
     <table>
         <tr>
             <td class="bold">Proveedor:</td>
-            <td>{{ $compra->proveedor->nombre }}</td>
+            <td>{{ $compra->proveedor->name ?? 'N/A' }}</td>
         </tr>
         <tr>
             <td class="bold">Proyecto:</td>
