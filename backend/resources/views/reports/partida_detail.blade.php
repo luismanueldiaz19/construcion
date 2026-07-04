@@ -171,6 +171,12 @@
                     {{ number_format($porcentajeConsumido, 1) }}%
                 </td>
             </tr>
+            <tr>
+                <td class="budget-vs-real" style="border-top: 1px solid white;">Avance Físico General:</td>
+                <td class="text-right budget-vs-real" style="border-top: 1px solid white; color: #b9f6ca;">
+                    {{ number_format($avanceFisicoPartida, 1) }}%
+                </td>
+            </tr>
         </table>
     </div>
 </body>

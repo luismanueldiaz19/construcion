@@ -539,6 +539,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 32),
 
             // Test credentials helper card
+            /*
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
@@ -591,6 +592,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            */
           ],
         ),
       ),

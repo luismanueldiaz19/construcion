@@ -57,7 +57,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/inventario-proyectos', [InventarioController::class, 'index']);
     Route::get('/inventario-proyectos/{id}', [InventarioController::class, 'show']);
     Route::get('/inventario-proyectos/{id}/pdf', [InventarioController::class, 'downloadPdf']);
-    Route::apiResource('compras', CompraController::class);
+    Route::apiResource('compras', CompraController::class)->except(['destroy']);
+    Route::delete('compras/{compra}', [CompraController::class, 'destroy'])->middleware('auth:sanctum');
     Route::get('compras-pendientes', [CompraController::class, 'pendientes']);
     Route::post('/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'store']);
     Route::post('/pagos', [\App\Http\Controllers\Api\PagoClienteController::class, 'store']);
@@ -65,6 +66,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/subpartidas/{id}/avances', [\App\Http\Controllers\Api\AvanceProyectoController::class, 'history']);
     Route::get('/contabilidad/catalogo', [ContabilidadController::class, 'catalogo']);
     Route::get('/contabilidad/asientos', [ContabilidadController::class, 'asientos']);
+    Route::delete('/contabilidad/asientos/{id}', [ContabilidadController::class, 'destroyAsiento'])->middleware('auth:sanctum');
     Route::get('/contabilidad/bancos', [ContabilidadController::class, 'bancos']);
     Route::get('/contabilidad/estado-resultados', [ContabilidadController::class, 'estadoResultados']);
 
@@ -75,7 +77,8 @@ Route::prefix('v1')->group(function () {
     Route::post('compras/{id}/documentos', [CompraController::class, 'uploadDocumento']);
     Route::delete('compras/documentos/{id}', [CompraController::class, 'deleteDocumento']);
     Route::post('recepciones', [RecepcionController::class, 'store']);
-    Route::apiResource('consumos', ConsumoController::class);
+    Route::apiResource('consumos', ConsumoController::class)->except(['destroy']);
+    Route::delete('consumos/{consumo}', [ConsumoController::class, 'destroy'])->middleware('auth:sanctum');
     Route::post('transferencias', [\App\Http\Controllers\Api\TransferenciaController::class, 'store']);
     Route::get('cuentas-por-pagar', [PagoCompraController::class, 'index']);
     Route::post('pagos-compras', [PagoCompraController::class, 'store']);

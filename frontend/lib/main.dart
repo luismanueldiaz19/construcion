@@ -6,7 +6,9 @@ import 'core/app_theme.dart';
 import 'core/auth_provider.dart';
 import 'modules/auth/splash_screen.dart';
 import 'modules/projects/projects_screen.dart';
-import 'modules/accounting/accounting_screen.dart';
+import 'modules/accounting/catalog_screen.dart';
+import 'modules/accounting/journal_screen.dart';
+import 'modules/accounting/profit_loss_screen.dart';
 import 'modules/accounting/cuentas_por_pagar_screen.dart';
 import 'modules/accounting/cuentas_por_cobrar_screen.dart';
 import 'modules/payments/payments_screen.dart';
@@ -138,9 +140,9 @@ class _MainLayoutState extends State<MainLayout> {
     const CuentasPorCobrarScreen(), // 23. Estado de cuentas de clientes
     const EmptyScreen('ITBIS facturado'), // 24
     // 6. Finanzas y Contabilidad (25-29)
-    const AccountingScreen(), // 25. Catálogo contable jerárquico
-    const EmptyScreen('Asientos automáticos'), // 26
-    const EmptyScreen('Estados financieros'), // 27
+    const CatalogScreen(), // 25. Catálogo contable jerárquico
+    const JournalScreen(), // 26. Libro Diario
+    const ProfitLossScreen(), // 27. Estados financieros
     const EmptyScreen('Obligaciones fiscales'), // 28
     const EmptyScreen('Conciliaciones y cierres contables'), // 29
     // 7. Activos Fijos (30-33)

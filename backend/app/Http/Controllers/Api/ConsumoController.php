@@ -111,4 +111,34 @@ class ConsumoController extends Controller
             return $consumo;
         });
     }
+
+    public function destroy($id)
+    {
+        $consumo = Consumo::findOrFail($id);
+        
+        return DB::transaction(function () use ($consumo) {
+            // 1. Restaurar el stock
+            $inv = Inventario::where('proyecto_id', $consumo->proyecto_id)
+                ->where('material_id', $consumo->material_id)
+                ->first();
+                
+            if ($inv) {
+                $inv->increment('stock', $consumo->cantidad);
+            }
+
+            // 2. Eliminar asiento contable
+            $asiento = \App\Models\AsientoContable::where('referencia_tipo', 'Consumo')
+                ->where('referencia_id', $consumo->id)
+                ->first();
+
+            if ($asiento) {
+                $asiento->delete();
+            }
+
+            // 3. Eliminar consumo
+            $consumo->delete();
+
+            return response()->noContent();
+        });
+    }
 }

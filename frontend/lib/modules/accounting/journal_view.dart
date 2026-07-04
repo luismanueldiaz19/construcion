@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth_provider.dart';
 import '../../services/accounting_service.dart';
 
 class JournalView extends StatefulWidget {
@@ -32,6 +34,48 @@ class _JournalViewState extends State<JournalView> {
     }
   }
 
+  Future<void> _deleteAsiento(int id) async {
+    print('delete asiento $id');
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar Eliminación'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar este asiento contable de forma manual?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _accountingService.deleteAsiento(id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Asiento eliminado exitosamente')),
+          );
+          _loadAsientos();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error al eliminar: $e')));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = NumberFormat.currency(symbol: '\$');
@@ -53,13 +97,27 @@ class _JournalViewState extends State<JournalView> {
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Asiento #${asiento['id']} - ${asiento['referencia_tipo'] ?? 'General'}',
+                Expanded(
+                  child: Text(
+                    'Asiento #${asiento['id']} - ${asiento['referencia_tipo'] ?? 'General'}',
+                  ),
                 ),
                 Text(
                   asiento['fecha'],
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
+                if (context.watch<AuthProvider>().username == 'ludeveloper')
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
+                    onPressed: () => _deleteAsiento(asiento['id']),
+                    tooltip: 'Eliminar Asiento',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
               ],
             ),
             subtitle: Text(asiento['glosa'] ?? 'Sin glosa'),

@@ -264,4 +264,36 @@ class CompraController extends Controller
         $documento->delete();
         return response()->json(['message' => 'Documento eliminado correctamente']);
     }
+
+    public function destroy($id)
+    {
+        if (auth()->user()->username !== 'ludeveloper') {
+            return response()->json(['message' => 'Acción denegada.'], 403);
+        }
+
+        $compra = Compra::findOrFail($id);
+
+        return DB::transaction(function () use ($compra) {
+            $asiento = \App\Models\AsientoContable::where('referencia_tipo', 'Compra')
+                ->where('referencia_id', $compra->id)
+                ->first();
+
+            if ($asiento) {
+                $asiento->delete();
+            }
+
+            // Eliminar dependencias manualmente si no hay onDelete('cascade') en base de datos
+            \App\Models\CompraDetalle::where('compra_id', $compra->id)->delete();
+            
+            $cxp = \App\Models\CuentaPorPagar::where('compra_id', $compra->id)->first();
+            if ($cxp) {
+                \App\Models\PagoCompra::where('cuenta_por_pagar_id', $cxp->id)->delete();
+                $cxp->delete();
+            }
+
+            $compra->delete();
+
+            return response()->noContent();
+        });
+    }
 }

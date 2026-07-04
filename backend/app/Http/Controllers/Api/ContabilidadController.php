@@ -71,6 +71,18 @@ class ContabilidadController extends Controller
         return AsientoContable::with('detalles.cuenta')->latest()->get();
     }
 
+    public function destroyAsiento($id)
+    {
+        if (auth()->user()->username !== 'ludeveloper') {
+            return response()->json(['message' => 'Acción denegada. Solo el súper usuario puede eliminar asientos.'], 403);
+        }
+
+        $asiento = AsientoContable::findOrFail($id);
+        $asiento->delete();
+
+        return response()->noContent();
+    }
+
     public function bancos()
     {
         return CatalogoCuenta::where('codigo', 'like', '1.1.01%')

@@ -10,7 +10,7 @@ class AccountingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -20,13 +20,12 @@ class AccountingScreen extends StatelessWidget {
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Catálogo de Cuentas'),
-              Tab(text: 'Libro Diario (Asientos)'),
               Tab(text: 'Estado de Resultados'),
             ],
           ),
         ),
         body: const TabBarView(
-          children: [CatalogView(), JournalView(), ProfitLossView()],
+          children: [CatalogView(), ProfitLossView()],
         ),
       ),
     );

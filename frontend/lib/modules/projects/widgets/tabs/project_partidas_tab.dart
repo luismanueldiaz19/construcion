@@ -5,8 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants.dart';
 import '../../../../models/partida.dart';
 import '../../../../models/subpartida.dart';
+import '../../../../models/avance_proyecto.dart';
 import '../../providers/project_details_provider.dart';
 import '../cards/detail_stat_card.dart';
+import '../../../../widgets/custom_button.dart';
 
 class ProjectPartidasTab extends StatelessWidget {
   // final VoidCallback onAddPartida;
@@ -238,6 +240,11 @@ class ProjectPartidasTab extends StatelessWidget {
         subpartidas.isNotEmpty &&
         subpartidas.every((s) => s.avanceActual >= 100);
 
+    final double avanceFisicoPartida = subpartidas.isEmpty
+        ? 0.0
+        : subpartidas.map((s) => s.avanceActual).reduce((a, b) => a + b) /
+              subpartidas.length;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: allCompleted ? 4 : 1,
@@ -295,7 +302,7 @@ class ProjectPartidasTab extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        '${(costoRealPartida / totalPartida * 100).toStringAsFixed(1)}%',
+                        'Financiero: ${(costoRealPartida / totalPartida * 100).toStringAsFixed(1)}%',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -303,6 +310,41 @@ class ProjectPartidasTab extends StatelessWidget {
                               ? const Color(0xFFE65100)
                               : const Color(0xFF00695C),
                         ),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  if (subpartidas.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: Colors.blue.shade200,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.construction,
+                            size: 12,
+                            color: Colors.blue.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Físico: ${avanceFisicoPartida.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -429,13 +471,197 @@ class ProjectPartidasTab extends StatelessWidget {
     Subpartida sub,
     NumberFormat f,
   ) {
+    final avance = sub.avanceActual;
     return ListTile(
       title: Text(sub.descripcion),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
-        child: Text(
-          'Presupuesto: ${f.format(sub.totalPresupuestado)} (${sub.unidad})',
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            'Presupuesto: ${f.format(sub.totalPresupuestado)} (${sub.unidad})',
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: avance / 100,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    avance >= 100 ? Colors.green : Colors.blue,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${avance.toInt()}%',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      trailing: avance >= 100
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    '100%',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : (provider.proyecto!.estado == 'Activo'
+                ? CustomButton(
+                    onPressed: () => _showAvanceDialog(context, provider, sub),
+                    icon: Icons.add_chart,
+                    text: 'Registrar',
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  )
+                : const SizedBox.shrink()),
+    );
+  }
+
+  void _showAvanceDialog(
+    BuildContext context,
+    ProjectDetailsProvider provider,
+    Subpartida sub,
+  ) {
+    final initialValue = (sub.avanceActual + 5.0 <= 100)
+        ? sub.avanceActual + 5.0
+        : 100.0;
+    final controller = TextEditingController(text: initialValue.toString());
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.trending_up, color: Color(0xFF003366)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Avance: ${sub.descripcion}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Selecciona el nuevo avance físico:',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<double>(
+              value: initialValue,
+              decoration: InputDecoration(
+                labelText: 'Nuevo Avance (%)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 14,
+                ),
+              ),
+              items:
+                  [
+                        ...[
+                          for (
+                            double v = sub.avanceActual + 5.0;
+                            v < 100;
+                            v += 5.0
+                          )
+                            v,
+                        ],
+                        100.0,
+                      ]
+                      .toSet()
+                      .map(
+                        (val) => DropdownMenuItem(
+                          value: val,
+                          child: Text('${val.toInt()}%'),
+                        ),
+                      )
+                      .toList(),
+              onChanged: (v) => controller.text = (v ?? 0).toString(),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          CustomButton(
+            text: 'Guardar',
+            onPressed: () async {
+              try {
+                final porc = double.tryParse(controller.text) ?? 0;
+                final total = sub.totalPresupuestado;
+                await provider.projectService.createAvance(
+                  AvanceProyecto(
+                    partidaId: sub.partidaId,
+                    subpartidaId: sub.id!,
+                    fecha: DateTime.now(),
+                    porcentaje: porc,
+                    valorEjecutado: (porc / 100) * total,
+                  ),
+                );
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Avance registrado correctamente'),
+                    ),
+                  );
+                }
+                provider.refresh();
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al registrar: $e')),
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
     );
   }

@@ -11,6 +11,10 @@ class AccountingService {
     return await _http.get('contabilidad/asientos');
   }
 
+  Future<void> deleteAsiento(int id) async {
+    await _http.delete('contabilidad/asientos/$id');
+  }
+
   Future<List<dynamic>> getBancos() async {
     return await _http.get('contabilidad/bancos');
   }

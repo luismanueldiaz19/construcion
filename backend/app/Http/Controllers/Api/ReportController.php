@@ -167,7 +167,7 @@ class ReportController extends Controller
 
     public function partidaPdf($id)
     {
-        $partida = \App\Models\Partida::with(['proyecto', 'subpartidas'])->findOrFail($id);
+        $partida = \App\Models\Partida::with(['proyecto', 'subpartidas.avances'])->findOrFail($id);
         $subpartidaIds = $partida->subpartidas->pluck('id');
 
         $gastos = GastoProyecto::with(['proveedor', 'subpartida'])
@@ -181,13 +181,22 @@ class ReportController extends Controller
         $totalGastos = $gastos->sum('monto');
         $totalConsumos = $consumos->sum('total');
 
+        $avanceFisicoTotal = 0;
+        $totalSubpartidas = $partida->subpartidas->count();
+        foreach ($partida->subpartidas as $sub) {
+            $ultimoAvance = $sub->avances->last();
+            $avanceFisicoTotal += $ultimoAvance ? $ultimoAvance->porcentaje : 0;
+        }
+        $avanceFisicoPartida = $totalSubpartidas > 0 ? round($avanceFisicoTotal / $totalSubpartidas, 2) : 0;
+
         $pdf = Pdf::loadView('reports.partida_detail', [
             'partida' => $partida,
             'gastos' => $gastos,
             'consumos' => $consumos,
             'totalGastos' => $totalGastos,
             'totalConsumos' => $totalConsumos,
-            'totalReal' => $totalGastos + $totalConsumos
+            'totalReal' => $totalGastos + $totalConsumos,
+            'avanceFisicoPartida' => $avanceFisicoPartida
         ]);
 
         return $pdf->stream('reporte_partida_'.$id.'.pdf');
