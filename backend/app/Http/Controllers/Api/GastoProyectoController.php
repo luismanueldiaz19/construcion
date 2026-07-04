@@ -17,7 +17,6 @@ class GastoProyectoController extends Controller
     public function __construct(AsientoService $asientoService)
     {
         $this->asientoService = $asientoService;
-        $this->middleware('auth:sanctum')->only('destroy');
     }
 
     public function index(Request $request)

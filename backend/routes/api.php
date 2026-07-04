@@ -37,7 +37,8 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::apiResource('proyectos', ProyectoController::class);
-    Route::apiResource('gastos-proyecto', GastoProyectoController::class);
+    Route::apiResource('gastos-proyecto', GastoProyectoController::class)->except(['destroy']);
+    Route::delete('gastos-proyecto/{gastoProyecto}', [GastoProyectoController::class, 'destroy'])->middleware('auth:sanctum');
     Route::get('gastos-proyecto/{id}/pdf', [GastoProyectoController::class, 'imprimirRecibo']);
     Route::post('proyectos/{id}/pago-cliente', [ProyectoController::class, 'pagoCliente']);
     Route::post('proyectos/{id}/logo', [ProyectoController::class, 'uploadLogo']);
