@@ -62,6 +62,10 @@ class ProjectService {
     await _http.post('gastos-proyecto', gasto.toJson());
   }
 
+  Future<void> deleteGastoProyecto(int id) async {
+    await _http.delete('gastos-proyecto/$id');
+  }
+
   Future<List<GastoProyecto>> getGastosProyecto(int proyectoId) async {
     final data = await _http.get(
       'gastos-proyecto',

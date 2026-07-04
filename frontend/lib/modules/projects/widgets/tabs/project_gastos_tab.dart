@@ -7,6 +7,7 @@ import '../../providers/project_details_provider.dart';
 import '../cards/detail_stat_card.dart';
 import '../../gasto_proyecto_dialog.dart';
 import '../gasto_card.dart';
+import '../../../../services/project_service.dart';
 
 class ProjectGastosTab extends StatelessWidget {
   const ProjectGastosTab({super.key});
@@ -185,6 +186,7 @@ class ProjectGastosTab extends StatelessWidget {
               return GastoCard(
                 gasto: g,
                 onPrint: () => _openGastoPdf(context, g.id!),
+                onDelete: () => _deleteGasto(context, provider, g.id!),
               );
             }).toList(),
         ],
@@ -214,6 +216,51 @@ class ProjectGastosTab extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo abrir el recibo PDF')),
         );
+      }
+    }
+  }
+
+  Future<void> _deleteGasto(
+    BuildContext context,
+    ProjectDetailsProvider provider,
+    int gastoId,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar Eliminación'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar este gasto? Esto también eliminará su asiento contable.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await ProjectService().deleteGastoProyecto(gastoId);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gasto eliminado exitosamente')),
+          );
+          provider.refresh();
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error al eliminar: $e')));
+        }
       }
     }
   }

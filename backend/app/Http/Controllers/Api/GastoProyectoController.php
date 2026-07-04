@@ -90,7 +90,8 @@ class GastoProyectoController extends Controller
                 $validated['fecha'],
                 "Gasto de Proyecto ({$validated['tipo_gasto']}): {$validated['descripcion']}",
                 $detalles,
-                'Gasto'
+                'Gasto',
+                $gasto->id
             );
 
             return $gasto->load(['proyecto', 'subpartida', 'proveedor']);
@@ -99,7 +100,25 @@ class GastoProyectoController extends Controller
 
     public function destroy(GastoProyecto $gastoProyecto)
     {
-        $gastoProyecto->delete();
+        // Verificar que solo el súper usuario ('ludeveloper') pueda eliminar el gasto
+        if (auth()->user()->username !== 'ludeveloper') {
+            return response()->json(['message' => 'Acción denegada. Solo el súper usuario puede eliminar gastos.'], 403);
+        }
+
+        DB::transaction(function () use ($gastoProyecto) {
+            // Buscar y eliminar el asiento contable asociado
+            $asiento = \App\Models\AsientoContable::where('referencia_tipo', 'Gasto')
+                ->where('referencia_id', $gastoProyecto->id)
+                ->first();
+
+            if ($asiento) {
+                // Esto eliminará automáticamente los detalles del asiento gracias al onDelete('cascade') en la migración
+                $asiento->delete();
+            }
+
+            $gastoProyecto->delete();
+        });
+
         return response()->noContent();
     }
 

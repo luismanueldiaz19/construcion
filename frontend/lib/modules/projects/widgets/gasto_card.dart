@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/gasto_proyecto.dart';
+import 'package:provider/provider.dart';
+import '../../../core/auth_provider.dart';
 
 class GastoCard extends StatelessWidget {
   final GastoProyecto gasto;
   final VoidCallback onPrint;
+  final VoidCallback? onDelete;
 
-  const GastoCard({super.key, required this.gasto, required this.onPrint});
+  const GastoCard({
+    super.key,
+    required this.gasto,
+    required this.onPrint,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +37,7 @@ class GastoCard extends StatelessWidget {
     final subpartidaInfo = gasto.subpartida != null
         ? " • Sub: ${gasto.subpartida!.descripcion}"
         : "";
-
+    print('connector ${context.watch<AuthProvider>().username}');
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -54,7 +62,9 @@ class GastoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "${gasto.proveedor?.name ?? gasto.proveedor?.commercialName ?? 'Sin proveedor'}",
+                  gasto.proveedor?.name ??
+                      gasto.proveedor?.commercialName ??
+                      'Sin proveedor',
                   style: const TextStyle(color: Colors.black87),
                 ),
                 const SizedBox(height: 2),
@@ -92,6 +102,13 @@ class GastoCard extends StatelessWidget {
                 tooltip: 'Imprimir Recibo',
                 onPressed: onPrint,
               ),
+              if (onDelete != null &&
+                  context.watch<AuthProvider>().username == 'ludeveloper')
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.redAccent),
+                  tooltip: 'Eliminar',
+                  onPressed: onDelete,
+                ),
             ],
           ),
         ),

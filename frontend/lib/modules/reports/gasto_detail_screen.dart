@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../services/purchase_service.dart';
+import 'package:provider/provider.dart';
+import '../../core/auth_provider.dart';
+import '../../services/project_service.dart';
 
 class GastoDetailScreen extends StatefulWidget {
   final int gastoId;
@@ -100,6 +103,55 @@ class _GastoDetailScreenState extends State<GastoDetailScreen> {
               }
             },
           ),
+          if (context.watch<AuthProvider>().username == 'ludeveloper')
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              tooltip: 'Eliminar Gasto',
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Confirmar Eliminación'),
+                    content: const Text(
+                      '¿Estás seguro de que deseas eliminar este gasto? Esto también eliminará su asiento contable.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        child: const Text('Eliminar'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  try {
+                    await ProjectService().deleteGastoProyecto(widget.gastoId);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Gasto eliminado exitosamente'),
+                        ),
+                      );
+                      Navigator.pop(context, true);
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error al eliminar: $e')),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
         ],
       ),
       body: SingleChildScrollView(

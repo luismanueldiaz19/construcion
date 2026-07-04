@@ -38,7 +38,7 @@ class AuthProvider extends ChangeNotifier {
       if (response != null && response['token'] != null) {
         HttpService.token = response['token'];
         _isAuthenticated = true;
-        _username = response['user']['name'] ?? trimmedUsername;
+        _username = response['user']['username'] ?? trimmedUsername;
         _isLoading = false;
         notifyListeners();
         return true;
