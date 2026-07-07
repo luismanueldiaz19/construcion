@@ -221,9 +221,9 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                 ),
                                 _buildMenuItem(
                                   17,
-                                  Icons.event_available_outlined,
-                                  Icons.event_available,
-                                  'Pagos programados',
+                                  Icons.outbound_outlined,
+                                  Icons.outbound,
+                                  'Historial de Pagos (Gastos)',
                                   accentColor,
                                 ),
                                 _buildMenuItem(
@@ -255,9 +255,9 @@ class _CustomSidebarState extends State<CustomSidebar> {
                                 ),
                                 _buildMenuItem(
                                   22,
-                                  Icons.price_check_outlined,
-                                  Icons.price_check,
-                                  'Cobros parciales por avance',
+                                  Icons.move_to_inbox_outlined,
+                                  Icons.move_to_inbox,
+                                  'Historial de Cobros (Ingresos)',
                                   accentColor,
                                 ),
                                 _buildMenuItem(

@@ -105,10 +105,23 @@ class ReportController extends Controller
         $proyectoId = $request->query('proyecto_id');
         $proyecto = null;
         
+        $avanceFisicoTotal = 0;
+        
         if ($proyectoId) {
-            $proyecto = \App\Models\Proyecto::with(['partidas.subpartidas', 'client'])->find($proyectoId);
+            $proyecto = \App\Models\Proyecto::with(['partidas.subpartidas.avances', 'client'])->find($proyectoId);
             $gastosReales = \App\Models\GastoProyecto::where('proyecto_id', $proyectoId)->get();
             $consumosReales = \App\Models\Consumo::where('proyecto_id', $proyectoId)->get();
+
+            if ($proyecto) {
+                foreach ($proyecto->partidas as $partida) {
+                    foreach ($partida->subpartidas as $sub) {
+                        $ultimoAvance = $sub->avances->last();
+                        $porcentaje = $ultimoAvance ? $ultimoAvance->porcentaje : 0;
+                        $sub->valor_ejecutado = ($porcentaje / 100) * $sub->total_presupuestado;
+                    }
+                }
+                $avanceFisicoTotal = $proyecto->porcentaje_avance_total;
+            }
         } else {
             $gastosReales = collect();
             $consumosReales = collect();
@@ -159,6 +172,7 @@ class ReportController extends Controller
             'utilidad_neta' => $ingresos - $costos - $gastos,
             'gastosReales' => $gastosReales,
             'consumosReales' => $consumosReales,
+            'avanceFisicoTotal' => $avanceFisicoTotal,
             'filtros' => $request->all()
         ])->setPaper('a4', 'portrait');
 

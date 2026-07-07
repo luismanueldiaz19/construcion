@@ -2,3 +2,5 @@
 final String host = "https://neo-proyect.site";
 
 final logoPath = "assets/logo.png";
+
+// powershell -ExecutionPolicy Bypass -File .\compilar_web.ps1

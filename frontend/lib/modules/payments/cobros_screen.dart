@@ -131,199 +131,391 @@ class _CobrosScreenState extends State<CobrosScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth > 1000;
+
+          if (isDesktop) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Buscador de Texto
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por cliente o proyecto...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                  ),
-                ),
-                // Buscador de Fecha Rápido (QuickDateFilter)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
+                Expanded(
+                  flex: 3,
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: QuickDateFilter(
-                          selectedOption: _selectedDateFilter,
-                          onChanged: (option) {
-                            setState(() {
-                              _selectedDateFilter = option;
-                            });
-                          },
+                      // Buscador de Texto
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Buscar por cliente o proyecto...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onChanged: (v) => setState(() => _searchQuery = v),
                         ),
                       ),
+                      // Buscador de Fecha Rápido
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: QuickDateFilter(
+                                selectedOption: _selectedDateFilter,
+                                onChanged: (option) {
+                                  setState(() {
+                                    _selectedDateFilter = option;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Listado de Tarjetas
+                      _buildHistoryTab(f),
                     ],
                   ),
                 ),
-                // Listado de Tarjetas
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadHistory,
-                    child: _filteredHistory.isEmpty
-                        ? const Center(
-                            child: Text('No se encontraron cobros registrados.'),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _filteredHistory.length,
-                            itemBuilder: (context, index) {
-                              final item = _filteredHistory[index];
-                              return _buildCobroCard(item, f);
-                            },
-                          ),
+                SizedBox(
+                  width: 320,
+                  child: SingleChildScrollView(
+                    child: _buildSummaryCards(f, isVertical: true),
                   ),
                 ),
               ],
-            ),
+            );
+          }
+
+          return Column(
+            children: [
+              _buildSummaryCards(f),
+              // Buscador de Texto
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por cliente o proyecto...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                ),
+              ),
+              // Buscador de Fecha Rápido
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: QuickDateFilter(
+                        selectedOption: _selectedDateFilter,
+                        onChanged: (option) {
+                          setState(() {
+                            _selectedDateFilter = option;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Listado de Tarjetas
+              _buildHistoryTab(f),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildCobroCard(dynamic item, NumberFormat f) {
-    final pMonto = double.tryParse(item['monto'].toString()) ?? 0;
-    final pFecha = DateTime.tryParse(item['fecha'].toString()) ?? DateTime.now();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.01),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Widget _buildHistoryTab(NumberFormat f) {
+    return Expanded(
+      child: RefreshIndicator(
+        onRefresh: _loadHistory,
+        child: _filteredHistory.isEmpty
+            ? const Center(
+                child: Text('No se encontraron cobros registrados.'),
+              )
+            : Container(
+                margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
+                        dataRowMinHeight: 52,
+                        dataRowMaxHeight: 60,
+                        horizontalMargin: 20,
+                        columnSpacing: 28,
+                        dividerThickness: 0.5,
+                        columns: const [
+                          DataColumn(label: Text('TIPO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                          DataColumn(label: Text('FECHA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                          DataColumn(label: Text('CLIENTE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                          DataColumn(label: Text('PROYECTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                          DataColumn(label: Text('MÉTODO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                          DataColumn(label: Text('MONTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54)), numeric: true),
+                          DataColumn(label: Text('ACCIÓN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                        ],
+                        rows: _filteredHistory.map((item) => _buildDataRow(item, f)).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
       ),
-      child: Row(
-        children: [
-          // Icono Flecha Verde
+    );
+  }
+
+  DataRow _buildDataRow(dynamic item, NumberFormat f) {
+    final pMonto = double.tryParse(item['monto'].toString()) ?? 0;
+
+    return DataRow(
+      cells: [
+        DataCell(
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.green[50],
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(
-              Icons.arrow_downward,
-              size: 20,
-              color: Colors.green[700],
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Detalles de Textos
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['proyecto'] ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Cliente: ${item['entidad'] ?? 'N/A'}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item['metodo_pago']} • ${DateFormat('dd/MM/yyyy').format(pFecha)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Ingreso',
+              style: TextStyle(
+                color: Colors.green[700],
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
             ),
           ),
-          // Monto Cobrado
+        ),
+        DataCell(
+          Text(
+            item['fecha'] ?? '',
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ),
+        DataCell(
+          Text(
+            item['entidad'] ?? 'Sin Cliente',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            item['proyecto'] ?? 'N/A',
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ),
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              item['metodo_pago'] ?? '',
+              style: const TextStyle(fontSize: 11, color: Colors.black87),
+            ),
+          ),
+        ),
+        DataCell(
           Text(
             '+${f.format(pMonto)}',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: Colors.green[700],
+              fontSize: 14,
             ),
           ),
-          const SizedBox(width: 16),
-          // Adjuntos y PDF
-          if (item['original'] != null &&
-              item['original']['comprobante_path'] != null) ...[
-            IconButton(
-              icon: const Icon(
-                Icons.attachment,
-                color: Colors.blue,
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (item['original'] != null &&
+                  item['original']['comprobante_path'] != null) ...[
+                IconButton(
+                  icon: const Icon(Icons.attachment, color: Colors.blue, size: 20),
+                  tooltip: 'Ver Comprobante Original',
+                  splashRadius: 20,
+                  onPressed: () async {
+                    final url = Uri.parse('$host/storage/${item['original']['comprobante_path']}');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                  tooltip: 'Eliminar Comprobante',
+                  splashRadius: 20,
+                  onPressed: () => _confirmDeleteComprobante(item['id']),
+                ),
+              ],
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf_outlined, color: Colors.redAccent, size: 20),
+                tooltip: 'Ver Recibo PDF',
+                splashRadius: 20,
+                onPressed: () async {
+                  final url = Uri.parse('$host/api/v1/pagos-historial/Cobro/${item['id']}/pdf');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
               ),
-              tooltip: 'Ver Comprobante Original',
-              onPressed: () async {
-                final url = Uri.parse(
-                  '$host/storage/${item['original']['comprobante_path']}',
-                );
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(
-                    url,
-                    mode: LaunchMode.externalApplication,
-                  );
-                }
-              },
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.red,
-              ),
-              tooltip: 'Eliminar Comprobante',
-              onPressed: () => _confirmDeleteComprobante(item['id']),
-            ),
-            const SizedBox(width: 4),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCards(NumberFormat f, {bool isVertical = false}) {
+    double totalIngresos = 0;
+    int totalTransacciones = 0;
+
+    for (var item in _history) {
+      if (item['tipo'] == 'Cobro') {
+        final double monto = double.tryParse(item['monto'].toString()) ?? 0;
+        totalIngresos += monto;
+        totalTransacciones++;
+      }
+    }
+
+    final items = [
+      _buildSummaryItem(
+        'Ingresos Recibidos',
+        f.format(totalIngresos),
+        Colors.green[700]!,
+        Icons.trending_up,
+      ),
+      _buildSummaryItem(
+        'Total Cobros',
+        totalTransacciones.toString(),
+        Colors.blue[700]!,
+        Icons.receipt_long,
+      ),
+    ];
+
+    if (isVertical) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          children: [
+            items[0],
+            const SizedBox(height: 16),
+            items[1],
           ],
-          IconButton(
-            icon: const Icon(
-              Icons.picture_as_pdf,
-              color: Colors.red,
-            ),
-            tooltip: 'Ver Recibo PDF',
-            onPressed: () async {
-              final url = Uri.parse(
-                '$host/api/v1/pagos-historial/Cobro/${item['id']}/pdf',
-              );
-              if (await canLaunchUrl(url)) {
-                await launchUrl(
-                  url,
-                  mode: LaunchMode.externalApplication,
-                );
-              }
-            },
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(child: items[0]),
+          const SizedBox(width: 16),
+          Expanded(child: items[1]),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, Color color, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

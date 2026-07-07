@@ -57,7 +57,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       final data = await _accountingService.getAllPagosHistorial();
       if (!mounted) return;
       setState(() {
-        _history = data;
+        _history = data.where((item) => item['tipo'] != 'Cobro').toList();
         _isLoadingHistory = false;
       });
     } catch (e) {
@@ -246,19 +246,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               ),
                               _filterChip(
                                 label: 'Compra',
-                                icon: Icons.arrow_upward,
+                                icon: Icons.shopping_cart,
                                 color: Colors.blue[700]!,
                                 selected: tempTipo == 'Compra',
                                 onTap: () =>
                                     setSheetState(() => tempTipo = 'Compra'),
-                              ),
-                              _filterChip(
-                                label: 'Cobro',
-                                icon: Icons.arrow_downward,
-                                color: Colors.green[700]!,
-                                selected: tempTipo == 'Cobro',
-                                onTap: () =>
-                                    setSheetState(() => tempTipo = 'Cobro'),
                               ),
                               _filterChip(
                                 label: 'Proyecto',
@@ -622,7 +614,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         elevation: 0,
         foregroundColor: AppTheme.textPrimary,
         title: const Text(
-          'Historial de Pagos y Cobros',
+          'Historial de Pagos (Gastos)',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         actions: [
@@ -633,60 +625,115 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildSummaryCards(f),
-          _buildSearchAndFilter(),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _isLoadingHistory
-                ? const Center(child: CircularProgressIndicator())
-                : _buildHistoryTab(),
-          ),
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth > 1000;
+
+          if (isDesktop) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    children: [
+                      _buildSearchAndFilter(),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: _isLoadingHistory
+                            ? const Center(child: CircularProgressIndicator())
+                            : _buildHistoryTab(),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: 320,
+                  child: SingleChildScrollView(
+                    child: _buildSummaryCards(f, isVertical: true),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              _buildSummaryCards(f),
+              _buildSearchAndFilter(),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _isLoadingHistory
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildHistoryTab(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSummaryCards(NumberFormat f) {
-    double totalIngresos = 0;
-    double totalEgresos = 0;
+  Widget _buildSummaryCards(NumberFormat f, {bool isVertical = false}) {
+    double totalCompras = 0;
+    double totalProyectos = 0;
 
     for (var item in _history) {
       final double monto = double.tryParse(item['monto'].toString()) ?? 0;
-      if (item['tipo'] == 'Cobro') {
-        totalIngresos += monto;
-      } else {
-        totalEgresos += monto;
+      if (item['tipo'] == 'Compra') {
+        totalCompras += monto;
+      } else if (item['tipo'] == 'Proyecto') {
+        totalProyectos += monto;
       }
+    }
+
+    final totalPagado = totalCompras + totalProyectos;
+
+    final items = [
+      _buildSummaryItem(
+        'Pagos de Compras',
+        f.format(totalCompras),
+        Colors.orange[700]!,
+        Icons.shopping_cart,
+      ),
+      _buildSummaryItem(
+        'Pagos de Proyectos',
+        f.format(totalProyectos),
+        Colors.blue[700]!,
+        Icons.construction,
+      ),
+      _buildSummaryItem(
+        'Total Pagado (Egresos)',
+        f.format(totalPagado),
+        Colors.red[700]!,
+        Icons.trending_down,
+      ),
+    ];
+
+    if (isVertical) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          children: [
+            items[0],
+            const SizedBox(height: 16),
+            items[1],
+            const SizedBox(height: 16),
+            items[2],
+          ],
+        ),
+      );
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildSummaryItem(
-            'Total Recibido (Ingresos)',
-            f.format(totalIngresos),
-            Colors.green[700]!,
-            Icons.trending_up,
-          ),
+          Expanded(child: items[0]),
           const SizedBox(width: 16),
-          _buildSummaryItem(
-            'Total Pagado (Egresos)',
-            f.format(totalEgresos),
-            Colors.red[700]!,
-            Icons.trending_down,
-          ),
+          Expanded(child: items[1]),
           const SizedBox(width: 16),
-          _buildSummaryItem(
-            'Balance Neto',
-            f.format(totalIngresos - totalEgresos),
-            (totalIngresos - totalEgresos) >= 0
-                ? Colors.blue[700]!
-                : Colors.purple[700]!,
-            Icons.account_balance,
-          ),
+          Expanded(child: items[2]),
         ],
       ),
     );
@@ -698,59 +745,57 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     Color color,
     IconData icon,
   ) {
-    return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-          border: Border.all(color: Colors.grey[200]!),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      value,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -942,57 +987,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        final item = filtered[index];
-        return _buildHistoryCard(item, f);
-      },
-    );
-  }
-
-  Widget _buildHistoryCard(dynamic item, NumberFormat f) {
-    final String tipo = item['tipo'];
-    final bool isCompra = tipo == 'Compra';
-    final bool isCobro = tipo == 'Cobro';
-    final double monto = double.tryParse(item['monto'].toString()) ?? 0;
-
-    Color badgeColor;
-    Color iconColor;
-    IconData icon;
-    String tipoLabel;
-    Color amountColor;
-    String prefix;
-
-    if (isCobro) {
-      badgeColor = Colors.green[50]!;
-      iconColor = Colors.green[700]!;
-      icon = Icons.arrow_downward;
-      tipoLabel = 'Ingreso (Cobro)';
-      amountColor = Colors.green[700]!;
-      prefix = '+';
-    } else if (isCompra) {
-      badgeColor = Colors.blue[50]!;
-      iconColor = Colors.blue[700]!;
-      icon = Icons.arrow_upward;
-      tipoLabel = 'Egreso (Compra)';
-      amountColor = Colors.red[700]!;
-      prefix = '-';
-    } else {
-      badgeColor = Colors.orange[50]!;
-      iconColor = Colors.orange[700]!;
-      icon = Icons.arrow_upward;
-      tipoLabel = 'Egreso (Gasto)';
-      amountColor = Colors.orange[800]!;
-      prefix = '-';
-    }
-
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[200]!),
         boxShadow: [
           BoxShadow(
@@ -1003,190 +1002,143 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top row: Type badge, Amount, and PDF button
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: badgeColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon, size: 12, color: iconColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          tipoLabel,
-                          style: TextStyle(
-                            color: iconColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '$prefix${f.format(monto)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: amountColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // PDF Button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _openPdf(item['tipo'], item['id']),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[200]!),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[50],
-                        ),
-                        child: const Icon(
-                          Icons.picture_as_pdf_outlined,
-                          color: Colors.redAccent,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Main Info: Entity Name
-              Text(
-                item['entidad'] ?? 'Sin Entidad',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-
-              // Project & Concept
-              Row(
-                children: [
-                  Icon(
-                    Icons.business_outlined,
-                    size: 14,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Proyecto: ${item['proyecto']}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
-                        fontSize: 12.5,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              if (item['concepto'] != null &&
-                  item['concepto'].toString().isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  item['concepto'],
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    height: 1.3,
-                  ),
-                ),
+        borderRadius: BorderRadius.circular(12),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
+              dataRowMinHeight: 52,
+              dataRowMaxHeight: 60,
+              horizontalMargin: 20,
+              columnSpacing: 28,
+              dividerThickness: 0.5,
+              columns: const [
+                DataColumn(label: Text('TIPO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                DataColumn(label: Text('FECHA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                DataColumn(label: Text('ENTIDAD (PROVEEDOR)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                DataColumn(label: Text('PROYECTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                DataColumn(label: Text('CONCEPTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                DataColumn(label: Text('MÉTODO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+                DataColumn(label: Text('MONTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54)), numeric: true),
+                DataColumn(label: Text('ACCIÓN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
               ],
-              const Divider(height: 24, thickness: 0.5),
-
-              // Bottom row: Date & Payment method chips
-              Row(
-                children: [
-                  // Date badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 11,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          item['fecha'],
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Payment Method badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.payment_outlined,
-                          size: 11,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          item['metodo_pago'],
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              rows: filtered.map((item) => _buildDataRow(item, f)).toList(),
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  DataRow _buildDataRow(dynamic item, NumberFormat f) {
+    final String tipo = item['tipo'];
+    final bool isCompra = tipo == 'Compra';
+    final double monto = double.tryParse(item['monto'].toString()) ?? 0;
+
+    Color badgeColor;
+    Color iconColor;
+    String tipoLabel;
+
+    if (isCompra) {
+      badgeColor = Colors.blue[50]!;
+      iconColor = Colors.blue[700]!;
+      tipoLabel = 'Compra';
+    } else {
+      badgeColor = Colors.orange[50]!;
+      iconColor = Colors.orange[700]!;
+      tipoLabel = 'Gasto (Proy)';
+    }
+
+    return DataRow(
+      cells: [
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: badgeColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              tipoLabel,
+              style: TextStyle(
+                color: iconColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            item['fecha'] ?? '',
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ),
+        DataCell(
+          Text(
+            item['entidad'] ?? 'Sin Entidad',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            item['proyecto'] ?? 'N/A',
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 180,
+            child: Text(
+              item['concepto'] ?? '-',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
+        ),
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              item['metodo_pago'] ?? '',
+              style: const TextStyle(fontSize: 11, color: Colors.black87),
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            '-${f.format(monto)}',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.red[700],
+              fontSize: 14,
+            ),
+          ),
+        ),
+        DataCell(
+          IconButton(
+            icon: const Icon(
+              Icons.picture_as_pdf_outlined,
+              color: Colors.redAccent,
+              size: 20,
+            ),
+            onPressed: () => _openPdf(item['tipo'], item['id']),
+            tooltip: 'Ver Recibo PDF',
+            splashRadius: 20,
+          ),
+        ),
+      ],
     );
   }
 

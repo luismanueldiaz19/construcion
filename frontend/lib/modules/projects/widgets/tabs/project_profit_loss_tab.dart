@@ -540,6 +540,47 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            // 5. Physical Progress indicator
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Avance Físico (Ejecución Real)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      '${(widget.proyecto.porcentajeAvanceTotal ?? 0).toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: ((widget.proyecto.porcentajeAvanceTotal ?? 0) / 100)
+                        .clamp(0.0, 1.0),
+                    minHeight: 10,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.teal.shade500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -580,53 +621,19 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
 
   // 5. Comparación Presupuesto vs Real
   Widget _buildPresupuestoVsRealCard() {
-    double moPresupuesto = 0.0;
-    double equiposPresupuesto = 0.0;
-    double materialesPresupuesto = 0.0;
+    final double totalPresupuesto =
+        widget.proyecto.totalPresupuestoConGlobales ??
+        widget.proyecto.presupuestoEstimado;
 
-    for (var partida in widget.proyecto.partidas) {
-      for (var sub in partida.subpartidas) {
-        final desc = sub.descripcion.toLowerCase();
-        if (desc.contains('mano de obra') ||
-            desc.contains('mo ') ||
-            desc.contains(' mo') ||
-            desc.contains('jornal') ||
-            desc.contains('albañil') ||
-            desc.contains('pintor') ||
-            desc.contains('personal') ||
-            desc.contains('labor')) {
-          moPresupuesto += sub.totalPresupuestado;
-        } else if (desc.contains('alquiler') ||
-            desc.contains('equipo') ||
-            desc.contains('herramienta') ||
-            desc.contains('maquinaria') ||
-            desc.contains('mezcladora') ||
-            desc.contains('andamio')) {
-          equiposPresupuesto += sub.totalPresupuestado;
-        } else {
-          materialesPresupuesto += sub.totalPresupuestado;
-        }
-      }
-    }
-
-    final double moReal = widget.gastos
-        .where((g) => g.tipoGasto.toLowerCase().contains('mano de obra'))
-        .fold(0.0, (sum, g) => sum + g.monto);
-    final double equiposReal = widget.gastos
-        .where(
-          (g) =>
-              g.tipoGasto.toLowerCase().contains('alquiler') ||
-              g.tipoGasto.toLowerCase().contains('equipo'),
-        )
-        .fold(0.0, (sum, g) => sum + g.monto);
     final double materialesReal = widget.consumos.fold(
       0.0,
       (sum, c) => sum + c.total,
     );
-
-    final double totalPresupuesto =
-        moPresupuesto + equiposPresupuesto + materialesPresupuesto;
-    final double totalReal = moReal + equiposReal + materialesReal;
+    final double gastosReal = widget.gastos.fold(
+      0.0,
+      (sum, g) => sum + g.monto,
+    );
+    final double totalReal = materialesReal + gastosReal;
 
     return Card(
       elevation: 3,
@@ -640,7 +647,7 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Comparativa Presupuesto vs Real (Costo Directo)',
+                  'Comparativa Presupuesto vs Real',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -650,10 +657,10 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                 MetricInfoButton(
                   title: 'Comparativa Presupuesto vs Real',
                   definition:
-                      'Compara los costos presupuestados con los costos reales de los materiales, mano de obra y equipos.',
-                  formula: 'Diferencia = Presupuesto - Real',
+                      'Compara el monto total del presupuesto aprobado frente a la suma de todos los gastos y compras reales del proyecto.',
+                  formula: 'Diferencia = Presupuesto Total - Costo Real Total',
                   source:
-                      'Presupuesto: Subpartidas del proyecto. Real: Gastos y Consumos registrados agrupados por tipo.',
+                      'Presupuesto: Monto total del proyecto. Real: Todas las compras, consumos y pagos registrados.',
                 ),
               ],
             ),
@@ -681,18 +688,7 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                   ],
                 ),
                 _buildTableRow(
-                  'Materiales',
-                  materialesPresupuesto,
-                  materialesReal,
-                ),
-                _buildTableRow('Mano de Obra', moPresupuesto, moReal),
-                _buildTableRow(
-                  'Equipos y Herramientas',
-                  equiposPresupuesto,
-                  equiposReal,
-                ),
-                _buildTableRow(
-                  'Total Directo',
+                  'Costo Total del Proyecto',
                   totalPresupuesto,
                   totalReal,
                   isTotal: true,
@@ -796,7 +792,15 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
       0.0,
       (sum, c) => sum + c.total,
     );
-    final totalReal = moReal + equiposReal + materialesReal;
+    final double indirectosReal = widget.gastos
+        .where(
+          (g) =>
+              !g.tipoGasto.toLowerCase().contains('mano de obra') &&
+              !g.tipoGasto.toLowerCase().contains('alquiler') &&
+              !g.tipoGasto.toLowerCase().contains('equipo'),
+        )
+        .fold(0.0, (sum, g) => sum + g.monto);
+    final totalReal = moReal + equiposReal + materialesReal + indirectosReal;
 
     final margenBruto = ingresos > 0 ? (utilidadBruta / ingresos * 100) : 0.0;
     final margenNeto = ingresos > 0 ? (utilidadNeta / ingresos * 100) : 0.0;
@@ -862,10 +866,10 @@ class _ProjectProfitLossTabState extends State<ProjectProfitLossTab> {
                   '${costoRealVsPresupuesto.toStringAsFixed(1)}%',
                   costoRealVsPresupuesto <= 100 ? Colors.teal : Colors.red,
                   definition:
-                      'Porcentaje de ejecución del costo directo frente al presupuesto original.',
-                  formula: '(Costo Directo Real / Presupuesto Total) * 100',
+                      'Porcentaje de ejecución del costo total frente al presupuesto.',
+                  formula: '(Costo Real Total / Presupuesto Total) * 100',
                   source:
-                      'Comparación de Costos Reales vs Subpartidas Presupuestadas.',
+                      'Comparación de Costos Reales vs Presupuesto Estimado o Contrato.',
                 ),
               ],
             ),

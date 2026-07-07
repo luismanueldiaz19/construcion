@@ -273,8 +273,9 @@ class PurchaseProvider extends ChangeNotifier {
       selectedProyectoId = data['selectedProyectoId'];
       tipoCompra = data['tipoCompra'] ?? 'Contado';
       if (data['fecha'] != null) fecha = DateTime.parse(data['fecha']);
-      if (data['fechaVencimiento'] != null)
+      if (data['fechaVencimiento'] != null) {
         fechaVencimiento = DateTime.parse(data['fechaVencimiento']);
+      }
       ordenController.text = data['ordenController'] ?? '';
       codigoController.text = data['codigoController'] ?? '';
       comprobanteController.text = data['comprobanteController'] ?? '';

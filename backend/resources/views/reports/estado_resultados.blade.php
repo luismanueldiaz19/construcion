@@ -83,13 +83,8 @@
         $avanceFinanciero = 0;
         $cuentasPorCobrar = 0;
         
-        $moPresupuesto = 0;
-        $equiposPresupuesto = 0;
-        $materialesPresupuesto = 0;
-
-        $moReal = 0;
-        $equiposReal = 0;
-        $materialesReal = 0;
+        $totalPresupuesto = 0;
+        $totalReal = 0;
 
         if ($proyecto) {
             $contrato = $proyecto->total_presupuesto_con_globales ?? $proyecto->presupuesto_estimado ?? 0;
@@ -98,34 +93,20 @@
             $avanceFinanciero = $contrato > 0 ? ($cobrado / $contrato * 100) : 0;
             $cuentasPorCobrar = $contrato - $cobrado;
 
-            foreach($proyecto->partidas as $partida) {
-                foreach($partida->subpartidas as $sub) {
-                    $desc = strtolower($sub->descripcion);
-                    if (str_contains($desc, 'mano de obra') || str_contains($desc, 'mo ') || str_contains($desc, ' mo') || str_contains($desc, 'jornal') || str_contains($desc, 'albañil') || str_contains($desc, 'pintor') || str_contains($desc, 'personal') || str_contains($desc, 'labor')) {
-                        $moPresupuesto += $sub->total_presupuestado;
-                    } elseif (str_contains($desc, 'alquiler') || str_contains($desc, 'equipo') || str_contains($desc, 'herramienta') || str_contains($desc, 'maquinaria') || str_contains($desc, 'mezcladora') || str_contains($desc, 'andamio')) {
-                        $equiposPresupuesto += $sub->total_presupuestado;
-                    } else {
-                        $materialesPresupuesto += $sub->total_presupuestado;
-                    }
-                }
-            }
+            $totalPresupuesto = $contrato;
 
+            $gastosTotales = 0;
             foreach($gastosReales as $g) {
-                $tipo = strtolower($g->tipo_gasto);
-                if (str_contains($tipo, 'mano de obra')) {
-                    $moReal += $g->monto;
-                } elseif (str_contains($tipo, 'alquiler') || str_contains($tipo, 'equipo')) {
-                    $equiposReal += $g->monto;
-                }
+                $gastosTotales += $g->monto;
             }
             
+            $consumosTotales = 0;
             foreach($consumosReales as $c) {
-                $materialesReal += $c->total;
+                $consumosTotales += $c->total;
             }
+
+            $totalReal = $gastosTotales + $consumosTotales;
         }
-        $totalPresupuesto = $moPresupuesto + $equiposPresupuesto + $materialesPresupuesto;
-        $totalReal = $moReal + $equiposReal + $materialesReal;
     @endphp
 
     <table class="data-table">
@@ -193,6 +174,10 @@
                                 <td style="padding: 5px 0; color: #555;">Avance Financiero (Cobrado / Proyecto)</td>
                                 <td class="text-right" style="padding: 5px 0; color: #0056b3;"><strong>{{ number_format($avanceFinanciero, 1) }}%</strong></td>
                             </tr>
+                            <tr>
+                                <td style="padding: 5px 0; color: #555;">Avance Físico (Ejecución Real)</td>
+                                <td class="text-right" style="padding: 5px 0; color: #008080;"><strong>{{ number_format($avanceFisicoTotal ?? 0, 1) }}%</strong></td>
+                            </tr>
                         </table>
                     </div>
                 </td>
@@ -225,7 +210,7 @@
     </div>
 
     <div style="page-break-inside: avoid; margin-top: 20px;">
-        <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #0056b3;">Comparativa Presupuesto vs Real (Costo Directo)</div>
+        <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #0056b3;">Comparativa Presupuesto vs Real</div>
         <table class="data-table" style="margin-top: 0;">
             <thead>
                 <tr>
@@ -236,32 +221,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Materiales</td>
-                    <td class="text-right">RD$ {{ number_format($materialesPresupuesto, 2) }}</td>
-                    <td class="text-right">RD$ {{ number_format($materialesReal, 2) }}</td>
-                    <td class="text-right" style="color: {{ ($materialesPresupuesto - $materialesReal) < 0 ? 'red' : 'green' }}; font-weight: bold;">
-                        RD$ {{ number_format($materialesPresupuesto - $materialesReal, 2) }}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Mano de Obra</td>
-                    <td class="text-right">RD$ {{ number_format($moPresupuesto, 2) }}</td>
-                    <td class="text-right">RD$ {{ number_format($moReal, 2) }}</td>
-                    <td class="text-right" style="color: {{ ($moPresupuesto - $moReal) < 0 ? 'red' : 'green' }}; font-weight: bold;">
-                        RD$ {{ number_format($moPresupuesto - $moReal, 2) }}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Equipos y Herramientas</td>
-                    <td class="text-right">RD$ {{ number_format($equiposPresupuesto, 2) }}</td>
-                    <td class="text-right">RD$ {{ number_format($equiposReal, 2) }}</td>
-                    <td class="text-right" style="color: {{ ($equiposPresupuesto - $equiposReal) < 0 ? 'red' : 'green' }}; font-weight: bold;">
-                        RD$ {{ number_format($equiposPresupuesto - $equiposReal, 2) }}
-                    </td>
-                </tr>
                 <tr class="total-row">
-                    <td>TOTAL DIRECTO</td>
+                    <td>Costo Total del Proyecto</td>
                     <td class="text-right">RD$ {{ number_format($totalPresupuesto, 2) }}</td>
                     <td class="text-right">RD$ {{ number_format($totalReal, 2) }}</td>
                     <td class="text-right" style="color: {{ ($totalPresupuesto - $totalReal) < 0 ? 'red' : 'green' }}; font-weight: bold;">

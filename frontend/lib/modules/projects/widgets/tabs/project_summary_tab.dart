@@ -173,6 +173,54 @@ class ProjectSummaryTab extends StatelessWidget {
                     valueFontSize: 22,
                   ),
                 ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.analytics_outlined, size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Avance Físico',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            '${(proyecto.porcentajeAvanceTotal ?? 0).toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              color: Colors.blue.shade700,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: ((proyecto.porcentajeAvanceTotal ?? 0) / 100).clamp(0.0, 1.0),
+                                backgroundColor: Colors.blue.shade50,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                                minHeight: 8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
