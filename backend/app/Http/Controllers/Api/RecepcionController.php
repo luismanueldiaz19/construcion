@@ -41,6 +41,13 @@ class RecepcionController extends Controller
 
                 $detalle = CompraDetalle::findOrFail($item['compra_detalle_id']);
                 
+                $pendiente = $detalle->cantidad - $detalle->cantidad_recibida;
+                if ($item['cantidad'] > $pendiente) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "items" => "La cantidad a recibir ({$item['cantidad']}) no puede superar la pendiente ({$pendiente})."
+                    ]);
+                }
+
                 // 2. Crear detalle de la recepción
                 RecepcionDetalle::create([
                     'recepcion_id' => $recepcion->id,

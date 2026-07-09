@@ -349,22 +349,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.text,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: 'Nombre de usuario',
-                      labelStyle: const TextStyle(color: Colors.white38),
+                      hintText: 'Nombre de usuario',
+                      hintStyle: const TextStyle(color: Colors.white54),
                       prefixIcon: const Icon(
                         Icons.person_outline,
-                        color: Colors.white38,
+                        color: Colors.white54,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.white10,
-                          width: 1.5,
-                        ),
+                        borderSide: BorderSide.none,
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: accentColor, width: 2),
+                        borderSide: BorderSide(color: accentColor, width: 1.5),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -377,10 +380,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
                           color: Colors.redAccent,
-                          width: 2,
+                          width: 1.5,
                         ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -397,18 +403,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      labelStyle: const TextStyle(color: Colors.white38),
+                      hintText: 'Contraseña',
+                      hintStyle: const TextStyle(color: Colors.white54),
                       prefixIcon: const Icon(
                         Icons.lock_outlined,
-                        color: Colors.white38,
+                        color: Colors.white54,
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          color: Colors.white38,
+                          color: Colors.white54,
                         ),
                         onPressed: () {
                           setState(() {
@@ -416,16 +422,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                         },
                       ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.white10,
-                          width: 1.5,
-                        ),
+                        borderSide: BorderSide.none,
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: accentColor, width: 2),
+                        borderSide: BorderSide(color: accentColor, width: 1.5),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -438,10 +447,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
                           color: Colors.redAccent,
-                          width: 2,
+                          width: 1.5,
                         ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
