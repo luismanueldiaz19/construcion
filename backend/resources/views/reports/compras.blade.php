@@ -89,6 +89,8 @@
                 <th>Proyecto</th>
                 <th>Proveedor</th>
                 <th>Tipo</th>
+                <th>Comprobante</th>
+                <th>Num:Orden</th>
                 <th>Estado</th>
                 <th class="text-right">Subtotal</th>
                 <th class="text-right">ITBIS</th>
@@ -111,6 +113,8 @@
                 <td>{{ $compra->proyecto->nombre ?? 'N/A' }}</td>
                 <td>{{ $compra->proveedor->name ?? 'N/A' }}</td>
                 <td>{{ $compra->tipo_compra }}</td>
+                <td>{{ $compra->comprobante ?? 'N/A' }}</td>
+                <td>{{ $compra->orden ?? 'N/A' }}</td>
                 <td>
                     <span style="color: {{ $compra->estado == 'Pagado' ? 'green' : ($compra->estado == 'Pendiente' ? 'orange' : 'inherit') }}">
                         {{ $compra->estado }}
@@ -122,7 +126,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="9" class="text-center" style="padding: 20px;">No se encontraron registros de compras con los filtros seleccionados.</td>
+                <td colspan="11" class="text-center" style="padding: 20px;">No se encontraron registros de compras con los filtros seleccionados.</td>
             </tr>
             @endforelse
         </tbody>
