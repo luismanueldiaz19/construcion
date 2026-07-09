@@ -40,8 +40,8 @@ class CompraController extends Controller
         if ($request->has('fecha_fin') && $request->fecha_fin !== 'null') {
             $query->whereDate('fecha', '<=', $request->fecha_fin);
         }
-        if ($request->has('search') && !empty($request->search)) {
-            $search = strtolower($request->search);
+        if ($request->has('search') && !empty(trim($request->search))) {
+            $search = trim($request->search);
             $query->where(function($q) use ($search) {
                 $q->where('id', 'like', "%$search%")
                   ->orWhere('comprobante', 'like', "%$search%")
@@ -267,7 +267,8 @@ class CompraController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->user()->username !== 'ludeveloper') {
+        $username = auth()->user()->username;
+        if ($username !== 'ludeveloper' && strtolower($username) !== 'master') {
             return response()->json(['message' => 'Acción denegada.'], 403);
         }
 
@@ -280,6 +281,29 @@ class CompraController extends Controller
 
             if ($asiento) {
                 $asiento->delete();
+            }
+
+            // 1. Revertir y Eliminar Recepciones (y descontar inventario)
+            $recepciones = \App\Models\Recepcion::where('compra_id', $compra->id)->get();
+            foreach ($recepciones as $recepcion) {
+                $recepcionDetalles = \App\Models\RecepcionDetalle::where('recepcion_id', $recepcion->id)->get();
+                foreach ($recepcionDetalles as $det) {
+                    $compraDetalle = \App\Models\CompraDetalle::find($det->compra_detalle_id);
+                    if ($compraDetalle) {
+                        $inv = \App\Models\Inventario::where('proyecto_id', $compra->proyecto_id)
+                                ->where('material_id', $compraDetalle->material_id)
+                                ->first();
+                        
+                        if ($inv) {
+                            if ($inv->stock < $det->cantidad_entregada) {
+                                throw new \Exception("No se puede eliminar la compra porque el stock actual ({$inv->stock}) del material #{$compraDetalle->material_id} es menor a lo recibido ({$det->cantidad_entregada}). Debe anular los consumos primero.");
+                            }
+                            $inv->decrement('stock', $det->cantidad_entregada);
+                        }
+                    }
+                    $det->delete();
+                }
+                $recepcion->delete();
             }
 
             // Eliminar dependencias manualmente si no hay onDelete('cascade') en base de datos

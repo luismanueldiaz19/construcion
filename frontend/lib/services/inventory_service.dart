@@ -58,6 +58,10 @@ class InventoryService {
         .toList();
   }
 
+  Future<void> deleteConsumo(int id) async {
+    await _http.delete('consumos/$id');
+  }
+
   Future<List<LocalInventory>> getLocalInventories() async {
     final data = await _http.get('inventarios-locales');
     return (data as List).map((json) => LocalInventory.fromJson(json)).toList();
@@ -71,7 +75,10 @@ class InventoryService {
     return await _http.get('inventarios-locales/$id');
   }
 
-  Future<Map<String, dynamic>> importMateriales(List<int> fileBytes, String filename) async {
+  Future<Map<String, dynamic>> importMateriales(
+    List<int> fileBytes,
+    String filename,
+  ) async {
     final file = http.MultipartFile.fromBytes(
       'file',
       fileBytes,

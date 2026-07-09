@@ -10,6 +10,7 @@ import '../widgets/compra_detail_panel.dart';
 import '../widgets/compras_filter_sheet.dart';
 import '../widgets/compras_summary_footer.dart';
 import '../../../widgets/quick_date_filter.dart';
+import '../../../widgets/custom_text_field.dart';
 
 class ComprasReportScreen extends StatelessWidget {
   const ComprasReportScreen({super.key});
@@ -47,8 +48,30 @@ class _ComprasReportScreenContent extends StatelessWidget {
             selectedOption: provider.selectedDateFilter,
             onChanged: provider.setDateFilter,
           ),
+          SizedBox(
+            width: 200,
+            child: Center(
+              child: CustomTextField(
+                controller: provider.searchController,
+                hintText: 'Buscar comprobante...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: provider.searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () {
+                          provider.searchController.clear();
+                          provider.loadData();
+                        },
+                      )
+                    : null,
+                isDense: true,
+                onFieldSubmitted: (_) => provider.loadData(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
             tooltip: 'Imprimir Reporte PDF',
             onPressed: () async {
               String query = '?';

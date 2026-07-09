@@ -99,6 +99,31 @@ class Proyecto {
     );
   }
 
+  Proyecto copyWith({
+    String? nombre,
+    String? notas,
+  }) {
+    return Proyecto(
+      id: id,
+      clientId: clientId,
+      client: client,
+      nombre: nombre ?? this.nombre,
+      cliente: cliente,
+      ubicacion: ubicacion,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      presupuestoEstimado: presupuestoEstimado,
+      estado: estado,
+      itbis: itbis,
+      transporte: transporte,
+      otrosCostos: otrosCostos,
+      supervisionTecnica: supervisionTecnica,
+      notas: notas ?? this.notas,
+      logoPath: logoPath,
+      partidas: partidas,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

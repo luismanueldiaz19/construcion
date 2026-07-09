@@ -9,6 +9,7 @@ import '../../../../models/avance_proyecto.dart';
 import '../../providers/project_details_provider.dart';
 import '../cards/detail_stat_card.dart';
 import '../../../../widgets/custom_button.dart';
+import '../../partida_materiales_screen.dart';
 
 class ProjectPartidasTab extends StatelessWidget {
   // final VoidCallback onAddPartida;
@@ -374,12 +375,38 @@ class ProjectPartidasTab extends StatelessWidget {
                       const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 20,
+                          color: Color(0xFFE31E24),
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Ver Materiales',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (ctx) => ChangeNotifierProvider.value(
+                                value: provider,
+                                child: PartidaMaterialesScreen(
+                                  partida: partida,
+                                  consumos: provider.consumos,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(
                           Icons.print_outlined,
                           size: 20,
                           color: Color(0xFF003366),
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
+                        tooltip: 'Imprimir',
                         onPressed: () async {
                           final url = Uri.parse(
                             '$host/reports/partida/${partida.id}/pdf',

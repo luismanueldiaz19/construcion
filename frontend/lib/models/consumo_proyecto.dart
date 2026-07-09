@@ -7,6 +7,11 @@ class ConsumoProyecto {
   final double total;
   final DateTime fecha;
 
+  final String? materialNombre;
+  final String? materialUnidad;
+  final String? subpartidaNombre;
+  final double? costoUnitario;
+
   ConsumoProyecto({
     this.id,
     required this.proyectoId,
@@ -15,6 +20,10 @@ class ConsumoProyecto {
     required this.cantidad,
     required this.total,
     required this.fecha,
+    this.materialNombre,
+    this.materialUnidad,
+    this.subpartidaNombre,
+    this.costoUnitario,
   });
 
   factory ConsumoProyecto.fromJson(Map<String, dynamic> json) {
@@ -26,6 +35,10 @@ class ConsumoProyecto {
       cantidad: double.tryParse(json['cantidad']?.toString() ?? '0') ?? 0.0,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0.0,
       fecha: DateTime.parse(json['fecha']),
+      materialNombre: json['material']?['nombre'] ?? json['material']?['descripcion'],
+      materialUnidad: json['material']?['unidad'],
+      subpartidaNombre: json['subpartida']?['descripcion'] ?? json['subpartida']?['nombre'],
+      costoUnitario: double.tryParse(json['costo_unitario']?.toString() ?? '0'),
     );
   }
 
@@ -37,6 +50,7 @@ class ConsumoProyecto {
       'material_id': materialId,
       'cantidad': cantidad,
       'total': total,
+      'costo_unitario': costoUnitario,
       'fecha': fecha.toIso8601String(),
     };
   }

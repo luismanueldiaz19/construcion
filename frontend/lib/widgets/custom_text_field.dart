@@ -19,6 +19,7 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? fillColor;
   final bool isDense;
+  final void Function(String)? onFieldSubmitted;
 
   const CustomTextField({
     super.key,
@@ -39,6 +40,7 @@ class CustomTextField extends StatelessWidget {
     this.onTap,
     this.fillColor,
     this.isDense = false,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -50,6 +52,7 @@ class CustomTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       validator: validator,
       onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
       textAlign: textAlign,
       maxLines: maxLines,
       readOnly: readOnly,

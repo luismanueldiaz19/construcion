@@ -4,16 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/app_theme.dart';
+import '../../../../core/auth_provider.dart';
 import '../../../../core/constants.dart';
 import '../providers/compras_report_provider.dart';
 
 class CompraDetailPanel extends StatelessWidget {
   final bool isBottomSheet;
 
-  const CompraDetailPanel({
-    super.key,
-    required this.isBottomSheet,
-  });
+  const CompraDetailPanel({super.key, required this.isBottomSheet});
 
   @override
   Widget build(BuildContext context) {
@@ -35,12 +33,20 @@ class CompraDetailPanel extends StatelessWidget {
                 children: [
                   CircularProgressIndicator(color: Colors.black),
                   SizedBox(height: 16),
-                  Text('Cargando detalles...', style: TextStyle(color: Colors.grey)),
+                  Text(
+                    'Cargando detalles...',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
             ),
           );
         }
+
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final isMaster =
+            authProvider.username?.toLowerCase() == 'master' ||
+            authProvider.username?.toLowerCase() == 'ludeveloper';
 
         final detail = provider.selectedCompraDetail;
         if (detail == null) {
@@ -54,7 +60,11 @@ class CompraDetailPanel extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.receipt_long_outlined, size: 72, color: Colors.grey[300]),
+                Icon(
+                  Icons.receipt_long_outlined,
+                  size: 72,
+                  color: Colors.grey[300],
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Detalles de Factura',
@@ -68,7 +78,11 @@ class CompraDetailPanel extends StatelessWidget {
                 const Text(
                   'Seleccione una compra del registro a la izquierda para visualizar su factura, desglose de materiales, totales y documentos de evidencia adjuntos.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.4),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -79,9 +93,12 @@ class CompraDetailPanel extends StatelessWidget {
         final detalles = detail['detalles'] as List? ?? [];
         final documentos = detail['documentos'] as List? ?? [];
         final estado = detail['estado'] ?? 'N/A';
-        Color estadoColor = estado == 'Pendiente' ? Colors.orange : Colors.green;
+        Color estadoColor = estado == 'Pendiente'
+            ? Colors.orange
+            : Colors.green;
 
-        final subtotal = double.tryParse(detail['subtotal']?.toString() ?? '0') ?? 0;
+        final subtotal =
+            double.tryParse(detail['subtotal']?.toString() ?? '0') ?? 0;
         final itbis = double.tryParse(detail['itbis']?.toString() ?? '0') ?? 0;
         final total = double.tryParse(detail['total']?.toString() ?? '0') ?? 0;
 
@@ -89,40 +106,94 @@ class CompraDetailPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Información de Facturación
-            _buildInfoItem('Proveedor', detail['proveedor']?['nombre'] ?? 'N/A', Icons.store),
+            _buildInfoItem(
+              'Proveedor',
+              detail['proveedor']?['nombre'] ?? 'N/A',
+              Icons.store,
+            ),
             const SizedBox(height: 12),
-            _buildInfoItem('Proyecto', detail['proyecto']?['nombre'] ?? 'N/A', Icons.business),
+            _buildInfoItem(
+              'Proyecto',
+              detail['proyecto']?['nombre'] ?? 'N/A',
+              Icons.business,
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _buildInfoItem('Fecha', detail['fecha']?.toString().split('T')[0] ?? 'N/A', Icons.calendar_today)),
-                Expanded(child: _buildInfoItem('Tipo', detail['tipo_compra'] ?? 'N/A', Icons.payment)),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Fecha',
+                    detail['fecha']?.toString().split('T')[0] ?? 'N/A',
+                    Icons.calendar_today,
+                  ),
+                ),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Tipo',
+                    detail['tipo_compra'] ?? 'N/A',
+                    Icons.payment,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _buildInfoItem('Comprobante', detail['comprobante'] ?? 'N/A', Icons.confirmation_number)),
-                Expanded(child: _buildInfoItem('Orden #', detail['orden'] ?? 'N/A', Icons.receipt_long)),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Comprobante',
+                    detail['comprobante'] ?? 'N/A',
+                    Icons.confirmation_number,
+                  ),
+                ),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Orden #',
+                    detail['orden'] ?? 'N/A',
+                    Icons.receipt_long,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _buildInfoItem('Código Ref.', detail['codigo'] ?? 'N/A', Icons.qr_code)),
-                Expanded(child: _buildInfoItem('Vencimiento', detail['fecha_vencimiento']?.toString().split('T')[0] ?? 'N/A', Icons.event_note)),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Código Ref.',
+                    detail['codigo'] ?? 'N/A',
+                    Icons.qr_code,
+                  ),
+                ),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Vencimiento',
+                    detail['fecha_vencimiento']?.toString().split('T')[0] ??
+                        'N/A',
+                    Icons.event_note,
+                  ),
+                ),
               ],
             ),
-            if (detail['nota'] != null && detail['nota'].toString().isNotEmpty) ...[
+            if (detail['nota'] != null &&
+                detail['nota'].toString().isNotEmpty) ...[
               const SizedBox(height: 12),
-              _buildInfoItem('Notas / Observaciones', detail['nota'], Icons.info_outline),
+              _buildInfoItem(
+                'Notas / Observaciones',
+                detail['nota'],
+                Icons.info_outline,
+              ),
             ],
 
             // Desglose de Artículos
             const Divider(height: 32, color: Color(0xFFEEEEEE)),
             const Text(
               'Artículos / Materiales',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueGrey),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.blueGrey,
+              ),
             ),
             const SizedBox(height: 12),
             ListView.builder(
@@ -132,11 +203,18 @@ class CompraDetailPanel extends StatelessWidget {
               itemBuilder: (context, index) {
                 final d = detalles[index];
                 final mat = d['material'];
-                final cantidad = double.tryParse(d['cantidad']?.toString() ?? '0') ?? 0;
-                final precio = double.tryParse(d['precio_unitario']?.toString() ?? '0') ?? 0;
-                final subtotalVal = double.tryParse(d['subtotal']?.toString() ?? '0') ?? 0;
+                final cantidad =
+                    double.tryParse(d['cantidad']?.toString() ?? '0') ?? 0;
+                final precio =
+                    double.tryParse(d['precio_unitario']?.toString() ?? '0') ??
+                    0;
+                final subtotalVal =
+                    double.tryParse(d['subtotal']?.toString() ?? '0') ?? 0;
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 12,
+                  ),
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
@@ -152,19 +230,29 @@ class CompraDetailPanel extends StatelessWidget {
                           children: [
                             Text(
                               mat?['nombre'] ?? 'Desconocido',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${cantidad.toStringAsFixed(2)} x ${f.format(precio)}',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       Text(
                         f.format(subtotalVal),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -179,7 +267,11 @@ class CompraDetailPanel extends StatelessWidget {
               children: [
                 const Text(
                   'Evidencias / Documentos',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueGrey),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.blueGrey,
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _uploadDocumento(context, provider),
@@ -190,8 +282,13 @@ class CompraDetailPanel extends StatelessWidget {
                     foregroundColor: Colors.black,
                     elevation: 0,
                     side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                 ),
               ],
@@ -200,7 +297,11 @@ class CompraDetailPanel extends StatelessWidget {
             if (documentos.isEmpty)
               Text(
                 'No hay documentos adjuntos.',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontStyle: FontStyle.italic),
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
               )
             else
               ListView.builder(
@@ -216,12 +317,22 @@ class CompraDetailPanel extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 0,
+                      ),
                       dense: true,
-                      leading: const Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 20),
+                      leading: const Icon(
+                        Icons.picture_as_pdf,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
                       title: Text(
                         doc['original_name'] ?? 'Documento',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -229,17 +340,31 @@ class CompraDetailPanel extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.open_in_new, color: Colors.blue, size: 18),
+                            icon: const Icon(
+                              Icons.open_in_new,
+                              color: Colors.blue,
+                              size: 18,
+                            ),
                             onPressed: () async {
-                              final url = Uri.parse('$host/api/v1/file?path=${doc['file_path']}');
+                              final url = Uri.parse(
+                                '$host/api/v1/file?path=${doc['file_path']}',
+                              );
                               if (await canLaunchUrl(url)) {
                                 await launchUrl(url);
                               }
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                            onPressed: () => _confirmDeleteDocumento(context, provider, doc['id']),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                              size: 18,
+                            ),
+                            onPressed: () => _confirmDeleteDocumento(
+                              context,
+                              provider,
+                              doc['id'],
+                            ),
                           ),
                         ],
                       ),
@@ -262,7 +387,12 @@ class CompraDetailPanel extends StatelessWidget {
               const SizedBox(height: 8),
               _buildTotalRow('ITBIS (18%)', f.format(itbis), Colors.white70),
               const Divider(color: Colors.white24, height: 24),
-              _buildTotalRow('TOTAL', f.format(total), Colors.greenAccent, isTotal: true),
+              _buildTotalRow(
+                'TOTAL',
+                f.format(total),
+                Colors.greenAccent,
+                isTotal: true,
+              ),
             ],
           ),
         );
@@ -276,20 +406,37 @@ class CompraDetailPanel extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Factura #${detail['id']}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
+                if (isMaster)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                    tooltip: 'Eliminar Compra',
+                    onPressed: () =>
+                        _confirmDeleteCompra(context, provider, detail['id']),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.print, color: Colors.black54),
                   tooltip: 'Imprimir Factura',
                   onPressed: () async {
-                    final url = Uri.parse('$host/compras/${detail['id']}/print');
+                    final url = Uri.parse(
+                      '$host/compras/${detail['id']}/print',
+                    );
                     if (await canLaunchUrl(url)) {
                       await launchUrl(url);
                     } else {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('No se pudo abrir el enlace de impresión')),
+                          const SnackBar(
+                            content: Text(
+                              'No se pudo abrir el enlace de impresión',
+                            ),
+                          ),
                         );
                       }
                     }
@@ -383,20 +530,34 @@ class CompraDetailPanel extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label.toUpperCase(),
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: Colors.black87,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTotalRow(String label, String value, Color color, {bool isTotal = false}) {
+  Widget _buildTotalRow(
+    String label,
+    String value,
+    Color color, {
+    bool isTotal = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -420,9 +581,12 @@ class CompraDetailPanel extends StatelessWidget {
     );
   }
 
-  Future<void> _uploadDocumento(BuildContext context, ComprasReportProvider provider) async {
+  Future<void> _uploadDocumento(
+    BuildContext context,
+    ComprasReportProvider provider,
+  ) async {
     // We can access purchaseService directly from provider but it's private.
-    // Wait, the API call should probably be in the provider. Let's assume provider has `uploadDocument` 
+    // Wait, the API call should probably be in the provider. Let's assume provider has `uploadDocument`
     // or we can implement it there later, but for now we'll just show a snackbar saying to implement this in the provider or just let it be.
     // Actually, since this is a UI file, I should call a method on the provider.
     try {
@@ -435,20 +599,91 @@ class CompraDetailPanel extends StatelessWidget {
         await provider.uploadDocumentoCompra(result.files.single);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Documento subido correctamente'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('Documento subido correctamente'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al subir documento: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error al subir documento: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  Future<void> _confirmDeleteDocumento(BuildContext context, ComprasReportProvider provider, int docId) async {
+  Future<void> _confirmDeleteCompra(
+    BuildContext context,
+    ComprasReportProvider provider,
+    int id,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Eliminar Compra'),
+        content: const Text(
+          '¿Está seguro que desea eliminar esta compra?\n\n'
+          'Esta acción revertirá:\n'
+          '- La Recepción (descontará el inventario)\n'
+          '- Las Cuentas por Pagar asociadas\n'
+          '- Los Asientos Contables\n\n'
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar Compra'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await provider.deleteCompra(id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Compra eliminada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Error: ${e.toString().replaceAll('Exception:', '').trim()}',
+              ),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteDocumento(
+    BuildContext context,
+    ComprasReportProvider provider,
+    int docId,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -462,7 +697,10 @@ class CompraDetailPanel extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Eliminar'),
           ),
         ],
@@ -474,13 +712,19 @@ class CompraDetailPanel extends StatelessWidget {
         await provider.deleteDocumentoCompra(docId);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Documento eliminado correctamente'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('Documento eliminado correctamente'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al eliminar: $e'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }

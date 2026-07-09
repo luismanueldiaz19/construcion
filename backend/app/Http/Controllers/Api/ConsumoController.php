@@ -114,6 +114,11 @@ class ConsumoController extends Controller
 
     public function destroy($id)
     {
+        $user = auth()->user();
+        if ($user->username !== 'ludeveloper' && strtolower($user->username) !== 'master') {
+            return response()->json(['message' => 'Acción denegada. Solo el súper usuario puede eliminar consumos.'], 403);
+        }
+
         $consumo = Consumo::findOrFail($id);
         
         return DB::transaction(function () use ($consumo) {

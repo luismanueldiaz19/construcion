@@ -111,6 +111,20 @@ class ProjectDetailsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> actualizarProyectoDetalles(String nombre, String? notas) async {
+    if (_proyecto == null) return;
+    _setLoading(true);
+    try {
+      final updatedData = _proyecto!.copyWith(nombre: nombre, notas: notas);
+      await _projectService.updateProyecto(_proyecto!.id!, updatedData);
+      await refresh();
+    } catch (e) {
+      _error = 'Error al actualizar proyecto: $e';
+      _setLoading(false);
+      rethrow;
+    }
+  }
+
   Future<void> cambiarEstado(String nuevoEstado) async {
     if (_proyecto == null) return;
     _setLoading(true);

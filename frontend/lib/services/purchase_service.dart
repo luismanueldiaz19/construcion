@@ -58,6 +58,10 @@ class PurchaseService {
     return await _http.get('compras$queryString');
   }
 
+  Future<void> deleteCompra(int id) async {
+    await _http.delete('compras/$id');
+  }
+
   Future<List<Compra>> getComprasPendientes() async {
     final List<dynamic> data = await _http.get('compras-pendientes');
     return data.map((json) => Compra.fromJson(json)).toList();

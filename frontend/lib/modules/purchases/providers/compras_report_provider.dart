@@ -210,6 +210,20 @@ class ComprasReportProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteCompra(int id) async {
+    try {
+      await _purchaseService.deleteCompra(id);
+      compras.removeWhere((c) => c.id == id);
+      if (selectedCompraDetail != null && selectedCompraDetail!['id'] == id) {
+        selectedCompraDetail = null;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error al eliminar compra: $e");
+      rethrow;
+    }
+  }
+
   void applyFilters() {
     currentPage = 1;
     loadData();
