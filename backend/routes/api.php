@@ -69,6 +69,8 @@ Route::prefix('v1')->group(function () {
     Route::delete('/contabilidad/asientos/{id}', [ContabilidadController::class, 'destroyAsiento'])->middleware('auth:sanctum');
     Route::get('/contabilidad/bancos', [ContabilidadController::class, 'bancos']);
     Route::get('/contabilidad/estado-resultados', [ContabilidadController::class, 'estadoResultados']);
+    Route::get('/contabilidad/obligaciones', [ContabilidadController::class, 'obligaciones']);
+    Route::post('/contabilidad/obligaciones/pagar', [ContabilidadController::class, 'pagarObligacion']);
 
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);
@@ -96,5 +98,119 @@ Route::prefix('v1')->group(function () {
         $fullPath = storage_path('app/public/' . $path);
         if (!file_exists($fullPath)) abort(404);
         return response()->file($fullPath);
+    });
+
+    // ═══════════════════════════════════════════════════════════════════
+    // MÓDULO DE NÓMINA — Empleados y Sistema de Nómina
+    // Legislación: República Dominicana (Código de Trabajo, Ley 87-01)
+    // ═══════════════════════════════════════════════════════════════════
+
+    // ── Empleados ──────────────────────────────────────────────────────
+    Route::prefix('employees')->group(function () {
+        Route::get('/',              [\App\Http\Controllers\Api\EmployeeController::class, 'index']);
+        Route::post('/',             [\App\Http\Controllers\Api\EmployeeController::class, 'store']);
+        Route::get('/{id}',          [\App\Http\Controllers\Api\EmployeeController::class, 'show']);
+        Route::put('/{id}',          [\App\Http\Controllers\Api\EmployeeController::class, 'update']);
+        Route::delete('/{id}',       [\App\Http\Controllers\Api\EmployeeController::class, 'destroy']);
+        Route::post('/{id}/restore', [\App\Http\Controllers\Api\EmployeeController::class, 'restore']);
+
+        // Acciones especiales (auditoría obligatoria)
+        Route::post('/{id}/change-salary', [\App\Http\Controllers\Api\EmployeeController::class, 'changeSalary']);
+        Route::post('/{id}/change-status', [\App\Http\Controllers\Api\EmployeeController::class, 'changeStatus']);
+        Route::post('/{id}/terminate',     [\App\Http\Controllers\Api\EmployeeController::class, 'terminate']);
+
+        // Sub-recursos del empleado
+        Route::get('/{id}/payroll-history', [\App\Http\Controllers\Api\EmployeeController::class, 'payrollHistory']);
+
+        // Dependientes
+        Route::get('/{id}/dependents',       [\App\Http\Controllers\Api\EmployeeDependentController::class, 'index']);
+        Route::post('/{id}/dependents',      [\App\Http\Controllers\Api\EmployeeDependentController::class, 'store']);
+        Route::delete('/dependents/{depId}', [\App\Http\Controllers\Api\EmployeeDependentController::class, 'destroy']);
+
+        // Documentos
+        Route::get('/{id}/documents',        [\App\Http\Controllers\Api\EmployeeDocumentController::class, 'index']);
+        Route::post('/{id}/documents',       [\App\Http\Controllers\Api\EmployeeDocumentController::class, 'store']);
+        Route::delete('/documents/{docId}',  [\App\Http\Controllers\Api\EmployeeDocumentController::class, 'destroy']);
+    });
+
+    // ── Catálogos de Nómina ────────────────────────────────────────────
+    Route::prefix('nomina')->group(function () {
+        // Departamentos
+        Route::get('/departments',        [\App\Http\Controllers\Api\NominaCatalogController::class, 'departments']);
+        Route::post('/departments',       [\App\Http\Controllers\Api\NominaCatalogController::class, 'storeDepartment']);
+        Route::put('/departments/{id}',   [\App\Http\Controllers\Api\NominaCatalogController::class, 'updateDepartment']);
+
+        // Cargos / Posiciones
+        Route::get('/positions',          [\App\Http\Controllers\Api\NominaCatalogController::class, 'positions']);
+        Route::post('/positions',         [\App\Http\Controllers\Api\NominaCatalogController::class, 'storePosition']);
+        Route::put('/positions/{id}',     [\App\Http\Controllers\Api\NominaCatalogController::class, 'updatePosition']);
+
+        // Horarios, grupos, referencia
+        Route::get('/work-schedules',     [\App\Http\Controllers\Api\NominaCatalogController::class, 'workSchedules']);
+        Route::get('/payroll-groups',     [\App\Http\Controllers\Api\NominaCatalogController::class, 'payrollGroups']);
+        Route::get('/afps',               [\App\Http\Controllers\Api\NominaCatalogController::class, 'afps']);
+        Route::get('/arss',               [\App\Http\Controllers\Api\NominaCatalogController::class, 'arss']);
+        Route::get('/banks',              [\App\Http\Controllers\Api\NominaCatalogController::class, 'banks']);
+
+        // Conceptos de nómina (CRUD para admin/contador)
+        Route::get('/concepts',           [\App\Http\Controllers\Api\NominaCatalogController::class, 'payrollConcepts']);
+        Route::post('/concepts',          [\App\Http\Controllers\Api\NominaCatalogController::class, 'storePayrollConcept']);
+
+        // Parámetros legales (TSS, ISR, INFOTEP)
+        Route::get('/legal-parameters',   [\App\Http\Controllers\Api\NominaCatalogController::class, 'legalParameters']);
+
+        // Periodos de nómina
+        Route::get('/periods',            [\App\Http\Controllers\Api\NominaCatalogController::class, 'payrollPeriods']);
+        Route::post('/periods',           [\App\Http\Controllers\Api\NominaCatalogController::class, 'storePayrollPeriod']);
+        Route::delete('/periods/{id}',    [\App\Http\Controllers\Api\NominaCatalogController::class, 'destroyPayrollPeriod']);
+    });
+
+    // ── Proceso de Nómina ──────────────────────────────────────────────
+    Route::prefix('payrolls')->group(function () {
+        Route::get('/',                        [\App\Http\Controllers\Api\PayrollController::class, 'index']);
+        Route::post('/',                       [\App\Http\Controllers\Api\PayrollController::class, 'store']);
+        Route::get('/{id}',                    [\App\Http\Controllers\Api\PayrollController::class, 'show']);
+        
+        // Flujo de aprobación
+        Route::post('/{id}/calculate',         [\App\Http\Controllers\Api\PayrollController::class, 'calculate']);
+        Route::post('/{id}/review',            [\App\Http\Controllers\Api\PayrollController::class, 'review']);
+        Route::post('/{id}/approve',           [\App\Http\Controllers\Api\PayrollController::class, 'approve']);
+        Route::post('/{id}/mark-paid',         [\App\Http\Controllers\Api\PayrollController::class, 'markPaid']);
+        Route::post('/{id}/close',             [\App\Http\Controllers\Api\PayrollController::class, 'close']);
+        Route::delete('/{id}/force-delete',    [\App\Http\Controllers\Api\PayrollController::class, 'forceDelete']);
+
+        // Empleados y desgloses
+        Route::get('/{id}/employee-summary',   [\App\Http\Controllers\Api\PayrollController::class, 'employeeSummary']);
+        Route::get('/{id}/vouchers/pdf',       [\App\Http\Controllers\Api\PayrollController::class, 'downloadVouchersPdf']);
+        Route::get('/{id}/employee/{empId}',   [\App\Http\Controllers\Api\PayrollController::class, 'employeeDetail']);
+        Route::put('/details/{detailId}',      [\App\Http\Controllers\Api\PayrollController::class, 'updateDetail']);
+    });
+
+    // ── Préstamos y Adelantos ──────────────────────────────────────────
+    Route::prefix('payroll-loans')->group(function () {
+        Route::get('/',           [\App\Http\Controllers\Api\PayrollLoanController::class, 'index']);
+        Route::post('/',          [\App\Http\Controllers\Api\PayrollLoanController::class, 'store']);
+        Route::get('/{id}',       [\App\Http\Controllers\Api\PayrollLoanController::class, 'show']);
+        Route::put('/{id}',       [\App\Http\Controllers\Api\PayrollLoanController::class, 'update']);
+        Route::delete('/{id}',    [\App\Http\Controllers\Api\PayrollLoanController::class, 'destroy']);
+    });
+
+    // ── Exportaciones Excel (Tarea 09) ─────────────────────────────────
+    Route::prefix('nomina/export')->group(function () {
+        Route::get('/nomina-consolidada', [\App\Http\Controllers\Api\NominaExportController::class, 'nominaConsolidada']);
+        Route::get('/planilla-tss',       [\App\Http\Controllers\Api\NominaExportController::class, 'planillaTSS']);
+        Route::get('/historial-salarios', [\App\Http\Controllers\Api\NominaExportController::class, 'historialSalarios']);
+        Route::get('/retenciones-isr',    [\App\Http\Controllers\Api\NominaExportController::class, 'retencionesISR']);
+        Route::get('/provisiones',        [\App\Http\Controllers\Api\NominaExportController::class, 'provisiones']);
+        Route::get('/kardex',             [\App\Http\Controllers\Api\NominaExportController::class, 'kardex']);
+    });
+
+    // ── Vistas UI Reportes (JSON) ───────────────────────────────────────
+    Route::prefix('nomina/reports')->group(function () {
+        Route::get('/nomina-consolidada', [\App\Http\Controllers\Api\NominaReportController::class, 'nominaConsolidada']);
+        Route::get('/planilla-tss',       [\App\Http\Controllers\Api\NominaReportController::class, 'planillaTSS']);
+        Route::get('/retenciones-isr',    [\App\Http\Controllers\Api\NominaReportController::class, 'retencionesISR']);
+        Route::get('/provisiones',        [\App\Http\Controllers\Api\NominaReportController::class, 'provisiones']);
+        Route::get('/historial-salarios', [\App\Http\Controllers\Api\NominaReportController::class, 'historialSalarios']);
     });
 });

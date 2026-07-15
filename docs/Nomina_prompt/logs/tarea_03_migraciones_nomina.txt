@@ -1,0 +1,40 @@
+TAREA 03 — MIGRACIONES MOTOR DE NÓMINA
+========================================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA (con 1 corrección de precisión decimal)
+
+Archivo generado:
+  backend/database/migrations/2026_07_15_100003_create_nomina_engine_tables.php
+
+Tablas creadas:
+  1. payroll_legal_parameters — Porcentajes TSS, ISR, INFOTEP versionados por fecha de vigencia
+  2. payroll_concepts         — Conceptos de nómina paramétricos (NO hardcodeados)
+  3. payroll_periods          — Periodos por grupo de nómina
+  4. payrolls                 — Cabecera del proceso de nómina
+  5. payroll_details          — Desglose por empleado y concepto (NUNCA solo totales)
+  6. payroll_loans            — Préstamos/adelantos con saldo y cuotas
+  7. payslips                 — Recibos de pago generados (PDF path)
+
+CORRECCIÓN APLICADA:
+  El campo value en payroll_legal_parameters originalmente era decimal(10,6).
+  El ISR exento anual para RD 2026 es 416,220.00 — ese monto causa overflow en (10,6)
+  porque precision=10 con scale=6 solo soporta hasta 9999.999999.
+  Corregido a decimal(14,4) que soporta hasta 9,999,999,999.9999
+
+Características clave:
+  payroll_legal_parameters:
+    - code versionado con effective_from / effective_to — NUNCA hardcodear %
+    - getActive() static helper busca el parámetro vigente por fecha
+  
+  payrolls (cabecera):
+    - Flujo completo: borrador → calculado → revisado → aprobado → pagado → cerrado
+    - Segregación de funciones: processed_by ≠ approved_by
+    - Una vez "cerrado" → immutable (solo asiento de ajuste)
+  
+  payroll_details:
+    - Siempre desglosado por concepto (jamás solo total)
+    - is_manual_override: si fue editado manualmente antes de aprobación
+
+Resultado migrate:
+  2026_07_15_100003_create_nomina_engine_tables ... 174.28ms DONE (primer intento, previo a corrección decimal)
+  Rollback → Corrección → Re-run: 284.23ms DONE ✅

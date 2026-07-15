@@ -1,0 +1,384 @@
+# PROMPT MAESTRO — Módulo de Empleados y Sistema de Nómina
+### Stack: Laravel API (backend) + Flutter (frontend)
+### Rol requerido: Contador Público Autorizado (Senior) + Arquitecto de Software Senior
+
+---
+
+## CÓMO USAR ESTE PROMPT
+
+Copia y pega este documento completo como instrucción inicial a tu asistente de IA (Claude, Claude Code, Cursor, etc.). Está escrito para que el modelo asuma un doble rol —experto contable y desarrollador senior— y construya el sistema completo, sin omitir nada de lo que un sistema de nómina real necesita para ser auditable, legal y escalable.
+
+Nota: los cálculos legales (TSS, AFP, ARS, ISR) están basados en la legislación laboral **dominicana** (Código de Trabajo, Ley 87-01, Código Tributario), por la ubicación configurada del usuario. El prompt está diseñado para que estos porcentajes/reglas sean **configurables por país** desde una tabla de parámetros, así que si tu operación es en otro país, solo se ajustan los valores, no la arquitectura.
+
+---
+
+## 1. ROL Y CONTEXTO PARA LA IA
+
+```
+Actúa como un equipo de dos expertos trabajando en conjunto:
+
+1. CONTADOR PÚBLICO SENIOR (15+ años en nómina y contabilidad de personal):
+   - Domina el Código de Trabajo dominicano, la Ley 87-01 (TSS), el Código
+     Tributario (ISR sobre salarios), y normas NIIF aplicables a pasivos laborales.
+   - Se asegura de que cada transacción de nómina genere el asiento contable
+     correcto en partida doble.
+   - No permite que se calculen deducciones o beneficios de forma incorrecta,
+     redondeada mal, o sin respaldo legal.
+
+2. DESARROLLADOR SENIOR FULL STACK (Laravel + Flutter):
+   - Escribe código limpio, con arquitectura en capas (Repository/Service),
+     migraciones versionadas, validaciones robustas (Form Requests),
+     transacciones de base de datos (DB::transaction) para operaciones
+     financieras, y pruebas automatizadas.
+   - Aplica principios SOLID, evita lógica de negocio en los controladores.
+   - Diseña el frontend Flutter con gestión de estado (Bloc/Riverpod/Provider),
+     validaciones de formulario, y manejo de errores de API consistente.
+
+El resultado debe ser un sistema PRODUCTIVO, no un prototipo. Cada decisión de
+diseño debe justificarse desde ambas perspectivas: ¿es correcto contablemente?
+¿es sostenible técnicamente?
+```
+
+---
+
+## 2. STACK TECNOLÓGICO
+
+| Capa | Tecnología |
+|---|---|
+| Auth API | Laravel Sanctum (tokens) + Roles/Permisos (Spatie Permission) |
+| Frontend | Flutter 3.x (Dart 3) |
+| Gestión de estado Flutter | Riverpod o Bloc (a elección, mantener consistencia) |
+| Generación de reportes | DomPDF / Snappy (PDF), Maatwebsite Excel |
+| Colas | Laravel Queue (procesos de nómina masivos en background) |
+| Notificaciones | Email (volantes de pago) + Push (Flutter) |
+| Auditoría | Laravel Auditing o tabla `audit_logs` propia |
+| Testing | PHPUnit/Pest (backend), flutter_test + mocktail (frontend) |
+
+---
+
+## 3. MÓDULO DE EMPLEADOS — BACKEND (LARAVEL API)
+
+### 3.1 Tablas / Migraciones obligatorias
+
+**`employees` (empleados)**
+- `id`, `employee_code` (único, autogenerado, ej. EMP-0001)
+- `first_name`, `last_name`
+- `identification_type` (cédula, pasaporte, RNC), `identification_number` (único)
+- `birth_date`, `gender`, `marital_status`
+- `nationality`
+- `email` (único), `phone`, `address`, `city`, `province`
+- `photo_path`
+- `hire_date`, `termination_date` (nullable)
+- `employment_status` (activo, inactivo, suspendido, vacaciones, licencia, desvinculado)
+- `contract_type` (indefinido, definido, por obra, aprendizaje/pasantía)
+- `contract_end_date` (nullable, para contratos definidos)
+- `position_id` (FK → `positions`)
+- `department_id` (FK → `departments`)
+- `work_schedule_id` (FK → `work_schedules`)
+- `payroll_group_id` (FK → `payroll_groups`) — **crítico**: define si es semanal, quincenal o mensual
+- `base_salary` (decimal 12,2)
+- `salary_type` (fijo, por hora, comisión, mixto)
+- `payment_method` (transferencia, cheque, efectivo)
+- `bank_id`, `bank_account_number`, `bank_account_type`
+- `tss_number` (número de afiliación TSS)
+- `afp_id` (Administradora de Fondos de Pensiones)
+- `ars_id` (Administradora de Riesgos de Salud)
+- `is_tss_exempt`, `is_isr_exempt` (booleanos, para casos especiales)
+- `supervisor_id` (FK autoreferencial → `employees`, para organigrama)
+- `created_by`, `updated_by`, timestamps, `deleted_at` (soft deletes — **nunca borrar físicamente un empleado**)
+
+**`departments`** — id, name, cost_center_code (centro de costo contable), manager_id
+
+**`positions`** (cargos) — id, title, department_id, salary_min, salary_max, job_description
+
+**`work_schedules`** (horarios) — id, name, days_per_week, hours_per_day, entry_time, exit_time, is_night_shift (para cálculo de recargo nocturno)
+
+**`payroll_groups`** (grupos de nómina) — id, name, `frequency` (weekly, biweekly, monthly), `cutoff_day`, `payment_day`, `is_active`
+
+**`employee_dependents`** (dependientes) — id, employee_id, name, relationship, birth_date, is_isr_dependent (afecta exenciones)
+
+**`employee_documents`** — id, employee_id, document_type (contrato, cédula, título, certificaciones), file_path, expiration_date
+
+**`employee_salary_history`** (histórico de cambios salariales — **obligatorio para auditoría**) — id, employee_id, previous_salary, new_salary, effective_date, reason, approved_by
+
+**`employee_status_history`** (histórico de estatus: ascensos, traslados, suspensiones, reingresos)
+
+**`employee_bank_accounts`** (si un empleado puede tener más de una cuenta/distribución de pago)
+
+### 3.2 Relaciones Eloquent
+
+```
+Employee
+ ├─ belongsTo Position, Department, WorkSchedule, PayrollGroup, Bank
+ ├─ belongsTo AFP, ARS
+ ├─ belongsTo Supervisor (self)
+ ├─ hasMany Dependents, Documents, SalaryHistory, StatusHistory
+ ├─ hasMany PayrollDetails (nómina histórica)
+ ├─ hasOne User (cuenta de acceso al sistema, si aplica)
+```
+
+### 3.3 Endpoints API mínimos (RESTful + acciones específicas)
+
+```
+GET    /api/employees                     (paginado, filtros: estado, depto, grupo nómina)
+POST   /api/employees
+GET    /api/employees/{id}
+PUT    /api/employees/{id}
+DELETE /api/employees/{id}                (soft delete)
+POST   /api/employees/{id}/restore
+
+POST   /api/employees/{id}/change-salary       (crea registro en salary_history)
+POST   /api/employees/{id}/change-status       (activar/suspender/desvincular)
+POST   /api/employees/{id}/terminate           (dispara cálculo de prestaciones laborales)
+
+GET    /api/employees/{id}/documents
+POST   /api/employees/{id}/documents
+GET    /api/employees/{id}/dependents
+POST   /api/employees/{id}/dependents
+
+GET    /api/employees/{id}/payroll-history
+GET    /api/employees/{id}/payslips/{payroll_id}   (descarga PDF del recibo)
+
+GET    /api/departments, /api/positions, /api/payroll-groups, /api/work-schedules
+```
+
+### 3.4 Reglas de negocio obligatorias en el backend
+
+- **Nunca eliminar físicamente** un empleado con nómina procesada (soft delete + estado `desvinculado`).
+- Todo cambio de salario **debe pasar por** `change-salary`, nunca un `UPDATE` directo al campo `base_salary` desde un formulario genérico — así se garantiza el histórico.
+- Validación: `identification_number` único, formato de cédula dominicana (000-0000000-0) si aplica.
+- Un empleado no puede pertenecer a un `payroll_group` inactivo.
+- Al cambiar `contract_type` a "definido", `contract_end_date` es obligatorio.
+- Al marcar `employment_status = desvinculado`, disparar automáticamente el cálculo de **liquidación/prestaciones laborales** (ver sección 4.6).
+- Roles y permisos (Spatie): `nomina.admin`, `nomina.rrhh`, `nomina.aprobador`, `empleado.self-service` (el propio empleado solo ve su información vía Flutter).
+
+---
+
+## 4. MÓDULO DE NÓMINA — LO QUE SÍ O SÍ DEBE TENER
+
+### 4.1 Periodicidad configurable
+
+El sistema debe soportar simultáneamente distintos grupos de nómina, cada uno con su propia frecuencia:
+
+| Frecuencia | Días típicos de pago | Uso común |
+|---|---|---|
+| Semanal | Cada 7 días (ej. viernes) | Personal operativo/obrero |
+| Quincenal | Días 15 y último día del mes | Empleados administrativos |
+| Mensual | Último día del mes | Gerencia, staff |
+
+- Tabla `payroll_periods`: id, payroll_group_id, `start_date`, `end_date`, `payment_date`, `status` (abierto, calculado, aprobado, pagado, cerrado), `fiscal_year`.
+- El sistema debe **prorratear** salario mensual cuando el periodo no es completo (ingreso/salida a mitad de periodo).
+- El ISR (impuesto sobre la renta) siempre se calcula sobre **base anualizada** independientemente de si la nómina es semanal, quincenal o mensual (esto es un punto donde muchos sistemas fallan contablemente — hay que anualizar, calcular el impuesto anual, y luego prorratear al periodo correspondiente).
+
+### 4.2 Conceptos de nómina (Payroll Items) — tabla paramétrica, NO hardcodeada
+
+**`payroll_concepts`** — id, code, name, `type` (ingreso/deducción/aporte_patronal), `calculation_method` (fijo, porcentaje, fórmula, manual), `is_taxable_isr` (bool), `is_tss_applicable` (bool), `accounting_account_id` (FK a cuenta contable), `is_active`
+
+Debe incluir, como mínimo, estos conceptos precargados:
+
+**Ingresos (Earnings):**
+- Salario base / sueldo devengado
+- Horas extras (diurnas 35%, nocturnas 50%, festivos 100% — según Código de Trabajo RD)
+- Comisiones
+- Bonificaciones
+- Incentivos
+- Viáticos no sujetos a ISR
+- Regalía pascual (13vo salario) — cálculo anual, salario promedio de los últimos 12 meses / 12
+- Bono vacacional
+
+**Deducciones del empleado:**
+- TSS – Seguro Familiar de Salud (SFS): 3.04% del salario cotizable (tope existente)
+- TSS – Pensión (AFP): 2.87% del salario cotizable
+- ISR (retención sobre salarios, escala progresiva anual)
+- Préstamos/adelantos de nómina (con tabla de amortización)
+- Embargos judiciales
+- Cuotas sindicales
+- Seguros voluntarios / cooperativas
+- Ausencias / tardanzas (deducción proporcional)
+
+**Aportes patronales (no se deducen al empleado, pero generan pasivo y gasto para la empresa — deben registrarse igual):**
+- TSS patronal SFS: 7.09%
+- TSS patronal Pensión (AFP): 7.10%
+- Seguro de Riesgos Laborales (SRL): 1.10% (variable según riesgo)
+- INFOTEP: 1% sobre nómina (0.5% adicional en algunos casos)
+- Provisión de regalía pascual (1/12 del salario mensual, provisión mensual)
+- Provisión de vacaciones
+- Provisión de cesantía/prestaciones laborales
+
+> Todos los porcentajes deben vivir en una tabla `payroll_legal_parameters` versionada por fecha de vigencia (`effective_from`, `effective_to`), **nunca hardcodeados en el código**, porque la ley cambia y el sistema debe permitir recalcular nóminas históricas con el parámetro vigente en su momento.
+
+### 4.3 Motor de cálculo (Payroll Engine)
+
+Debe ser un **Service** (`PayrollCalculationService`) desacoplado del controlador, con esta secuencia:
+
+1. Obtener empleados activos del `payroll_group` y `payroll_period`.
+2. Calcular ingresos: salario base prorrateado + variables (horas extra, comisiones capturadas en el periodo).
+3. Calcular salario cotizable (tope TSS si aplica).
+4. Calcular deducciones TSS (SFS + AFP).
+5. Calcular ISR:
+   - Anualizar el ingreso gravable.
+   - Aplicar tabla progresiva del año fiscal vigente.
+   - Prorratear al periodo (÷52, ÷24, ÷12 según frecuencia).
+6. Aplicar deducciones adicionales (préstamos, embargos, ausencias).
+7. Calcular neto a pagar.
+8. Calcular aportes patronales y provisiones (no afectan el neto del empleado, pero sí el pasivo/gasto de la empresa).
+9. Guardar todo en `payroll_details` (detalle por empleado y concepto) — **nunca solo el total**, siempre desglosado por concepto para trazabilidad y auditoría.
+10. Generar el asiento contable (sección 4.5).
+
+**Tablas de resultado:**
+- `payrolls` (cabecera del proceso: id, payroll_period_id, status, total_gross, total_deductions, total_net, total_employer_cost, processed_by, approved_by, processed_at)
+- `payroll_details` (id, payroll_id, employee_id, concept_id, amount, type)
+- `payroll_loans` (préstamos activos con saldo, cuota, número de cuotas restantes)
+- `payslips` (recibo de pago generado, PDF path, enviado_email bool)
+
+### 4.4 Flujo de aprobación (workflow obligatorio)
+
+```
+Borrador → Calculado → Revisado por RRHH → Aprobado por Finanzas → Pagado → Cerrado/Contabilizado
+```
+- Ninguna nómina se marca "Pagada" sin pasar por aprobación (doble control — principio contable de segregación de funciones).
+- Registro de quién calculó, quién aprobó, y timestamps (auditoría).
+- Una vez "Cerrado/Contabilizado", el periodo se bloquea para edición (solo reversión mediante asiento de ajuste, nunca editando el histórico).
+
+### 4.5 Contabilización automática (partida doble)
+
+Cada nómina procesada **debe generar un asiento contable automático**, ejemplo (simplificado, cuentas configurables vía `payroll_concepts.accounting_account_id`):
+
+| Cuenta | Debe | Haber |
+|---|---|---|
+| Gasto de Sueldos y Salarios | XXX | |
+| Gasto de Horas Extras | XXX | |
+| Gasto Aportes Patronales TSS | XXX | |
+| Gasto Provisión Regalía Pascual | XXX | |
+| Gasto Provisión Vacaciones | XXX | |
+| Gasto Provisión Cesantía | XXX | |
+| &nbsp; | | |
+| Retención ISR por Pagar (pasivo) | | XXX |
+| TSS por Pagar - Empleado (pasivo) | | XXX |
+| TSS por Pagar - Patronal (pasivo) | | XXX |
+| Préstamos por Cobrar a Empleados (recuperación) | | XXX |
+| Provisión Regalía Pascual por Pagar (pasivo) | | XXX |
+| Provisión Vacaciones por Pagar (pasivo) | | XXX |
+| Provisión Cesantía por Pagar (pasivo) | | XXX |
+| Nómina por Pagar / Banco (neto) | | XXX |
+
+- Tabla `journal_entries` + `journal_entry_lines` (o integración con módulo contable existente vía API).
+- El asiento debe cuadrar SIEMPRE (suma débitos = suma créditos) — validar antes de persistir, con `DB::transaction`.
+- Cuando se **paga** la nómina (desembolso), se genera un segundo asiento: Debe "Nómina por Pagar", Haber "Banco".
+- Cuando se **liquida** la TSS/DGII (pago mensual a las entidades), un tercer asiento cancela los pasivos correspondientes.
+
+### 4.6 Liquidación / Prestaciones laborales (al desvincular un empleado)
+
+Debe calcular automáticamente, según Código de Trabajo RD:
+- **Preaviso** (según tiempo laborado: 7, 14 o 28 días de salario)
+- **Auxilio de cesantía** (escala según años de servicio: 6, 13, 21 o 23 días por año)
+- **Vacaciones no disfrutadas** (proporcional)
+- **Regalía pascual proporcional** (si no se ha pagado en el año)
+- **Salarios pendientes**
+- Distinguir si la causa es **despido injustificado** (aplica preaviso + cesantía) vs **renuncia** (no aplica cesantía) vs **desahucio**.
+- Generar su propio asiento contable de liquidación de pasivos laborales.
+
+### 4.7 Provisiones mensuales (aunque no se pague aún)
+
+El sistema debe correr un proceso mensual de **provisión contable** (no es un pago, es un reconocimiento de gasto/pasivo bajo NIIF/devengo):
+- 1/12 de regalía pascual
+- Vacaciones devengadas del mes
+- Cesantía devengada del mes (estimación)
+
+Esto es indispensable para que los estados financieros reflejen el gasto real del periodo, no solo lo que se paga en efectivo.
+
+### 4.8 Reportes obligatorios
+
+- Recibo de pago / volante (PDF) por empleado y periodo.
+- Reporte de nómina consolidado (por departamento, centro de costo).
+- Planilla TSS (formato exigido por la Tesorería de la Seguridad Social).
+- Reporte de retenciones ISR (para declaración DGII, formulario IR-13/IR-3).
+- Reporte de provisiones (regalía, vacaciones, cesantía) acumuladas.
+- Reporte de aportes patronales.
+- Histórico de cambios salariales.
+- Libro de nómina / kardex del empleado.
+- Reporte comparativo de costo de nómina por periodo (para presupuesto).
+
+### 4.9 Seguridad, auditoría y control interno
+
+- Log de auditoría de todo cambio en salarios, conceptos, y procesos de nómina (`audit_logs`: usuario, acción, valores antes/después, IP, timestamp).
+- Ningún usuario puede calcular Y aprobar la misma nómina (separación de funciones).
+- Cifrado o enmascaramiento de datos sensibles (número de cuenta bancaria, cédula) en logs y respuestas API no autorizadas.
+- Backup / versionado antes de recalcular una nómina ya procesada.
+- Cierre de periodo: una vez cerrado, es inmutable; correcciones solo vía asiento de ajuste en el periodo siguiente.
+
+---
+
+## 5. FRONTEND FLUTTER
+
+### 5.1 Módulo de Empleados
+
+**Pantallas:**
+- Listado de empleados (búsqueda, filtros por departamento/estado/grupo de nómina, paginación infinita)
+- Ficha de empleado (tabs: Datos personales, Laboral, Salario e histórico, Documentos, Dependientes, Nómina/Recibos)
+- Formulario crear/editar empleado (con validación en tiempo real, selects dependientes: departamento → cargo)
+- Pantalla de cambio de salario (con motivo obligatorio, muestra histórico)
+- Pantalla de desvinculación (wizard: motivo → cálculo automático de liquidación mostrado antes de confirmar → confirmación)
+- Organigrama simple (empleado → supervisor)
+- Self-service: el propio empleado ve su ficha, recibos de pago, y solicita cambios (sin editar directo)
+
+### 5.2 Módulo de Nómina
+
+**Pantallas:**
+- Dashboard de nómina (próximos periodos por grupo, estado, alertas de aprobación pendiente)
+- Wizard de proceso de nómina: Seleccionar grupo/periodo → Calcular → Revisar detalle por empleado (editable antes de aprobar) → Aprobar → Marcar como pagado
+- Detalle de nómina por empleado (desglose de ingresos/deducciones, comparación con periodo anterior)
+- Gestión de conceptos de nómina (para administrador — CRUD de `payroll_concepts`)
+- Gestión de parámetros legales (TSS%, tabla ISR — para el administrador/contador)
+- Gestión de préstamos/adelantos (crear, ver amortización, aplicar retención automática)
+- Recibo de pago (visualización + descarga PDF + compartir)
+- Reportes (selector de reporte + rango de fechas + exportar PDF/Excel)
+
+### 5.3 Requisitos técnicos Flutter
+
+- Gestión de estado: Riverpod (recomendado) con `AsyncNotifier` para llamadas API.
+- Capa de red: `Dio` con interceptores (token Sanctum, manejo global de errores 401/422/500).
+- Modelos: `freezed` + `json_serializable` para inmutabilidad y parseo seguro.
+- Manejo de formularios: `flutter_form_builder` o validación manual con `Form` + `TextFormField` y validadores explícitos (cédula, email, montos).
+- Formateo de moneda y fechas: `intl`, con locale `es_DO`.
+- Manejo offline mínimo: cache de última nómina consultada (no editar en offline, es un sistema financiero).
+- Roles: ocultar/mostrar pantallas según permisos del usuario autenticado (RRHH, Contabilidad, Gerencia, Empleado).
+- Confirmaciones explícitas (diálogos) antes de cualquier acción irreversible: calcular nómina, aprobar, pagar, desvincular.
+
+---
+
+## 6. CHECKLIST FINAL — "SI NO ESTÁ ESTO, NO ES UN SISTEMA DE NÓMINA COMPLETO"
+
+- [ ] Soporte multi-frecuencia (semanal, quincenal, mensual) simultáneo, no excluyente
+- [ ] Parámetros legales (TSS, ISR, INFOTEP, SRL) en tabla configurable versionada por vigencia
+- [ ] ISR calculado sobre base anualizada y prorrateado correctamente
+- [ ] Desglose de cada nómina por concepto, no solo totales
+- [ ] Asientos contables automáticos en partida doble, cuadrados, por cada evento (cálculo, pago, liquidación TSS)
+- [ ] Provisiones mensuales de regalía, vacaciones y cesantía (devengo, no solo caja)
+- [ ] Cálculo automático de prestaciones laborales al desvincular
+- [ ] Histórico inmutable de salarios y estatus del empleado
+- [ ] Flujo de aprobación con separación de funciones (quien calcula ≠ quien aprueba)
+- [ ] Periodo cerrado = inmutable, correcciones vía asiento de ajuste
+- [ ] Auditoría de todo cambio sensible
+- [ ] Recibos de pago en PDF y reportes legales (TSS, DGII)
+- [ ] Manejo de préstamos/adelantos con amortización automática
+- [ ] Self-service de empleados (solo lectura de su propia info)
+- [ ] Pruebas automatizadas del motor de cálculo (casos límite: ingreso a mitad de mes, salario variable, tope TSS, empleado exento de ISR)
+
+---
+
+## 7. INSTRUCCIÓN DE CIERRE PARA LA IA
+
+```
+Antes de generar código, primero presenta:
+1. El diagrama entidad-relación completo (o lista de tablas con sus FKs).
+2. La tabla de parámetros legales que usarás, indicando que son valores de
+   ejemplo (2026, RD) y deben validarse/actualizarse con la ley vigente.
+3. El diseño del PayrollCalculationService (pseudocódigo) antes de escribir
+   Eloquent/Migrations.
+
+Luego, genera el código en este orden: migraciones → modelos → seeders de
+parámetros legales → services → form requests → controladores → rutas →
+tests del motor de cálculo → pantallas Flutter (empleados primero, luego
+nómina). No mezcles lógica de cálculo dentro de controladores ni widgets.
+```

@@ -1,0 +1,71 @@
+TAREA 05 — SEEDERS DE NÓMINA
+==============================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA (con 1 corrección de campo decimal — ver Tarea 03)
+
+Archivo generado:
+  backend/database/seeders/NominaSeeder.php
+
+Datos sembrados:
+
+1. AFPs (6):
+   SIE - AFP Siembra
+   POP - AFP Popular
+   RES - AFP Reservas
+   SCO - AFP Scotia
+   ROM - AFP Romana
+   PRO - AFP ProFuturo
+
+2. ARSs (8):
+   SEN - ARS SENASA
+   HUM - ARS Humano
+   RES - ARS Reservas
+   FUT - ARS Futuro
+   MET - ARS Meta Salud
+   YUN - ARS Yunen
+   UNI - ARS Universal
+   SIM - ARS Simag
+
+3. Bancos (11):
+   BPD - Banco Popular Dominicano
+   BDR - Banco de Reservas
+   SCO - Scotiabank
+   BHD - BHD León
+   BAN - Banreservas
+   + 6 más
+
+4. Grupos de Nómina (3):
+   - Nómina Mensual (monthly, corte día 25, pago día 30)
+   - Nómina Quincenal (biweekly, corte día 13, pago día 15)
+   - Nómina Semanal (weekly, corte día 4, pago día 5)
+
+5. Horarios de Trabajo (3):
+   - Jornada Regular 8h (L-V 08:00-17:00)
+   - Jornada Nocturna 7.5h (21:00-05:00, is_night_shift=true)
+   - Jornada 6 días 8h (07:00-15:00)
+
+6. Parámetros Legales 2026 RD (10 registros):
+   TSS_EMPLEADO_SFS   → 3.04%  (Ley 87-01)
+   TSS_EMPLEADO_AFP   → 2.87%  (Ley 87-01)
+   TSS_PATRONAL_SFS   → 7.09%  (Ley 87-01)
+   TSS_PATRONAL_AFP   → 7.10%  (Ley 87-01)
+   TSS_PATRONAL_SRL   → 1.10%  (Ley 87-01, Art. 196)
+   INFOTEP            → 1.00%  (Decreto 258-19)
+   ISR_EXENTO_ANUAL   → RD$416,220.00 (Código Tributario Art. 296)
+   ISR_TRAMO_2_TASA   → 15.00% (hasta RD$624,329)
+   ISR_TRAMO_3_TASA   → 20.00% (hasta RD$867,123)
+   ISR_TRAMO_4_TASA   → 25.00% (más de RD$867,123)
+
+7. Conceptos de Nómina (25 registros):
+   INGRESOS (10): SAL_BASE, HE_DIURNA, HE_NOCTURNA, HE_FESTIVO, COMISION, BONIFICACION,
+                  INCENTIVO, VIATICO_EXENTO, REGALIA, BONO_VAC
+   DEDUCCIONES (8): DED_TSS_SFS, DED_AFP, DED_ISR, DED_PRESTAMO, DED_EMBARGO,
+                    DED_SINDICAL, DED_SEGURO_VOL, DED_AUSENCIA
+   APORTES PATRONALES (7): PAT_TSS_SFS, PAT_AFP, PAT_SRL, PAT_INFOTEP,
+                            PROV_REGALIA, PROV_VACACIONES, PROV_CESANTIA
+
+ADVERTENCIA:
+   ⚠️  Los valores de ISR y TSS son de referencia para 2026 RD.
+   ⚠️  VALIDAR con valores oficiales de TSS (tss.gob.do) y DGII (dgii.gov.do) antes de producción.
+
+Resultado: php artisan db:seed --class=NominaSeeder → Sin errores ✅

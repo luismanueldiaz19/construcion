@@ -1,0 +1,35 @@
+TAREA 02 — MIGRACIÓN EMPLOYEES Y TABLAS HIJAS
+===============================================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Archivo generado:
+  backend/database/migrations/2026_07_15_100002_create_employees_tables.php
+
+Tablas creadas:
+  1. employees              — Tabla principal (soft deletes OBLIGATORIO — nunca eliminar físicamente)
+  2. employee_dependents    — Dependientes (afectan exenciones ISR)
+  3. employee_documents     — Documentos: contrato, cédula, título, certificaciones
+  4. employee_salary_history — SOLO INSERT — histórico inmutable de cambios salariales (auditoría)
+  5. employee_status_history — Ascensos, traslados, suspensiones, reingresos
+  6. employee_bank_accounts  — Cuentas bancarias adicionales para distribución de pago
+
+Campos clave de employees:
+  - employee_code: autogenerado (EMP-0001), único
+  - identification_number: único
+  - employment_status: activo | inactivo | suspendido | vacaciones | licencia | desvinculado
+  - contract_type: indefinido | definido | por_obra | aprendizaje
+  - supervisor_id: FK autoreferencial (organigrama)
+  - is_tss_exempt / is_isr_exempt: booleanos para casos especiales
+  - Datos bancarios cifrados en hidden: bank_account_number, identification_number
+
+FK especial:
+  - departments.manager_id → employees: se agrega en esta migración (dentro de Schema::table)
+
+Resultado migrate:
+  2026_07_15_100002_create_employees_tables ... 171.25ms DONE
+
+REGLAS DE NEGOCIO IMPLEMENTADAS:
+  ✅ Todo cambio salarial DEBE pasar por change-salary endpoint, nunca UPDATE directo
+  ✅ Soft deletes en employees — nunca borrar físicamente
+  ✅ Campos sensibles en $hidden (bank_account_number, identification_number)

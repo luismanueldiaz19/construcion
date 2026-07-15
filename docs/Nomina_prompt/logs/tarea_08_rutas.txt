@@ -1,0 +1,65 @@
+TAREA 08 — RUTAS API
+======================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Archivo modificado: backend/routes/api.php
+Acción: Solo se AGREGÓ al final — nada de las rutas existentes fue tocado.
+
+Rutas agregadas (bajo el prefix v1 existente):
+
+EMPLOYEES (16 rutas):
+  GET    api/v1/employees
+  POST   api/v1/employees
+  GET    api/v1/employees/{id}
+  PUT    api/v1/employees/{id}
+  DELETE api/v1/employees/{id}
+  POST   api/v1/employees/{id}/restore
+  POST   api/v1/employees/{id}/change-salary
+  POST   api/v1/employees/{id}/change-status
+  POST   api/v1/employees/{id}/terminate
+  GET    api/v1/employees/{id}/payroll-history
+  GET    api/v1/employees/{id}/dependents
+  POST   api/v1/employees/{id}/dependents
+  DELETE api/v1/employees/dependents/{depId}
+  GET    api/v1/employees/{id}/documents
+  POST   api/v1/employees/{id}/documents
+  DELETE api/v1/employees/documents/{docId}
+
+CATÁLOGOS NÓMINA (prefix: nomina):
+  GET/POST  api/v1/nomina/departments
+  PUT       api/v1/nomina/departments/{id}
+  GET/POST  api/v1/nomina/positions
+  PUT       api/v1/nomina/positions/{id}
+  GET       api/v1/nomina/work-schedules
+  GET       api/v1/nomina/payroll-groups
+  GET       api/v1/nomina/afps
+  GET       api/v1/nomina/arss
+  GET       api/v1/nomina/banks
+  GET/POST  api/v1/nomina/concepts
+  GET       api/v1/nomina/legal-parameters
+  GET/POST  api/v1/nomina/periods
+
+PROCESO DE NÓMINA (prefix: payrolls):
+  GET/POST  api/v1/payrolls
+  GET       api/v1/payrolls/{id}
+  POST      api/v1/payrolls/{id}/calculate
+  POST      api/v1/payrolls/{id}/review
+  POST      api/v1/payrolls/{id}/approve
+  POST      api/v1/payrolls/{id}/mark-paid
+  POST      api/v1/payrolls/{id}/close
+  GET       api/v1/payrolls/{id}/employee/{empId}
+  PUT       api/v1/payrolls/details/{detailId}
+
+PRÉSTAMOS (prefix: payroll-loans):
+  GET/POST/GET/{id}/PUT/{id}/DELETE/{id}
+
+EXPORTACIONES EXCEL (prefix: nomina/export):
+  GET api/v1/nomina/export/nomina-consolidada   ?payroll_id=N
+  GET api/v1/nomina/export/planilla-tss         ?payroll_id=N
+  GET api/v1/nomina/export/historial-salarios   ?employee_id=N&from=&to=
+  GET api/v1/nomina/export/retenciones-isr      ?payroll_id=N
+  GET api/v1/nomina/export/provisiones          ?from=&to=
+  GET api/v1/nomina/export/kardex               ?employee_id=N&from=&to=
+
+Verificación: php artisan route:list --path=v1/employees → 16 rutas listadas ✅

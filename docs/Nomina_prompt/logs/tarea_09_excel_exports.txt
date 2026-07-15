@@ -1,0 +1,54 @@
+TAREA 09 — EXPORTACIONES EXCEL
+================================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Archivo generado:
+  backend/app/Http/Controllers/Api/NominaExportController.php
+
+Librería utilizada: PhpSpreadsheet (phpoffice/phpspreadsheet)
+  — Ya incluida como dependencia de Laravel (no requiere instalación adicional)
+
+EXPORTACIONES IMPLEMENTADAS (6 reportes para contadores):
+
+1. NÓMINA CONSOLIDADA POR PERIODO
+   Endpoint: GET /api/v1/nomina/export/nomina-consolidada?payroll_id=N
+   Columnas:
+     Código | Empleado | Departamento | Salario Base | HE/Variables | TOTAL BRUTO |
+     TSS SFS | AFP | ISR | Préstamos | Total Deducc. | NETO A PAGAR | Costo Patronal
+   Características:
+     - Filas alternas con color azul claro
+     - Fila de totales en negrita
+     - Formato numérico RD (#,##0.00)
+
+2. PLANILLA TSS (para Tesorería de la Seguridad Social)
+   Endpoint: GET /api/v1/nomina/export/planilla-tss?payroll_id=N
+   Columnas: No. | No. TSS | Nombre | AFP | ARS | Salario Cotizable | AFP Emp. | SFS Emp. | AFP Patron. | SFS Patron.
+
+3. HISTORIAL DE SALARIOS
+   Endpoint: GET /api/v1/nomina/export/historial-salarios?employee_id=N&from=YYYY-MM-DD&to=YYYY-MM-DD
+   Columnas: Empleado | Código | Departamento | Fecha Efectiva | Sal. Anterior | Sal. Nuevo | Diferencia | Motivo | Aprobado Por
+   Color: verde si aumento, rojo si reducción
+
+4. RETENCIONES ISR (para declaración DGII — IR-13/IR-3)
+   Endpoint: GET /api/v1/nomina/export/retenciones-isr?payroll_id=N
+   Columnas: Código | Empleado | Departamento | Ingreso Bruto | ISR Retenido | ISR Anualizado Estimado
+
+5. PROVISIONES ACUMULADAS (regalía, vacaciones, cesantía — devengo NIIF)
+   Endpoint: GET /api/v1/nomina/export/provisiones?from=YYYY-MM-DD&to=YYYY-MM-DD
+   Columnas: Código | Empleado | Departamento | Prov. Regalía | Prov. Vacaciones | Prov. Cesantía | TOTAL
+
+6. KARDEX / LIBRO DE NÓMINA DEL EMPLEADO
+   Endpoint: GET /api/v1/nomina/export/kardex?employee_id=N&from=YYYY-MM-DD&to=YYYY-MM-DD
+   Agrupado por periodo, desglosado concepto a concepto con subtotal NETO por periodo
+
+DISEÑO APLICADO:
+  - Encabezado azul oscuro (#1E3A5F) texto blanco
+  - Sub-encabezados azul claro (#D6E4F0)
+  - Columnas auto-dimensionadas
+  - Formato numérico (#,##0.00) en todos los montos
+  - Nombre de archivo con timestamp: reporte_YYYYMMDD_HHmmss.xlsx
+  - Content-Type correcto para descarga directa desde el navegador/Flutter
+
+NOTA PARA FLUTTER:
+  Usar Dio para descargar → guardar en almacenamiento local → abrir con open_file package

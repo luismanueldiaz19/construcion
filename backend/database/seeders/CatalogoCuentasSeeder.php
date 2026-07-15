@@ -51,6 +51,9 @@ class CatalogoCuentasSeeder extends Seeder
             ['codigo' => '2.1', 'nombre' => 'PASIVOS CORRIENTES', 'tipo' => 'Pasivo', 'nivel' => 2, 'padre_codigo' => '2', 'es_detalle' => false],
             ['codigo' => '2.1.01', 'nombre' => 'CUENTAS POR PAGAR PROVEEDORES', 'tipo' => 'Pasivo', 'nivel' => 3, 'padre_codigo' => '2.1', 'es_detalle' => true],
             ['codigo' => '2.1.03', 'nombre' => 'ITBIS POR PAGAR', 'tipo' => 'Pasivo', 'nivel' => 3, 'padre_codigo' => '2.1', 'es_detalle' => true],
+            ['codigo' => '2.1.04', 'nombre' => 'TSS POR PAGAR', 'tipo' => 'Pasivo', 'nivel' => 3, 'padre_codigo' => '2.1', 'es_detalle' => true],
+            ['codigo' => '2.1.05', 'nombre' => 'ISR POR PAGAR', 'tipo' => 'Pasivo', 'nivel' => 3, 'padre_codigo' => '2.1', 'es_detalle' => true],
+            ['codigo' => '2.1.06', 'nombre' => 'INFOTEP POR PAGAR', 'tipo' => 'Pasivo', 'nivel' => 3, 'padre_codigo' => '2.1', 'es_detalle' => true],
             
             ['codigo' => '4', 'nombre' => 'INGRESOS', 'tipo' => 'Ingreso', 'nivel' => 1, 'es_detalle' => false],
             ['codigo' => '4.1', 'nombre' => 'INGRESOS POR CONSTRUCCIÓN', 'tipo' => 'Ingreso', 'nivel' => 2, 'padre_codigo' => '4', 'es_detalle' => false],
@@ -65,6 +68,12 @@ class CatalogoCuentasSeeder extends Seeder
             ['codigo' => '5.1.05', 'nombre' => 'Gastos Indirectos (Supervisión y Otros)', 'tipo' => 'Costo', 'nivel' => 3, 'padre_codigo' => '5.1', 'es_detalle' => true],
             ['codigo' => '5.1.06', 'nombre' => 'Transporte y Acarreo', 'tipo' => 'Costo', 'nivel' => 3, 'padre_codigo' => '5.1', 'es_detalle' => true],
             ['codigo' => '5.1.07', 'nombre' => 'Seguros y Otros Costos de Obra', 'tipo' => 'Costo', 'nivel' => 3, 'padre_codigo' => '5.1', 'es_detalle' => true],
+            
+            ['codigo' => '6', 'nombre' => 'GASTOS', 'tipo' => 'Gasto', 'nivel' => 1, 'es_detalle' => false],
+            ['codigo' => '6.1', 'nombre' => 'GASTOS GENERALES Y ADMINISTRATIVOS', 'tipo' => 'Gasto', 'nivel' => 2, 'padre_codigo' => '6', 'es_detalle' => false],
+            ['codigo' => '6.1.01', 'nombre' => 'Recargos y Moras', 'tipo' => 'Gasto', 'nivel' => 3, 'padre_codigo' => '6.1', 'es_detalle' => true],
+            ['codigo' => '6.1.02', 'nombre' => 'Sueldos y Salarios', 'tipo' => 'Gasto', 'nivel' => 3, 'padre_codigo' => '6.1', 'es_detalle' => true],
+            ['codigo' => '6.1.03', 'nombre' => 'Aportes Patronales TSS', 'tipo' => 'Gasto', 'nivel' => 3, 'padre_codigo' => '6.1', 'es_detalle' => true],
         ];
 
         foreach ($cuentas as $c) {

@@ -1,0 +1,48 @@
+TAREA 07 — FORM REQUESTS Y CONTROLADORES
+==========================================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Archivos generados:
+  backend/app/Http/Controllers/Api/
+
+  EmployeeController.php       — CRUD completo + acciones especiales
+  PayrollController.php        — Motor de nómina + flujo de aprobación
+  NominaCatalogController.php  — Todos los catálogos (depts, positions, etc.)
+  NominaExportController.php   — Exportaciones Excel (Tarea 09)
+  EmployeeDependentController.php
+  EmployeeDocumentController.php
+  PayrollLoanController.php
+
+EMPLOYEE CONTROLLER — Endpoints implementados:
+  GET    /employees              — Listado paginado (filtros: status, dept, payroll_group, search)
+  POST   /employees              — Crear + registro inicial en salary_history
+  GET    /employees/{id}         — Detalle completo (19 relaciones eager loaded)
+  PUT    /employees/{id}         — Update (salario BLOQUEADO — solo vía change-salary)
+  DELETE /employees/{id}         — Soft delete (solo si no tiene nóminas)
+  POST   /employees/{id}/restore — Restaurar
+
+  ACCIONES AUDITABLES:
+  POST   /employees/{id}/change-salary  — Crea registro en salary_history (INMUTABLE)
+  POST   /employees/{id}/change-status  — Crea registro en status_history
+  POST   /employees/{id}/terminate      — Desvinculación + cálculo automático de prestaciones:
+    · Preaviso (7/14/28 días según antigüedad — solo si no es renuncia)
+    · Cesantía (escala RD: 6/13/21/23 días/año — solo despido o desahucio)
+    · Vacaciones proporcionales
+    · Regalía proporcional
+
+PAYROLL CONTROLLER — Flujo de aprobación:
+  POST   /payrolls/{id}/calculate  — Llama PayrollCalculationService.calculate()
+  POST   /payrolls/{id}/review     — RRHH marca como revisado
+  POST   /payrolls/{id}/approve    — Finanzas aprueba (VALIDA que no sea el mismo que calculó)
+  POST   /payrolls/{id}/mark-paid  — Registra pago
+  POST   /payrolls/{id}/close      — INMUTABLE, cierra periodo
+  PUT    /payrolls/details/{id}    — Edición manual de detalle antes de aprobar
+
+VALIDACIONES DE NEGOCIO:
+  ✅ Payroll_group debe estar activo al crear empleado
+  ✅ contract_end_date obligatorio si contract_type = definido
+  ✅ No soft-delete si tiene nóminas procesadas
+  ✅ No calcular sobre periodo cerrado
+  ✅ Segregación de funciones: processed_by ≠ approved_by (HTTP 403 si viola)
+  ✅ No editar detalles en nómina aprobada o cerrada

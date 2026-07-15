@@ -11,6 +11,7 @@ import 'modules/accounting/journal_screen.dart';
 import 'modules/accounting/profit_loss_screen.dart';
 import 'modules/accounting/cuentas_por_pagar_screen.dart';
 import 'modules/accounting/cuentas_por_cobrar_screen.dart';
+import 'modules/accounting/screens/obligaciones_screen.dart';
 import 'modules/payments/payments_screen.dart';
 import 'modules/payments/cobros_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
@@ -30,9 +31,18 @@ import 'modules/assets/providers/assets_provider.dart';
 import 'modules/settings/settings_screen.dart';
 import 'modules/users/providers/users_provider.dart';
 import 'modules/users/users_screen.dart';
+import 'modules/nomina/screens/employees_screen.dart';
+import 'modules/nomina/screens/payroll_dashboard_screen.dart';
+import 'modules/nomina/screens/nomina_exports_screen.dart';
+import 'modules/nomina/providers/employees_provider.dart';
+import 'modules/nomina/providers/payroll_provider.dart';
 import 'widgets/custom_sidebar.dart';
+import 'modules/nomina/screens/nomina_catalogs_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es', null);
   runApp(
     MultiProvider(
       providers: [
@@ -41,6 +51,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => ProjectsProvider()),
         ChangeNotifierProvider(create: (_) => AssetsProvider()),
         ChangeNotifierProvider(create: (_) => UsersProvider()),
+        ChangeNotifierProvider(create: (_) => EmployeesProvider()),
+        ChangeNotifierProvider(create: (_) => PayrollProvider()),
       ],
       child: const ConstruccionERP(),
     ),
@@ -143,7 +155,7 @@ class _MainLayoutState extends State<MainLayout> {
     const CatalogScreen(), // 25. Catálogo contable jerárquico
     const JournalScreen(), // 26. Libro Diario
     const ProfitLossScreen(), // 27. Estados financieros
-    const EmptyScreen('Obligaciones fiscales'), // 28
+    const ObligacionesScreen(), // 28. Obligaciones fiscales
     const EmptyScreen('Conciliaciones y cierres contables'), // 29
     // 7. Activos Fijos (30-33)
     const AssetsScreen(), // 30. Registro de equipos y maquinarias
@@ -151,10 +163,10 @@ class _MainLayoutState extends State<MainLayout> {
     const EmptyScreen('Mantenimiento programado'), // 32
     const EmptyScreen('Transferencias entre proyectos'), // 33
     // 8. Recursos Humanos (34-37)
-    const EmptyScreen('Nómina de empleados'), // 34
-    const EmptyScreen('Contratos de obra'), // 35
+    const EmployeesScreen(), // 34. Nómina de empleados (ahora Listado y Ficha)
+    const PayrollDashboardScreen(), // 35. Procesamiento de Nómina (antes Contratos)
     const EmptyScreen('Horas trabajadas y control de asistencia'), // 36
-    const EmptyScreen('Retenciones de seguridad social'), // 37
+    const NominaExportsScreen(), // 37. Exportaciones y Reportes (TSS/ISR/Excel)
     // 9. Configuración (38-42)
     const EmptyScreen('Parametrización de impuestos'), // 38
     const EmptyScreen('Catálogo de cuentas personalizable'), // 39
@@ -166,6 +178,7 @@ class _MainLayoutState extends State<MainLayout> {
     const EmptyScreen('Estado de cuentas por proyecto'), // 44
     const EmptyScreen('Auditoría de movimientos contables'), // 45
     const EmptyScreen('Exportación a PDF/Excel'), // 46
+    const NominaCatalogsScreen(), // 47. Cargos y Departamentos
   ];
 
   @override

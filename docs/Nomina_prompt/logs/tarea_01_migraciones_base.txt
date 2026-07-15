@@ -1,0 +1,24 @@
+TAREA 01 — MIGRACIONES TABLAS BASE
+====================================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Archivo generado:
+  backend/database/migrations/2026_07_15_100001_create_nomina_base_tables.php
+
+Tablas creadas:
+  1. departments     — Departamentos con centro de costo contable y manager_id (FK → employees, constraint agregado en tarea 02)
+  2. positions       — Cargos/Puestos, con salary_min/salary_max y job_description
+  3. work_schedules  — Horarios de trabajo, soporta turno nocturno (is_night_shift)
+  4. payroll_groups  — Grupos de nómina: weekly / biweekly / monthly
+  5. afps            — Administradoras de Fondos de Pensiones (RD: Siembra, Popular, Reservas, etc.)
+  6. arss            — Administradoras de Riesgos de Salud (RD: SENASA, Humano, etc.)
+  7. banks           — Bancos para datos bancarios del empleado
+
+Resultado migrate:
+  2026_07_15_100001_create_nomina_base_tables ... 601.95ms DONE
+
+Notas:
+  - departments.manager_id FK hacia employees se añade en tarea 02 (después de crear la tabla employees)
+  - Todas las tablas tienen is_active y timestamps
+  - departments y positions tienen soft deletes

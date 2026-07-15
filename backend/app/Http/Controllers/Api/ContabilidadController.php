@@ -181,4 +181,140 @@ class ContabilidadController extends Controller
             'filtrado_por_proyecto' => $proyectoId ? true : false,
         ];
     }
+    
+    public function obligaciones(Request $request)
+    {
+        $cuentasObligaciones = [
+            '2.1.03' => 'ITBIS POR PAGAR',
+            '2.1.04' => 'TSS POR PAGAR',
+            '2.1.05' => 'ISR POR PAGAR',
+            '2.1.06' => 'INFOTEP POR PAGAR',
+        ];
+        
+        $resultados = [];
+        
+        foreach ($cuentasObligaciones as $codigo => $nombre) {
+            $cuenta = \App\Models\CatalogoCuenta::where('codigo', $codigo)->first();
+            if ($cuenta) {
+                $saldo = \DB::table('asiento_detalles')
+                    ->where('cuenta_id', $cuenta->id)
+                    ->selectRaw('SUM(haber) - SUM(debe) as total')
+                    ->first()->total ?? 0;
+                    
+                $detalle = null;
+                // Calculo automático del neto para ITBIS
+                if ($codigo === '2.1.03') {
+                    $cuentaItbisPagado = \App\Models\CatalogoCuenta::where('codigo', '1.1.03')->first();
+                    $saldoItbisPagado = 0;
+                    if ($cuentaItbisPagado) {
+                        $saldoItbisPagado = \DB::table('asiento_detalles')
+                            ->where('cuenta_id', $cuentaItbisPagado->id)
+                            ->selectRaw('SUM(debe) - SUM(haber) as total')
+                            ->first()->total ?? 0;
+                    }
+                    
+                    $saldoNeto = $saldo - $saldoItbisPagado;
+                    
+                    $detalle = [
+                        'itbis_cobrado' => (double)$saldo,
+                        'itbis_pagado' => (double)$saldoItbisPagado,
+                        'total_neto' => (double)$saldoNeto
+                    ];
+                    
+                    $saldo = $saldoNeto; // Actualizamos el saldo principal para que se muestre el neto
+                }
+                    
+                $resultados[] = [
+                    'cuenta_id' => $cuenta->id,
+                    'codigo' => $codigo,
+                    'nombre' => $nombre,
+                    'saldo' => (double)$saldo,
+                    'detalle' => $detalle
+                ];
+            }
+        }
+        
+        return response()->json($resultados);
+    }
+    
+    public function pagarObligacion(Request $request)
+    {
+        $validated = $request->validate([
+            'cuenta_id' => 'required|exists:catalogo_cuentas,id', // Cuenta de la obligacion (ITBIS, TSS, etc)
+            'banco_id' => 'required|exists:catalogo_cuentas,id', // Cuenta de banco desde donde se paga
+            'monto_principal' => 'required|numeric|min:0.01',
+            'monto_recargos' => 'nullable|numeric|min:0',
+            'fecha' => 'required|date',
+            'referencia' => 'nullable|string',
+        ]);
+        
+        $montoRecargos = $validated['monto_recargos'] ?? 0;
+        $montoTotal = $validated['monto_principal'] + $montoRecargos;
+        
+        return \DB::transaction(function () use ($validated, $montoRecargos, $montoTotal) {
+            $asientoService = app(\App\Services\AsientoService::class);
+            $cuentaObligacion = \App\Models\CatalogoCuenta::find($validated['cuenta_id']);
+            
+            $detallesAsiento = [
+                [
+                    'cuenta_id' => $validated['cuenta_id'], // Disminuimos el pasivo
+                    'debe' => $validated['monto_principal'],
+                    'haber' => 0,
+                ],
+                [
+                    'cuenta_id' => $validated['banco_id'], // Disminuimos el activo
+                    'debe' => 0,
+                    'haber' => $montoTotal,
+                ]
+            ];
+            
+            // Compensación automática de ITBIS si es la cuenta 2.1.03 (ITBIS POR PAGAR)
+            if ($cuentaObligacion && $cuentaObligacion->codigo === '2.1.03') {
+                $cuentaItbisPagado = \App\Models\CatalogoCuenta::where('codigo', '1.1.03')->first();
+                if ($cuentaItbisPagado) {
+                    $saldoItbisPagado = \DB::table('asiento_detalles')
+                        ->where('cuenta_id', $cuentaItbisPagado->id)
+                        ->selectRaw('SUM(debe) - SUM(haber) as total')
+                        ->first()->total ?? 0;
+                        
+                    if ($saldoItbisPagado > 0) {
+                        // Crédito a ITBIS Pagado para liquidarlo a cero
+                        $detallesAsiento[] = [
+                            'cuenta_id' => $cuentaItbisPagado->id,
+                            'debe' => 0,
+                            'haber' => $saldoItbisPagado,
+                        ];
+                        // Débito adicional a ITBIS por Pagar por el monto compensado
+                        $detallesAsiento[] = [
+                            'cuenta_id' => $validated['cuenta_id'],
+                            'debe' => $saldoItbisPagado,
+                            'haber' => 0,
+                        ];
+                    }
+                }
+            }
+            
+            // Si hay recargos, añadir el gasto
+            if ($montoRecargos > 0) {
+                $cuentaRecargos = \App\Models\CatalogoCuenta::where('codigo', '6.1.01')->first(); // Recargos y Moras
+                if ($cuentaRecargos) {
+                    $detallesAsiento[] = [
+                        'cuenta_id' => $cuentaRecargos->id,
+                        'debe' => $montoRecargos,
+                        'haber' => 0,
+                    ];
+                }
+            }
+            
+            $asientoService->registrarAsiento(
+                $validated['fecha'],
+                "Pago de Obligación: {$cuentaObligacion->nombre} " . ($validated['referencia'] ? "- Ref: {$validated['referencia']}" : ""),
+                $detallesAsiento,
+                'PagoObligacion',
+                null
+            );
+            
+            return response()->json(['message' => 'Obligación pagada correctamente']);
+        });
+    }
 }

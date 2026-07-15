@@ -53,4 +53,12 @@ class AccountingService {
   Future<void> deleteComprobantePago(int id) async {
     await _http.delete('pagos/$id/comprobante');
   }
+
+  Future<List<dynamic>> getObligaciones() async {
+    return await _http.get('contabilidad/obligaciones');
+  }
+
+  Future<void> pagarObligacion(Map<String, dynamic> data) async {
+    await _http.post('contabilidad/obligaciones/pagar', data);
+  }
 }

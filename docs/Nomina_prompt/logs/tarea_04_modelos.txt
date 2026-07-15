@@ -1,0 +1,40 @@
+TAREA 04 — MODELOS ELOQUENT
+=============================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Modelos creados (14 en total):
+  backend/app/Models/
+
+  TABLAS BASE:
+  - Department.php           → SoftDeletes, belongsTo Employee (manager), hasMany Employee, hasMany Position
+  - Position.php             → SoftDeletes, belongsTo Department, hasMany Employee
+  - WorkSchedule.php         → hasMany Employee
+  - PayrollGroup.php         → hasMany Employee, hasMany PayrollPeriod
+                               Computed attribute: periods_per_year (52/24/12 según frequency)
+  - Afp.php                  → hasMany Employee
+  - Ars.php                  → table = 'arss', hasMany Employee
+  - Bank.php                 → hasMany Employee, hasMany EmployeeBankAccount
+
+  EMPLOYEE:
+  - Employee.php             → SoftDeletes, 19 relaciones, $hidden = [bank_account_number, identification_number]
+                               Accessor: full_name, helper: isActive()
+  - EmployeeDependent.php
+  - EmployeeDocument.php
+  - EmployeeSalaryHistory.php → Solo INSERT, auditoría inmutable
+  - EmployeeStatusHistory.php
+  - EmployeeBankAccount.php  → $hidden = [account_number]
+
+  MOTOR NÓMINA:
+  - PayrollLegalParameter.php → static getActive($code, $date) para buscar parámetro vigente
+  - PayrollConcept.php       → Scopes: ingresos(), deducciones(), aportesPatronales()
+                               belongsTo CatalogoCuenta (para asientos automáticos)
+  - PayrollPeriod.php        → isClosed() helper
+  - Payroll.php              → isClosed(), isEditable() helpers; belongsTo processedBy, approvedBy
+  - PayrollDetail.php        → belongsTo Payroll, Employee, PayrollConcept
+  - PayrollLoan.php          → SoftDeletes, isActive() helper
+  - Payslip.php              → belongsTo Payroll, Employee
+
+CAMPOS SENSIBLES PROTEGIDOS:
+  Employee.$hidden: ['bank_account_number', 'identification_number']
+  EmployeeBankAccount.$hidden: ['account_number']

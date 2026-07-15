@@ -1,0 +1,46 @@
+TAREA 06 — PayrollCalculationService
+======================================
+Fecha de ejecución: 2026-07-15
+Estado: ✅ COMPLETADA
+
+Archivo generado:
+  backend/app/Services/PayrollCalculationService.php
+
+SECUENCIA DE CÁLCULO IMPLEMENTADA (por empleado):
+  1. calculateProratedSalary() — Prorrateo si el periodo no es completo (ingreso/salida a mitad)
+  2. Ingresos variables — horas extras con recargos correctos por ley:
+     - HE_DIURNA   → +35% (tarifa × 1.35)
+     - HE_NOCTURNA → +50% (tarifa × 1.50)
+     - HE_FESTIVO  → +100% (tarifa × 2.00)
+     - Comisiones, bonificaciones → monto directo
+  3. Salario cotizable TSS — base completa (sin tope actual en RD)
+  4. TSS empleado — SFS (3.04%) + AFP (2.87%) desde tabla payroll_legal_parameters
+  5. ISR (REGLA CRÍTICA):
+     a. Base gravable = ingresos taxable - TSS empleado (RD permite deducir TSS del ISR)
+     b. Anualizar: income × periodsPerYear (52/24/12 según frecuencia)
+     c. Tabla progresiva: 4 tramos (0%, 15%, 20%, 25%) desde parámetros legales
+     d. Prorratear: ISR_anual / periodsPerYear
+  6. Préstamos — descuenta cuota de loans activos con outstanding_balance > 0
+  7. Neto = Bruto - (TSS + ISR + Préstamos + otras deducciones)
+  8. Aportes patronales (gasto empresa, no afecta neto):
+     - SFS patronal 7.09%, AFP 7.10%, SRL 1.10%, INFOTEP 1.00%
+  9. Provisiones mensuales (devengo — no solo caja):
+     - Provisión Regalía: base_salary / 12
+     - Provisión Vacaciones: base_salary × 14/365
+     - Provisión Cesantía: calculateCesantiaProvision() con escala por antigüedad RD:
+         < 3 meses: 0 días
+         3–6 meses: 6 días/año
+         6–12 meses: 13 días/año
+         1–5 años: 21 días/año
+         > 5 años: 23 días/año
+  10. Persistencia en payroll_details — DB::insert() masivo (N inserts de golpe)
+
+ARQUITECTURA:
+  - payrollService->calculate() envuelto en DB::transaction
+  - loadCache() precarga todos los parámetros legales y conceptos → evita N+1 queries
+  - makeDetail() builder helper para construir el array de detalle
+  - Método calculateISR() es público para uso en tests unitarios
+
+FLUJO DE APROBACIÓN (segregación de funciones):
+  borrador → calculado → revisado → aprobado → pagado → cerrado
+  Quien processed_by ≠ approved_by (validado en PayrollController)
