@@ -17,4 +17,9 @@ class AsientoDetalle extends Model
     {
         return $this->belongsTo(Proyecto::class, 'centro_costo_id');
     }
+
+    public function asiento()
+    {
+        return $this->belongsTo(AsientoContable::class, 'asiento_id');
+    }
 }

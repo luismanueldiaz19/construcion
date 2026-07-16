@@ -21,6 +21,10 @@ class AsientoService
      */
     public function registrarAsiento(string $fecha, string $glosa, array $detalles, $referenciaTipo = null, $referenciaId = null)
     {
+        // 1. Validar "El Candado": Asegurar que el mes no esté cerrado contablemente
+        $cierreService = new \App\Services\CierreContableService();
+        $cierreService->validarPeriodoAbierto($fecha);
+
         return DB::transaction(function () use ($fecha, $glosa, $detalles, $referenciaTipo, $referenciaId) {
             $asiento = AsientoContable::create([
                 'fecha' => $fecha,

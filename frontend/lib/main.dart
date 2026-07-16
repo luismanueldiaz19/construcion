@@ -12,6 +12,7 @@ import 'modules/accounting/profit_loss_screen.dart';
 import 'modules/accounting/cuentas_por_pagar_screen.dart';
 import 'modules/accounting/cuentas_por_cobrar_screen.dart';
 import 'modules/accounting/screens/obligaciones_screen.dart';
+import 'modules/accounting/screens/conciliaciones_screen.dart';
 import 'modules/payments/payments_screen.dart';
 import 'modules/payments/cobros_screen.dart';
 import 'modules/inventory/inventory_screen.dart';
@@ -156,7 +157,7 @@ class _MainLayoutState extends State<MainLayout> {
     const JournalScreen(), // 26. Libro Diario
     const ProfitLossScreen(), // 27. Estados financieros
     const ObligacionesScreen(), // 28. Obligaciones fiscales
-    const EmptyScreen('Conciliaciones y cierres contables'), // 29
+    const ConciliacionesScreen(), // 29. Conciliaciones y cierres contables
     // 7. Activos Fijos (30-33)
     const AssetsScreen(), // 30. Registro de equipos y maquinarias
     const EmptyScreen('Depreciación contable y fiscal'), // 31

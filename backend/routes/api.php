@@ -74,6 +74,16 @@ Route::prefix('v1')->group(function () {
     Route::get('/contabilidad/obligaciones/historial', [ContabilidadController::class, 'historialPagosObligaciones']);
     Route::get('/contabilidad/obligaciones/historial/pdf', [ContabilidadController::class, 'historialPagosObligacionesPdf']);
 
+    // Cierres Contables
+    Route::get('/contabilidad/cierres', [\App\Http\Controllers\Api\Accounting\CierreContableController::class, 'index']);
+    Route::post('/contabilidad/cierres/toggle', [\App\Http\Controllers\Api\Accounting\CierreContableController::class, 'toggle']);
+
+    // Conciliaciones Bancarias
+    Route::get('/contabilidad/conciliaciones/bancos', [\App\Http\Controllers\Api\Accounting\ConciliacionController::class, 'getBancos']);
+    Route::get('/contabilidad/conciliaciones/movimientos', [\App\Http\Controllers\Api\Accounting\ConciliacionController::class, 'getMovimientos']);
+    Route::post('/contabilidad/conciliaciones/guardar', [\App\Http\Controllers\Api\Accounting\ConciliacionController::class, 'saveConciliacion']);
+    Route::get('/contabilidad/conciliaciones/pdf', [\App\Http\Controllers\Api\Accounting\ConciliacionController::class, 'generarPdf']);
+
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);
     Route::post('proveedores/{id}/toggle-active', [ProveedorController::class, 'toggleActive']);
