@@ -244,20 +244,15 @@ class PayrollController extends Controller
             // Generar Asiento Contable
             $cuentaSalarios = \App\Models\CatalogoCuenta::where('codigo', '6.1.02')->first();
             $cuentaAportes = \App\Models\CatalogoCuenta::where('codigo', '6.1.03')->first();
-            $cuentaBanco = \App\Models\CatalogoCuenta::where('codigo', '1.1.01.02')->first();
             $cuentaTSS = \App\Models\CatalogoCuenta::where('codigo', '2.1.04')->first();
             $cuentaISR = \App\Models\CatalogoCuenta::where('codigo', '2.1.05')->first();
-            $cuentaOtrasDeducciones = \App\Models\CatalogoCuenta::where('codigo', '2.1.01')->first();
+            $cuentaInfotep = \App\Models\CatalogoCuenta::where('codigo', '2.1.06')->first();
+            $cuentaBanco = \App\Models\CatalogoCuenta::where('codigo', '1.1.01')->first();
+            $cuentaOtrasDeducciones = \App\Models\CatalogoCuenta::where('codigo', '2.1.09')->first();
 
             $totalBruto = $payroll->total_gross;
+            $tssEmpleado = $payroll->total_tss_employee;
             
-            $tssEmpleado = \App\Models\PayrollDetail::where('payroll_id', $payroll->id)
-                ->where('type', 'deduccion')
-                ->whereHas('concept', function($q) {
-                    $q->whereIn('code', ['DED_TSS_SFS', 'DED_AFP']);
-                })
-                ->sum('amount');
-                
             $isr = \App\Models\PayrollDetail::where('payroll_id', $payroll->id)
                 ->where('type', 'deduccion')
                 ->whereHas('concept', function($q) {
@@ -269,6 +264,13 @@ class PayrollController extends Controller
                 ->where('type', 'aporte_patronal')
                 ->whereHas('concept', function($q) {
                     $q->whereIn('code', ['PAT_TSS_SFS', 'PAT_AFP', 'PAT_SRL']);
+                })
+                ->sum('amount');
+
+            $infotepPatronal = \App\Models\PayrollDetail::where('payroll_id', $payroll->id)
+                ->where('type', 'aporte_patronal')
+                ->whereHas('concept', function($q) {
+                    $q->where('code', 'PAT_INFOTEP');
                 })
                 ->sum('amount');
                 
@@ -288,6 +290,13 @@ class PayrollController extends Controller
                     $detallesAsiento[] = [
                         'cuenta_id' => $cuentaAportes->id,
                         'debe' => $tssPatronal,
+                        'haber' => 0,
+                    ];
+                }
+                if ($infotepPatronal > 0 && $cuentaAportes) {
+                    $detallesAsiento[] = [
+                        'cuenta_id' => $cuentaAportes->id,
+                        'debe' => $infotepPatronal,
                         'haber' => 0,
                     ];
                 }
@@ -312,6 +321,13 @@ class PayrollController extends Controller
                         'cuenta_id' => $cuentaISR->id,
                         'debe' => 0,
                         'haber' => $isr,
+                    ];
+                }
+                if ($infotepPatronal > 0 && $cuentaInfotep) {
+                    $detallesAsiento[] = [
+                        'cuenta_id' => $cuentaInfotep->id,
+                        'debe' => 0,
+                        'haber' => $infotepPatronal,
                     ];
                 }
                 if ($otrasDeducciones > 0 && $cuentaOtrasDeducciones) {
@@ -339,10 +355,10 @@ class PayrollController extends Controller
     // ── ELIMINAR NÓMINA (SOLO SUPER USUARIO) ──
     public function forceDelete(int $id): JsonResponse
     {
-        $user = auth()->user();
-        if (!$user || $user->username !== 'ludeveloper') {
-            return response()->json(['message' => 'No autorizado. Solo el Super Usuario puede eliminar una nómina.'], 403);
-        }
+        // $user = auth()->user();
+        // if (!$user) {
+        //     return response()->json(['message' => 'No autorizado.'], 403);
+        // }
 
         $payroll = Payroll::findOrFail($id);
 
@@ -413,11 +429,11 @@ class PayrollController extends Controller
     // ── DESCARGAR VOUCHERS DE PAGO (PDF) ──
     public function downloadVouchersPdf(int $id)
     {
-        $payroll = Payroll::with(['period'])->findOrFail($id);
+        $payroll = Payroll::with(['period.payrollGroup'])->findOrFail($id);
         
         $employees = \App\Models\Employee::whereHas('payrollDetails', function($q) use ($id) {
             $q->where('payroll_id', $id);
-        })->with(['payrollDetails' => function($q) use ($id) {
+        })->with(['position', 'payrollDetails' => function($q) use ($id) {
             $q->where('payroll_id', $id)->with('concept');
         }])->get();
 

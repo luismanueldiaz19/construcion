@@ -197,13 +197,21 @@ class PayrollCalculationService
         
         $infotep = $this->applyPercentage($totalGross,       'INFOTEP',          $date);
 
-        // Provisiones mensuales (devengo — no solo caja)
-        $provRegalia   = round($employee->base_salary / 12, 2);   // 1/12 salario mensual
-        $provVacaciones = round($employee->base_salary * 14 / 365, 2); // 14 días / año base
-        $provCesantia  = $this->calculateCesantiaProvision($employee, $grossSalary);
+        $provRegalia   = round($totalGross / 12, 2);   // 8.33% del bruto
+        $provVacaciones = round($totalGross * 0.0416, 2); // ~4.16% del bruto
+        
+        $months = Carbon::parse($employee->hire_date)->diffInMonths(now());
+        $cesantiaPercent = match(true) {
+            $months < 3  => 0,
+            $months < 6  => 0.017,
+            $months < 12 => 0.036,
+            $months < 60 => 0.058,
+            default       => 0.063,
+        };
+        $provCesantia  = round($totalGross * $cesantiaPercent, 2);
 
         $tssEmployer = $patSFS + $patAFP + $patSRL;
-        $employerCost = $netPay + $tssEmployer + $infotep + $provRegalia + $provVacaciones + $provCesantia;
+        $employerCost = $totalGross + $tssEmployer + $infotep + $provRegalia + $provVacaciones + $provCesantia;
 
         $patronalDetails = [
             ['PAT_TSS_SFS',     $patSFS],

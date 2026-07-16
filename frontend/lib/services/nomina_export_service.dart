@@ -50,8 +50,8 @@ class NominaExportService {
   }) async {
     await _openExport('historial-salarios', {
       if (employeeId != null) 'employee_id': employeeId.toString(),
-      if (from != null) 'from': from,
-      if (to != null) 'to': to,
+      'from': ?from,
+      'to': ?to,
     });
   }
 

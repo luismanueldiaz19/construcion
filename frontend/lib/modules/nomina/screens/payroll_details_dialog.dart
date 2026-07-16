@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
-import 'package:construccion_erp/core/constants.dart' as construccion_erp_constants;
+import 'package:construccion_erp/core/constants.dart'
+    as construccion_erp_constants;
 import '../../../services/nomina_service.dart';
 
 class PayrollDetailsDialog extends StatefulWidget {
@@ -68,13 +69,20 @@ class _PayrollDetailsDialogState extends State<PayrollDetailsDialog> {
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () async {
-                        final url = Uri.parse('${construccion_erp_constants.host}/api/v1/nomina/payrolls/${widget.payrollId}/vouchers/pdf');
+                        final url = Uri.parse(
+                          '${construccion_erp_constants.host}/api/v1/payrolls/${widget.payrollId}/vouchers/pdf',
+                        );
                         if (await url_launcher.canLaunchUrl(url)) {
-                          await url_launcher.launchUrl(url, mode: url_launcher.LaunchMode.externalApplication);
+                          await url_launcher.launchUrl(
+                            url,
+                            mode: url_launcher.LaunchMode.externalApplication,
+                          );
                         } else {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No se pudo abrir el PDF.')),
+                              const SnackBar(
+                                content: Text('No se pudo abrir el PDF.'),
+                              ),
                             );
                           }
                         }
@@ -86,7 +94,7 @@ class _PayrollDetailsDialogState extends State<PayrollDetailsDialog> {
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
-                )
+                ),
               ],
             ),
             const Divider(),
@@ -95,7 +103,10 @@ class _PayrollDetailsDialogState extends State<PayrollDetailsDialog> {
             else if (_error != null)
               Expanded(
                 child: Center(
-                  child: Text('Error: $_error', style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    'Error: $_error',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
               )
             else if (_summary.isEmpty)
@@ -109,12 +120,14 @@ class _PayrollDetailsDialogState extends State<PayrollDetailsDialog> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(Colors.grey.shade200),
+                      headingRowColor: WidgetStateProperty.all(
+                        Colors.grey.shade200,
+                      ),
                       columns: const [
                         DataColumn(label: Text('Identificación')),
                         DataColumn(label: Text('Nombre Empleado')),
                         DataColumn(label: Text('Salario Bruto'), numeric: true),
-                        DataColumn(label: Text('Retención TSS'), numeric: true),
+                        DataColumn(label: Text('Retención TSS / AFP'), numeric: true),
                         DataColumn(label: Text('Retención ISR'), numeric: true),
                         DataColumn(label: Text('Otras Ded.'), numeric: true),
                         DataColumn(label: Text('Neto a Pagar'), numeric: true),
@@ -123,7 +136,9 @@ class _PayrollDetailsDialogState extends State<PayrollDetailsDialog> {
                         return DataRow(
                           cells: [
                             DataCell(Text(row['identification_number'] ?? '')),
-                            DataCell(Text('${row['first_name']} ${row['last_name']}')),
+                            DataCell(
+                              Text('${row['first_name']} ${row['last_name']}'),
+                            ),
                             DataCell(Text(fmt.format(row['total_gross']))),
                             DataCell(Text(fmt.format(row['total_tss']))),
                             DataCell(Text(fmt.format(row['total_isr']))),
@@ -131,7 +146,9 @@ class _PayrollDetailsDialogState extends State<PayrollDetailsDialog> {
                             DataCell(
                               Text(
                                 fmt.format(row['total_net']),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],

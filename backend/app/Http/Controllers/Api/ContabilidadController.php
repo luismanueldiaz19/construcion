@@ -317,4 +317,35 @@ class ContabilidadController extends Controller
             return response()->json(['message' => 'Obligación pagada correctamente']);
         });
     }
+
+    public function historialPagosObligaciones(Request $request)
+    {
+        $query = AsientoContable::with('detalles.cuenta')
+            ->where('referencia_tipo', 'PagoObligacion');
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+        }
+
+        return $query->orderBy('fecha', 'desc')->get();
+    }
+
+    public function historialPagosObligacionesPdf(Request $request)
+    {
+        $query = AsientoContable::with('detalles.cuenta')
+            ->where('referencia_tipo', 'PagoObligacion');
+
+        $startDate = null;
+        $endDate = null;
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+
+        $pagos = $query->orderBy('fecha', 'desc')->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('contabilidad.historial-pagos-pdf', compact('pagos', 'startDate', 'endDate'));
+        return $pdf->stream('historial_pagos_obligaciones.pdf');
+    }
 }

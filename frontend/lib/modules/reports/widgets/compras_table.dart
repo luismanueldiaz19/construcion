@@ -43,12 +43,7 @@ class ComprasTable extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: provider.compras.length,
             itemBuilder: (context, index) {
-              return _buildCard(
-                context,
-                provider,
-                provider.compras[index],
-                f,
-              );
+              return _buildCard(context, provider, provider.compras[index], f);
             },
           ),
         ),
@@ -63,8 +58,6 @@ class ComprasTable extends StatelessWidget {
     Compra c,
     NumberFormat f,
   ) {
-    final double total = c.total;
-    final double subtotal = c.subtotal;
     final bool isSelected =
         provider.selectedCompraDetail != null &&
         provider.selectedCompraDetail!['id'] == c.id;
@@ -85,8 +78,8 @@ class ComprasTable extends StatelessWidget {
           ),
         ],
         border: Border.all(
-          color: isSelected 
-              ? AppTheme.accentColor.withValues(alpha: 0.5) 
+          color: isSelected
+              ? AppTheme.accentColor.withValues(alpha: 0.5)
               : Colors.blueGrey.withValues(alpha: 0.05),
           width: isSelected ? 1.5 : 1,
         ),
@@ -109,7 +102,11 @@ class ComprasTable extends StatelessWidget {
     );
   }
 
-  Widget _buildLargeScreenCardContent(Compra c, NumberFormat f, Color estadoColor) {
+  Widget _buildLargeScreenCardContent(
+    Compra c,
+    NumberFormat f,
+    Color estadoColor,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -130,15 +127,15 @@ class ComprasTable extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 c.fecha.split('T')[0],
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
               if (c.comprobante != null && c.comprobante!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.blueGrey.shade50,
                     borderRadius: BorderRadius.circular(6),
@@ -173,15 +170,16 @@ class ComprasTable extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.folder_outlined, size: 14, color: Colors.grey),
+                  const Icon(
+                    Icons.folder_outlined,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       c.proyecto?.nombre ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -238,7 +236,11 @@ class ComprasTable extends StatelessWidget {
     );
   }
 
-  Widget _buildSmallScreenCardContent(Compra c, NumberFormat f, Color estadoColor) {
+  Widget _buildSmallScreenCardContent(
+    Compra c,
+    NumberFormat f,
+    Color estadoColor,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -274,10 +276,7 @@ class ComprasTable extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           c.proveedor?.name ?? 'N/A',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         const SizedBox(height: 4),
         Row(
@@ -303,7 +302,10 @@ class ComprasTable extends StatelessWidget {
               children: [
                 if (c.comprobante != null && c.comprobante!.isNotEmpty) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.blueGrey.shade50,
                       borderRadius: BorderRadius.circular(4),

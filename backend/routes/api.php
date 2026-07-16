@@ -71,6 +71,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/contabilidad/estado-resultados', [ContabilidadController::class, 'estadoResultados']);
     Route::get('/contabilidad/obligaciones', [ContabilidadController::class, 'obligaciones']);
     Route::post('/contabilidad/obligaciones/pagar', [ContabilidadController::class, 'pagarObligacion']);
+    Route::get('/contabilidad/obligaciones/historial', [ContabilidadController::class, 'historialPagosObligaciones']);
+    Route::get('/contabilidad/obligaciones/historial/pdf', [ContabilidadController::class, 'historialPagosObligacionesPdf']);
 
     // Compras y Proveedores
     Route::apiResource('proveedores', ProveedorController::class);

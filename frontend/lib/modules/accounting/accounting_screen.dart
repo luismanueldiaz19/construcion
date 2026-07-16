@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import 'catalog_view.dart';
-import 'journal_view.dart';
 import 'profit_loss_view.dart';
 
 class AccountingScreen extends StatelessWidget {
@@ -24,9 +23,7 @@ class AccountingScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [CatalogView(), ProfitLossView()],
-        ),
+        body: const TabBarView(children: [CatalogView(), ProfitLossView()]),
       ),
     );
   }
