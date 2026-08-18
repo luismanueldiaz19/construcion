@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AssetCategoryController;
 use App\Http\Controllers\Api\AssetExpenseController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\LedhouseEstadoResultadoController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -224,5 +225,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/retenciones-isr',    [\App\Http\Controllers\Api\NominaReportController::class, 'retencionesISR']);
         Route::get('/provisiones',        [\App\Http\Controllers\Api\NominaReportController::class, 'provisiones']);
         Route::get('/historial-salarios', [\App\Http\Controllers\Api\NominaReportController::class, 'historialSalarios']);
+    });
+
+    // ── MÓDULO LED-HOUSE ───────────────────────────────────────────────
+    Route::prefix('ledhouse')->group(function () {
+        Route::get('/estado-resultado', [LedhouseEstadoResultadoController::class, 'index']);
+        Route::get('/estado-resultado/summary', [LedhouseEstadoResultadoController::class, 'summary']);
+        Route::post('/estado-resultado', [LedhouseEstadoResultadoController::class, 'store']);
+        Route::post('/estado-resultado/import', [LedhouseEstadoResultadoController::class, 'import']);
     });
 });

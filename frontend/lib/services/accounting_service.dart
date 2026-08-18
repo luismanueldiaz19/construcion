@@ -62,10 +62,16 @@ class AccountingService {
     await _http.post('contabilidad/obligaciones/pagar', data);
   }
 
-  Future<List<dynamic>> getHistorialPagosObligaciones({String? startDate, String? endDate}) async {
+  Future<List<dynamic>> getHistorialPagosObligaciones({
+    String? startDate,
+    String? endDate,
+  }) async {
     final Map<String, String> params = {};
     if (startDate != null) params['start_date'] = startDate;
     if (endDate != null) params['end_date'] = endDate;
-    return await _http.get('contabilidad/obligaciones/historial', params: params);
+    return await _http.get(
+      'contabilidad/obligaciones/historial',
+      params: params,
+    );
   }
 }

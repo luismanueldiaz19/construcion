@@ -58,6 +58,8 @@ class _CustomSidebarState extends State<CustomSidebar> {
       _expandedSection = '9. CONFIGURACIÓN';
     } else if (widget.selectedIndex >= 43 && widget.selectedIndex <= 46) {
       _expandedSection = '10. REPORTES Y AUDITORÍA';
+    } else if (widget.selectedIndex >= 48 && widget.selectedIndex <= 50) {
+      _expandedSection = '11. LED-HOUSE';
     }
   }
 
@@ -465,6 +467,33 @@ class _CustomSidebarState extends State<CustomSidebar> {
                     ),
                   ],
                 ),
+                _buildExpansionSection(
+                  '11. LED-HOUSE',
+                  Icons.lightbulb_outline,
+                  [
+                    _buildMenuItem(
+                      48,
+                      Icons.bar_chart_outlined,
+                      Icons.bar_chart,
+                      'Estado de Resultado',
+                      accentColor,
+                    ),
+                    _buildMenuItem(
+                      49,
+                      Icons.account_balance_wallet_outlined,
+                      Icons.account_balance_wallet,
+                      'Cuentas por Cobrar',
+                      accentColor,
+                    ),
+                    _buildMenuItem(
+                      50,
+                      Icons.money_off_outlined,
+                      Icons.money_off,
+                      'Cuentas por Pagar',
+                      accentColor,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -504,59 +533,64 @@ class _CustomSidebarState extends State<CustomSidebar> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
+        child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          color: isExpanded
-              ? Colors.black.withValues(alpha: 0.25)
-              : Colors.transparent,
-        ),
-        child: ExpansionTile(
-          key: Key('${title}_$isExpanded'),
-          initiallyExpanded: isExpanded,
-          onExpansionChanged: (expanded) => _handleExpansion(title, expanded),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-          leading: Icon(
-            icon,
+          child: Material(
             color: isExpanded
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.4),
-            size: 20,
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              color: isExpanded
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.4),
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.2,
-            ),
-          ),
-          trailing: Icon(
-            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-            color: Colors.white24,
-            size: 18,
-          ),
-          children: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(left: 16, bottom: 8),
-              padding: const EdgeInsets.only(top: 4),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: const Color(0xFFE31E24).withValues(alpha: 0.4),
-                    width: 2,
-                  ),
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.transparent,
+            child: ExpansionTile(
+              key: Key('${title}_$isExpanded'),
+              initiallyExpanded: isExpanded,
+              onExpansionChanged: (expanded) =>
+                  _handleExpansion(title, expanded),
+              tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+              leading: Icon(
+                icon,
+                color: isExpanded
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.4),
+                size: 20,
+              ),
+              title: Text(
+                title,
+                style: TextStyle(
+                  color: isExpanded
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.4),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.2,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: children,
+              trailing: Icon(
+                isExpanded
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                color: Colors.white24,
+                size: 18,
               ),
+              children: [
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(left: 16, bottom: 8),
+                  padding: const EdgeInsets.only(top: 4),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: const Color(0xFFE31E24).withValues(alpha: 0.4),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: children,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

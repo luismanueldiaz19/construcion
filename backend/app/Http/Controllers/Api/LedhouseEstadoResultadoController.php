@@ -1,0 +1,196 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\LedhouseEstadoResultado;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
+class LedhouseEstadoResultadoController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $query = LedhouseEstadoResultado::query();
+
+        // Filtro por fecha (rango)
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+        } elseif ($request->has('start_date')) {
+            $query->where('fecha', '>=', $request->start_date);
+        } elseif ($request->has('end_date')) {
+            $query->where('fecha', '<=', $request->end_date);
+        }
+
+        // Filtro por modulo
+        if ($request->has('modulo')) {
+            $query->where('modulo', $request->modulo);
+        }
+
+        // Filtro por codigo de cuenta (LIKE)
+        if ($request->has('codigo_cuenta')) {
+            $query->where('codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
+        }
+
+        $query->orderBy('fecha', 'desc');
+
+        // Paginación o todos
+        if ($request->has('per_page')) {
+            return response()->json($query->paginate($request->per_page));
+        }
+
+        return response()->json(['data' => $query->get()]);
+    }
+
+    /**
+     * Get summary data for charts.
+     */
+    public function summary(Request $request)
+    {
+        $query = LedhouseEstadoResultado::query();
+
+        // Aplicar los mismos filtros base si existen
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+        } elseif ($request->has('start_date')) {
+            $query->where('fecha', '>=', $request->start_date);
+        } elseif ($request->has('end_date')) {
+            $query->where('fecha', '<=', $request->end_date);
+        }
+
+        // Para el gráfico de pastel: Agrupar por modulo y sumar monto
+        $pieChartQuery = clone $query;
+        $pieChartData = $pieChartQuery->select('modulo', DB::raw('SUM(monto) as total'))
+            ->groupBy('modulo')
+            ->get();
+
+        // Para el gráfico de barras/líneas: Agrupar por mes/año y sumar monto
+        $barChartQuery = clone $query;
+        $barChartData = $barChartQuery->select(
+            DB::raw("TO_CHAR(fecha, 'YYYY-MM') as mes"),
+            DB::raw('SUM(monto) as total')
+        )
+        ->groupBy('mes')
+        ->orderBy('mes', 'asc')
+        ->get();
+
+        return response()->json([
+            'pie_chart' => $pieChartData,
+            'bar_chart' => $barChartData,
+            'total' => $query->sum('monto')
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'codigo_cuenta' => 'required|string',
+            'modulo' => 'required|string',
+            'descripcion_de_cuenta' => 'required|string',
+            'monto' => 'required|numeric',
+            'fecha' => 'required|date',
+            'registed_by' => 'nullable|string',
+        ]);
+
+        $item = LedhouseEstadoResultado::create($validated);
+
+        return response()->json($item, 201);
+    }
+
+    /**
+     * Import records from an Excel file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240', // max 10MB
+        ]);
+
+        $file = $request->file('file');
+        
+        try {
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+            
+            if (count($rows) <= 1) {
+                return response()->json(['error' => 'El archivo está vacío o solo contiene encabezados.'], 400);
+            }
+
+            $importedCount = 0;
+            $errors = [];
+
+            DB::beginTransaction();
+
+            // Asumimos estructura: [0] Código, [1] Módulo, [2] Descripción, [3] Monto, [4] Fecha
+            foreach ($rows as $index => $row) {
+                if ($index === 0) continue; // Saltar encabezado
+
+                // Si la fila está vacía, saltarla
+                if (empty(array_filter($row))) continue;
+
+                $codigo = trim((string)($row[0] ?? ''));
+                $modulo = trim((string)($row[1] ?? ''));
+                $descripcion = trim((string)($row[2] ?? ''));
+                $monto = trim((string)($row[3] ?? '0'));
+                
+                // Formatear la fecha
+                $fechaRaw = $row[4] ?? '';
+                $fecha = null;
+                
+                // Intentar parsear fecha Excel o texto
+                if (is_numeric($fechaRaw)) {
+                    $fecha = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($fechaRaw)->format('Y-m-d');
+                } else {
+                    $fecha = date('Y-m-d', strtotime(str_replace('/', '-', $fechaRaw)));
+                }
+
+                // Validaciones mínimas
+                if (!$codigo || !$modulo || !$descripcion || !is_numeric($monto) || !$fecha) {
+                    $errors[] = "Fila " . ($index + 1) . ": Datos incompletos o inválidos.";
+                    continue;
+                }
+
+                LedhouseEstadoResultado::create([
+                    'codigo_cuenta' => $codigo,
+                    'modulo' => strtoupper($modulo),
+                    'descripcion_de_cuenta' => $descripcion,
+                    'monto' => floatval($monto),
+                    'fecha' => $fecha,
+                    'registed_by' => $request->user() ? $request->user()->name : 'Import',
+                ]);
+
+                $importedCount++;
+            }
+
+            if (count($errors) > 0 && $importedCount === 0) {
+                DB::rollBack();
+                $errorDetails = implode(' | ', array_slice($errors, 0, 3));
+                if (count($errors) > 3) $errorDetails .= '...';
+                
+                return response()->json([
+                    'error' => 'No se pudo importar ningún registro. Detalles: ' . $errorDetails,
+                    'details' => $errors
+                ], 422);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => "Se importaron $importedCount registros exitosamente.",
+                'errors' => $errors
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al procesar el archivo: ' . $e->getMessage()], 500);
+        }
+    }
+}

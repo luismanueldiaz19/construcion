@@ -1,0 +1,75 @@
+import 'package:http/http.dart' as http;
+import '../models/ledhouse_estado_resultado_model.dart';
+import '../../../services/http_service.dart';
+
+class LedhouseService {
+  final HttpService _http = HttpService();
+
+  Future<List<LedhouseEstadoResultado>> fetchEstadoResultados({
+    String? startDate,
+    String? endDate,
+    String? modulo,
+    String? codigoCuenta,
+  }) async {
+    final queryParams = <String, String>{};
+    if (startDate != null) queryParams['start_date'] = startDate;
+    if (endDate != null) queryParams['end_date'] = endDate;
+    if (modulo != null) queryParams['modulo'] = modulo;
+    if (codigoCuenta != null) queryParams['codigo_cuenta'] = codigoCuenta;
+
+    final response = await _http.get(
+      'ledhouse/estado-resultado',
+      params: queryParams,
+    );
+
+    if (response != null && response['data'] != null) {
+      return (response['data'] as List)
+          .map((item) => LedhouseEstadoResultado.fromJson(item))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>> fetchSummary({
+    String? startDate,
+    String? endDate,
+    String? modulo,
+    String? codigoCuenta,
+  }) async {
+    final queryParams = <String, String>{};
+    if (startDate != null) queryParams['start_date'] = startDate;
+    if (endDate != null) queryParams['end_date'] = endDate;
+    if (modulo != null) queryParams['modulo'] = modulo;
+    if (codigoCuenta != null) queryParams['codigo_cuenta'] = codigoCuenta;
+
+    final response = await _http.get(
+      'ledhouse/estado-resultado/summary',
+      params: queryParams,
+    );
+
+    if (response != null) {
+      return response as Map<String, dynamic>;
+    }
+    return {};
+  }
+
+  Future<LedhouseEstadoResultado> storeEstadoResultado(Map<String, dynamic> data) async {
+    final response = await _http.post('ledhouse/estado-resultado', data);
+    return LedhouseEstadoResultado.fromJson(response);
+  }
+
+  Future<Map<String, dynamic>> importEstadoResultado(List<int> fileBytes, String filename) async {
+    final file = http.MultipartFile.fromBytes(
+      'file',
+      fileBytes,
+      filename: filename,
+    );
+
+    final response = await _http.multipart(
+      'ledhouse/estado-resultado/import',
+      files: [file],
+    );
+
+    return response as Map<String, dynamic>;
+  }
+}

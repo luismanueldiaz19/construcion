@@ -39,8 +39,11 @@ import 'modules/nomina/providers/employees_provider.dart';
 import 'modules/nomina/providers/payroll_provider.dart';
 import 'widgets/custom_sidebar.dart';
 import 'modules/nomina/screens/nomina_catalogs_screen.dart';
+import 'modules/led_house/providers/ledhouse_provider.dart';
+import 'modules/led_house/screens/ledhouse_estado_resultado_screen.dart';
+import 'modules/led_house/screens/ledhouse_cuentas_cobrar_screen.dart';
+import 'modules/led_house/screens/ledhouse_cuentas_pagar_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es', null);
@@ -54,6 +57,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UsersProvider()),
         ChangeNotifierProvider(create: (_) => EmployeesProvider()),
         ChangeNotifierProvider(create: (_) => PayrollProvider()),
+        ChangeNotifierProvider(create: (_) => LedhouseProvider()),
       ],
       child: const ConstruccionERP(),
     ),
@@ -180,6 +184,10 @@ class _MainLayoutState extends State<MainLayout> {
     const EmptyScreen('Auditoría de movimientos contables'), // 45
     const EmptyScreen('Exportación a PDF/Excel'), // 46
     const NominaCatalogsScreen(), // 47. Cargos y Departamentos
+    // 11. LED-HOUSE (48-50)
+    const LedhouseEstadoResultadoScreen(), // 48
+    const LedhouseCuentasCobrarScreen(), // 49
+    const LedhouseCuentasPagarScreen(), // 50
   ];
 
   @override
