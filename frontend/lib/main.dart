@@ -41,9 +41,14 @@ import 'widgets/custom_sidebar.dart';
 import 'modules/nomina/screens/nomina_catalogs_screen.dart';
 import 'modules/led_house/providers/ledhouse_provider.dart';
 import 'modules/led_house/screens/ledhouse_estado_resultado_screen.dart';
-import 'modules/led_house/screens/ledhouse_cuentas_cobrar_screen.dart';
-import 'modules/led_house/screens/ledhouse_cuentas_pagar_screen.dart';
+import 'modules/led_house/cxc/screens/cxc_screen.dart';
+import 'modules/led_house/cxp/screens/cxp_screen.dart';
+import 'modules/led_house/cxc/providers/cxc_provider.dart';
+import 'modules/led_house/cxp/providers/cxp_provider.dart';
+import 'modules/led_house/cxc/services/cxc_service.dart';
+import 'modules/led_house/cxp/services/cxp_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es', null);
@@ -58,6 +63,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => EmployeesProvider()),
         ChangeNotifierProvider(create: (_) => PayrollProvider()),
         ChangeNotifierProvider(create: (_) => LedhouseProvider()),
+        ChangeNotifierProvider(create: (_) => CxcProvider(CxcService())),
+        ChangeNotifierProvider(create: (_) => CxpProvider(CxpService())),
       ],
       child: const ConstruccionERP(),
     ),
@@ -186,8 +193,8 @@ class _MainLayoutState extends State<MainLayout> {
     const NominaCatalogsScreen(), // 47. Cargos y Departamentos
     // 11. LED-HOUSE (48-50)
     const LedhouseEstadoResultadoScreen(), // 48
-    const LedhouseCuentasCobrarScreen(), // 49
-    const LedhouseCuentasPagarScreen(), // 50
+    const CxcScreen(), // 49
+    const CxpScreen(), // 50
   ];
 
   @override

@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\AssetCategoryController;
 use App\Http\Controllers\Api\AssetExpenseController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\LedhouseEstadoResultadoController;
+use App\Http\Controllers\Api\LedhouseCxpController;
+use App\Http\Controllers\Api\LedhouseCxcController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -233,5 +235,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/estado-resultado/summary', [LedhouseEstadoResultadoController::class, 'summary']);
         Route::post('/estado-resultado', [LedhouseEstadoResultadoController::class, 'store']);
         Route::post('/estado-resultado/import', [LedhouseEstadoResultadoController::class, 'import']);
+
+        // CXP
+        Route::apiResource('cxp', LedhouseCxpController::class);
+
+        // CXC
+        Route::apiResource('cxc', LedhouseCxcController::class);
+        Route::post('cxc/{cxc}/soporte', [LedhouseCxcController::class, 'addSoporte']);
+        Route::get('cxc/{cxc}/soporte', [LedhouseCxcController::class, 'getSoportes']);
     });
 });

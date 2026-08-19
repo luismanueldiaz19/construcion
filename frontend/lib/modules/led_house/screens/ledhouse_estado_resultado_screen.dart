@@ -111,9 +111,9 @@ class _LedhouseEstadoResultadoScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estado de Resultado - LED-HOUSE'),
-        backgroundColor: const Color(0xFF1A1C1E),
-        foregroundColor: Colors.white,
+        title: const Text('Estado Financiero LED-HOUSE'),
+        backgroundColor: const Color(0xFFFFFFFF),
+        foregroundColor: Colors.black,
       ),
       body: Consumer<LedhouseProvider>(
         builder: (context, provider, child) {
@@ -386,6 +386,23 @@ class _LedhouseEstadoResultadoScreenState
       symbol: '\$',
       decimalDigits: 2,
     );
+
+    double ventas = 0;
+    double costos = 0;
+    double gastos = 0;
+
+    for (var data in provider.pieChartData) {
+      String modulo = data['modulo'].toString().toUpperCase();
+      double amount = double.tryParse(data['total'].toString()) ?? 0;
+
+      if (modulo == 'VENTAS') ventas = amount;
+      if (modulo == 'COSTOS') costos = amount;
+      if (modulo == 'GASTOS') gastos = amount;
+    }
+
+    double utilidad = ventas - costos - gastos;
+    double margenUtilidad = ventas > 0 ? (utilidad / ventas) * 100 : 0;
+
     return Card(
       color: const Color(0xFF1A1C1E),
       child: Padding(
@@ -393,17 +410,60 @@ class _LedhouseEstadoResultadoScreenState
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Total Generado',
-              style: TextStyle(color: Colors.white70, fontSize: 18),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ventas',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                Text(
+                  currencyFormatter.format(ventas),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              currencyFormatter.format(provider.total),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'Utilidad Neta',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                Text(
+                  currencyFormatter.format(utilidad),
+                  style: TextStyle(
+                    color: utilidad >= 0
+                        ? Colors.greenAccent
+                        : Colors.redAccent,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'Margen de Util.',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                Text(
+                  '${margenUtilidad.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                    color: margenUtilidad >= 0
+                        ? Colors.greenAccent
+                        : Colors.redAccent,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
