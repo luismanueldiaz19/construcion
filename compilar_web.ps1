@@ -36,10 +36,13 @@ foreach ($folder in $foldersToClean) {
 # 4. Copiar todos los archivos de build/web a backend/public
 Copy-Item -Path "$buildWebDir\*" -Destination $publicDir -Recurse -Force
 
-# 5. Copiar index.html a app.blade.php para que Laravel lo sirva como vista
+# 5. Copiar index.html a app.blade.php y hacer que Laravel maneje el base href dinámicamente
 if (Test-Path "$buildWebDir\index.html") {
-    Copy-Item -Path "$buildWebDir\index.html" -Destination $bladeViewPath -Force
-    Write-Host "Se actualizó app.blade.php con el nuevo index.html." -ForegroundColor Green
+    $htmlContent = Get-Content -Path "$buildWebDir\index.html" -Raw
+    # Reemplazamos la ruta estática de Flutter por el asset dinámico de Laravel
+    $htmlContent = $htmlContent -replace '<base href="/">', '<base href="{{ asset(''/'') }}">'
+    Set-Content -Path $bladeViewPath -Value $htmlContent -Force
+    Write-Host "Se actualizó app.blade.php con el nuevo index.html (y base href dinámico)." -ForegroundColor Green
 }
 
 # 6. Borrar index.html del public de Laravel para evitar conflictos con las rutas amigables de Laravel
