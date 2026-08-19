@@ -49,3 +49,8 @@ if (Test-Path $publicIndexHtml) {
 }
 
 Write-Host "¡Proceso terminado con éxito! Listo para hacer git add, commit y push en producción." -ForegroundColor Green
+
+
+
+# powershell -ExecutionPolicy Bypass -File .\compilar_web.ps1
+# toqxih-kAfhyf-xagha6
