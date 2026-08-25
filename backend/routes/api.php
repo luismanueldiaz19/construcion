@@ -231,6 +231,7 @@ Route::prefix('v1')->group(function () {
 
     // ── MÓDULO LED-HOUSE ───────────────────────────────────────────────
     Route::prefix('ledhouse')->group(function () {
+        Route::get('/estado-resultado/pdf', [LedhouseEstadoResultadoController::class, 'generatePdf']);
         Route::get('/estado-resultado', [LedhouseEstadoResultadoController::class, 'index']);
         Route::get('/estado-resultado/summary', [LedhouseEstadoResultadoController::class, 'summary']);
         Route::post('/estado-resultado', [LedhouseEstadoResultadoController::class, 'store']);

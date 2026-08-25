@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/constants.dart';
 import '../../../core/auth_provider.dart';
 import '../providers/ledhouse_provider.dart';
 
@@ -47,38 +49,64 @@ class _LedhouseEstadoResultadoScreenState
     setState(() {
       _selectedRange = range;
       final now = DateTime.now();
-      switch (range) {
-        case 'Este mes':
-          _startDate = DateFormat('yyyy-MM-01').format(now);
-          _endDate = DateFormat(
-            'yyyy-MM-dd',
-          ).format(DateTime(now.year, now.month + 1, 0));
-          break;
-        case 'Mes pasado':
-          final lastMonth = DateTime(now.year, now.month - 1, 1);
-          _startDate = DateFormat('yyyy-MM-01').format(lastMonth);
-          _endDate = DateFormat(
-            'yyyy-MM-dd',
-          ).format(DateTime(lastMonth.year, lastMonth.month + 1, 0));
-          break;
-        case '3 meses':
-          final threeMonthsAgo = DateTime(now.year, now.month - 2, 1);
-          _startDate = DateFormat('yyyy-MM-01').format(threeMonthsAgo);
-          _endDate = DateFormat(
-            'yyyy-MM-dd',
-          ).format(DateTime(now.year, now.month + 1, 0));
-          break;
-        case '6 meses':
-          final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
-          _startDate = DateFormat('yyyy-MM-01').format(sixMonthsAgo);
-          _endDate = DateFormat(
-            'yyyy-MM-dd',
-          ).format(DateTime(now.year, now.month + 1, 0));
-          break;
-        case 'Todo el año':
-          _startDate = DateFormat('yyyy-01-01').format(now);
-          _endDate = DateFormat('yyyy-12-31').format(now);
-          break;
+
+      const meses = [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre',
+      ];
+
+      if (meses.contains(range)) {
+        int monthIndex = meses.indexOf(range) + 1;
+        _startDate = DateFormat(
+          'yyyy-MM-dd',
+        ).format(DateTime(now.year, monthIndex, 1));
+        _endDate = DateFormat(
+          'yyyy-MM-dd',
+        ).format(DateTime(now.year, monthIndex + 1, 0));
+      } else {
+        switch (range) {
+          case 'Este mes':
+            _startDate = DateFormat('yyyy-MM-01').format(now);
+            _endDate = DateFormat(
+              'yyyy-MM-dd',
+            ).format(DateTime(now.year, now.month + 1, 0));
+            break;
+          case 'Mes pasado':
+            final lastMonth = DateTime(now.year, now.month - 1, 1);
+            _startDate = DateFormat('yyyy-MM-01').format(lastMonth);
+            _endDate = DateFormat(
+              'yyyy-MM-dd',
+            ).format(DateTime(lastMonth.year, lastMonth.month + 1, 0));
+            break;
+          case '3 meses':
+            final threeMonthsAgo = DateTime(now.year, now.month - 2, 1);
+            _startDate = DateFormat('yyyy-MM-01').format(threeMonthsAgo);
+            _endDate = DateFormat(
+              'yyyy-MM-dd',
+            ).format(DateTime(now.year, now.month + 1, 0));
+            break;
+          case '6 meses':
+            final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
+            _startDate = DateFormat('yyyy-MM-01').format(sixMonthsAgo);
+            _endDate = DateFormat(
+              'yyyy-MM-dd',
+            ).format(DateTime(now.year, now.month + 1, 0));
+            break;
+          case 'Todo el año':
+            _startDate = DateFormat('yyyy-01-01').format(now);
+            _endDate = DateFormat('yyyy-12-31').format(now);
+            break;
+        }
       }
     });
     _fetchData();
@@ -105,6 +133,46 @@ class _LedhouseEstadoResultadoScreenState
       modulo: modulo,
       codigoCuenta: codigo,
     );
+  }
+
+  Future<void> _downloadPdf() async {
+    final provider = Provider.of<LedhouseProvider>(context, listen: false);
+
+    if (provider.registros.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay registros para generar el reporte.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final modulo = _selectedModuloFilter == 'TODOS'
+        ? ''
+        : _selectedModuloFilter;
+    final codigo = _codigoController.text.trim();
+
+    final queryParams = <String>[];
+    if (_startDate != null) queryParams.add('start_date=$_startDate');
+    if (_endDate != null) queryParams.add('end_date=$_endDate');
+    if (modulo.isNotEmpty) queryParams.add('modulo=$modulo');
+    if (codigo.isNotEmpty) queryParams.add('codigo_cuenta=$codigo');
+
+    final queryString = queryParams.isNotEmpty
+        ? '?${queryParams.join('&')}'
+        : '';
+    final urlStr = '$host/api/v1/ledhouse/estado-resultado/pdf$queryString';
+    final url = Uri.parse(urlStr);
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No se pudo abrir el PDF.')));
+    }
   }
 
   @override
@@ -307,6 +375,26 @@ class _LedhouseEstadoResultadoScreenState
   }
 
   Widget _buildFilters() {
+    final List<String> opcionesFiltro = [
+      'Este mes',
+      'Mes pasado',
+      '3 meses',
+      '6 meses',
+      'Todo el año',
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+
     return Row(
       children: [
         PopupMenuButton<String>(
@@ -315,22 +403,32 @@ class _LedhouseEstadoResultadoScreenState
           onSelected: (range) {
             _applyQuickFilter(range);
           },
-          itemBuilder: (context) =>
-              ['Este mes', 'Mes pasado', '3 meses', '6 meses', 'Todo el año']
-                  .map(
-                    (range) => PopupMenuItem(
-                      value: range,
-                      child: Text(
-                        range,
-                        style: TextStyle(
-                          fontWeight: _selectedRange == range
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
+          itemBuilder: (context) => opcionesFiltro
+              .map(
+                (range) => PopupMenuItem(
+                  value: range,
+                  child: Text(
+                    range,
+                    style: TextStyle(
+                      fontWeight: _selectedRange == range
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color:
+                          [
+                            'Este mes',
+                            'Mes pasado',
+                            '3 meses',
+                            '6 meses',
+                            'Todo el año',
+                          ].contains(range)
+                          ? Colors.black
+                          : Colors
+                                .blueGrey, // Para diferenciar visualmente los meses estáticos
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -376,6 +474,13 @@ class _LedhouseEstadoResultadoScreenState
           icon: const Icon(Icons.refresh),
           tooltip: 'Actualizar',
           style: IconButton.styleFrom(backgroundColor: Colors.blue.shade50),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: _downloadPdf,
+          icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+          tooltip: 'Descargar PDF',
+          style: IconButton.styleFrom(backgroundColor: Colors.red.shade50),
         ),
       ],
     );
@@ -481,203 +586,394 @@ class _LedhouseEstadoResultadoScreenState
       decimalDigits: 2,
     );
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // Procesar datos para el gráfico de barras por mes y pilar
+    final Map<String, Map<String, double>> monthlyData = {};
+    for (var data in provider.barChartData) {
+      String mes = data['mes']?.toString() ?? '';
+      if (mes.isEmpty) continue;
+      String modulo = data['modulo']?.toString().toUpperCase() ?? '';
+      double total = double.tryParse(data['total'].toString()) ?? 0;
+
+      monthlyData.putIfAbsent(
+        mes,
+        () => {'VENTAS': 0.0, 'COSTOS': 0.0, 'GASTOS': 0.0, 'GANANCIA': 0.0},
+      );
+      if (['VENTAS', 'COSTOS', 'GASTOS'].contains(modulo)) {
+        monthlyData[mes]![modulo] = (monthlyData[mes]![modulo] ?? 0) + total;
+      }
+    }
+
+    double maxBarY = 0;
+    monthlyData.forEach((mes, values) {
+      values['GANANCIA'] =
+          (values['VENTAS'] ?? 0) -
+          (values['COSTOS'] ?? 0) -
+          (values['GASTOS'] ?? 0);
+
+      // Encontrar el valor máximo para escalar el gráfico
+      for (var val in values.values) {
+        if (val.abs() > maxBarY) maxBarY = val.abs();
+      }
+    });
+
+    final sortedMonths = monthlyData.keys.toList()..sort();
+
+    return Column(
       children: [
-        Expanded(
-          flex: 2,
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Evolución Mensual',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Evolución Mensual',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildLegendItem(Colors.green, 'Ventas'),
+                          const SizedBox(width: 12),
+                          _buildLegendItem(Colors.orange, 'Costos'),
+                          const SizedBox(width: 12),
+                          _buildLegendItem(Colors.red, 'Gastos'),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 200,
+                        child: BarChart(
+                          BarChartData(
+                            maxY: maxBarY > 0 ? maxBarY * 1.2 : 100,
+                            alignment: BarChartAlignment.spaceAround,
+                            barTouchData: BarTouchData(
+                              enabled: true,
+                              touchTooltipData: BarTouchTooltipData(
+                                getTooltipColor: (group) =>
+                                    Colors.white.withOpacity(0.9),
+                                tooltipPadding: const EdgeInsets.all(8),
+                                tooltipMargin: 8,
+                                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                  String label = '';
+                                  if (rodIndex == 0) label = 'Ventas: ';
+                                  if (rodIndex == 1) label = 'Costos: ';
+                                  if (rodIndex == 2) label = 'Gastos: ';
+
+                                  return BarTooltipItem(
+                                    '$label${currencyFormatter.format(rod.toY)}',
+                                    const TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            titlesData: FlTitlesData(
+                              show: true,
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    if (value.toInt() >= 0 &&
+                                        value.toInt() < sortedMonths.length) {
+                                      String mesStr =
+                                          sortedMonths[value.toInt()];
+                                      final parts = mesStr.split('-');
+                                      if (parts.length == 2) {
+                                        const months = [
+                                          'Ene',
+                                          'Feb',
+                                          'Mar',
+                                          'Abr',
+                                          'May',
+                                          'Jun',
+                                          'Jul',
+                                          'Ago',
+                                          'Sep',
+                                          'Oct',
+                                          'Nov',
+                                          'Dic',
+                                        ];
+                                        int monthIndex =
+                                            int.tryParse(parts[1]) ?? 0;
+                                        if (monthIndex >= 1 &&
+                                            monthIndex <= 12) {
+                                          mesStr = months[monthIndex - 1];
+                                        }
+                                      }
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 8.0,
+                                        ),
+                                        child: Text(
+                                          mesStr,
+                                          style: const TextStyle(fontSize: 10),
+                                        ),
+                                      );
+                                    }
+                                    return const Text('');
+                                  },
+                                  reservedSize: 30,
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 60,
+                                  getTitlesWidget: (value, meta) {
+                                    if (value == 0) return const Text('');
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: 8.0,
+                                      ),
+                                      child: Text(
+                                        currencyFormatter.format(value),
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                            ),
+                            gridData: const FlGridData(show: true),
+                            borderData: FlBorderData(show: false),
+                            barGroups: sortedMonths.asMap().entries.map((
+                              entry,
+                            ) {
+                              int index = entry.key;
+                              var values = monthlyData[entry.value]!;
+                              return BarChartGroupData(
+                                x: index,
+                                barsSpace: 4,
+                                barRods: [
+                                  BarChartRodData(
+                                    toY: values['VENTAS'] ?? 0,
+                                    color: Colors.green,
+                                    width: 8,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  BarChartRodData(
+                                    toY: values['COSTOS'] ?? 0,
+                                    color: Colors.orange,
+                                    width: 8,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  BarChartRodData(
+                                    toY: values['GASTOS'] ?? 0,
+                                    color: Colors.red,
+                                    width: 8,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 200,
-                    child: BarChart(
-                      BarChartData(
-                        maxY: provider.barChartData.isNotEmpty
-                            ? (provider.barChartData
-                                      .map(
-                                        (e) =>
-                                            double.tryParse(
-                                              e['total'].toString(),
-                                            ) ??
-                                            0,
-                                      )
-                                      .reduce((a, b) => a > b ? a : b)) *
-                                  1.2
-                            : 100,
-                        alignment: BarChartAlignment.spaceAround,
-                        barTouchData: BarTouchData(
-                          enabled: false,
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (group) => Colors.transparent,
-                            tooltipPadding: EdgeInsets.zero,
-                            tooltipMargin: 4,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              return BarTooltipItem(
-                                currencyFormatter.format(rod.toY),
-                                const TextStyle(
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 1,
+              child: Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Distribución por Módulo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 200,
+                        child: PieChart(
+                          PieChartData(
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 30,
+                            sections: provider.pieChartData.map((data) {
+                              double total =
+                                  double.tryParse(data['total'].toString()) ??
+                                  0;
+                              return PieChartSectionData(
+                                color: _getColorForModule(data['modulo']),
+                                value: total,
+                                title:
+                                    '${data['modulo']}\n${currencyFormatter.format(total)}',
+                                radius: 60,
+                                titleStyle: const TextStyle(
                                   fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Evolución de Ganancias Neta',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 150,
+                  child: LineChart(
+                    LineChartData(
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          getTooltipColor: (group) =>
+                              Colors.white.withOpacity(0.9),
+                          getTooltipItems: (touchedSpots) {
+                            return touchedSpots.map((spot) {
+                              return LineTooltipItem(
+                                currencyFormatter.format(spot.y),
+                                TextStyle(
+                                  color: spot.y >= 0
+                                      ? Colors.blue.shade700
+                                      : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ),
+                      gridData: const FlGridData(show: true),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 &&
+                                  value.toInt() < sortedMonths.length) {
+                                String mesStr = sortedMonths[value.toInt()];
+                                final parts = mesStr.split('-');
+                                if (parts.length == 2) {
+                                  const months = [
+                                    'Ene',
+                                    'Feb',
+                                    'Mar',
+                                    'Abr',
+                                    'May',
+                                    'Jun',
+                                    'Jul',
+                                    'Ago',
+                                    'Sep',
+                                    'Oct',
+                                    'Nov',
+                                    'Dic',
+                                  ];
+                                  int monthIndex = int.tryParse(parts[1]) ?? 0;
+                                  if (monthIndex >= 1 && monthIndex <= 12) {
+                                    mesStr = months[monthIndex - 1];
+                                  }
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    mesStr,
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                );
+                              }
+                              return const Text('');
+                            },
+                            reservedSize: 30,
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 60,
+                            getTitlesWidget: (value, meta) {
+                              if (value == 0) return const Text('');
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Text(
+                                  currencyFormatter.format(value),
+                                  style: const TextStyle(fontSize: 10),
                                 ),
                               );
                             },
                           ),
                         ),
-                        titlesData: FlTitlesData(
-                          show: true,
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                if (value.toInt() >= 0 &&
-                                    value.toInt() <
-                                        provider.barChartData.length) {
-                                  String mesStr = provider
-                                      .barChartData[value.toInt()]['mes']
-                                      .toString();
-                                  final parts = mesStr.split('-');
-                                  if (parts.length == 2) {
-                                    const months = [
-                                      'Ene',
-                                      'Feb',
-                                      'Mar',
-                                      'Abr',
-                                      'May',
-                                      'Jun',
-                                      'Jul',
-                                      'Ago',
-                                      'Sep',
-                                      'Oct',
-                                      'Nov',
-                                      'Dic',
-                                    ];
-                                    int monthIndex =
-                                        int.tryParse(parts[1]) ?? 0;
-                                    if (monthIndex >= 1 && monthIndex <= 12) {
-                                      mesStr = months[monthIndex - 1];
-                                    }
-                                  }
-
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      mesStr,
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                  );
-                                }
-                                return const Text('');
-                              },
-                              reservedSize: 30,
-                            ),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 60,
-                              getTitlesWidget: (value, meta) {
-                                if (value == 0) return const Text('');
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: Text(
-                                    currencyFormatter.format(value),
-                                    style: const TextStyle(fontSize: 10),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: sortedMonths.asMap().entries.map((entry) {
+                            return FlSpot(
+                              entry.key.toDouble(),
+                              monthlyData[entry.value]!['GANANCIA'] ?? 0,
+                            );
+                          }).toList(),
+                          isCurved: true,
+                          color: Colors.blue,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.blue.withOpacity(0.15),
                           ),
                         ),
-                        gridData: const FlGridData(show: true),
-                        borderData: FlBorderData(show: false),
-                        barGroups: provider.barChartData.asMap().entries.map((
-                          entry,
-                        ) {
-                          int index = entry.key;
-                          double total =
-                              double.tryParse(
-                                entry.value['total'].toString(),
-                              ) ??
-                              0;
-                          return BarChartGroupData(
-                            x: index,
-                            showingTooltipIndicators: [0],
-                            barRods: [
-                              BarChartRodData(
-                                toY: total,
-                                color: const Color(0xFFE31E24),
-                                width: 14,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 1,
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Distribución por Módulo',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 200,
-                    child: PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 30,
-                        sections: provider.pieChartData.map((data) {
-                          double total =
-                              double.tryParse(data['total'].toString()) ?? 0;
-                          return PieChartSectionData(
-                            color: _getColorForModule(data['modulo']),
-                            value: total,
-                            title:
-                                '${data['modulo']}\n${currencyFormatter.format(total)}',
-                            radius: 60,
-                            titleStyle: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -696,6 +992,23 @@ class _LedhouseEstadoResultadoScreenState
       default:
         return Colors.blue;
     }
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
   }
 
   Widget _buildDataTable(LedhouseProvider provider) {

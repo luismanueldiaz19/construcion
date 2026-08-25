@@ -68,13 +68,14 @@ class LedhouseEstadoResultadoController extends Controller
             ->groupBy('modulo')
             ->get();
 
-        // Para el gráfico de barras/líneas: Agrupar por mes/año y sumar monto
+        // Para el gráfico de barras/líneas: Agrupar por mes/año y módulo para sumar monto por pilar
         $barChartQuery = clone $query;
         $barChartData = $barChartQuery->select(
             DB::raw("TO_CHAR(fecha, 'YYYY-MM') as mes"),
+            'modulo',
             DB::raw('SUM(monto) as total')
         )
-        ->groupBy('mes')
+        ->groupBy('mes', 'modulo')
         ->orderBy('mes', 'asc')
         ->get();
 
@@ -83,6 +84,46 @@ class LedhouseEstadoResultadoController extends Controller
             'bar_chart' => $barChartData,
             'total' => $query->sum('monto')
         ]);
+    }
+
+    /**
+     * Generate PDF report.
+     */
+    public function generatePdf(Request $request)
+    {
+        $query = LedhouseEstadoResultado::query();
+
+        // Filtro por fecha (rango)
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+        } elseif ($request->has('start_date')) {
+            $query->where('fecha', '>=', $request->start_date);
+        } elseif ($request->has('end_date')) {
+            $query->where('fecha', '<=', $request->end_date);
+        }
+
+        // Filtro por modulo
+        if ($request->has('modulo') && $request->modulo !== 'TODOS') {
+            $query->where('modulo', $request->modulo);
+        }
+
+        // Filtro por codigo de cuenta (LIKE)
+        if ($request->has('codigo_cuenta')) {
+            $query->where('codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
+        }
+
+        $registros = $query->orderBy('fecha', 'desc')->get();
+        
+        $ventas = $registros->where('modulo', 'VENTAS')->sum('monto');
+        $costos = $registros->where('modulo', 'COSTOS')->sum('monto');
+        $gastos = $registros->where('modulo', 'GASTOS')->sum('monto');
+        $utilidad = $ventas - $costos - $gastos;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.ledhouse_estado_resultado', compact(
+            'registros', 'ventas', 'costos', 'gastos', 'utilidad', 'request'
+        ));
+
+        return $pdf->stream("Estado_Resultado_LEDHOUSE.pdf");
     }
 
     /**
@@ -139,7 +180,13 @@ class LedhouseEstadoResultadoController extends Controller
                 $codigo = trim((string)($row[0] ?? ''));
                 $modulo = trim((string)($row[1] ?? ''));
                 $descripcion = trim((string)($row[2] ?? ''));
-                $monto = trim((string)($row[3] ?? '0'));
+                $montoRaw = trim((string)($row[3] ?? '0'));
+                // Limpiar formato de contabilidad (ej. "( 138,364.40 )" -> "-138364.40") y separadores de miles
+                $montoStr = str_replace([',', ' '], '', $montoRaw);
+                if (preg_match('/^\((.+)\)$/', $montoStr, $matches)) {
+                    $montoStr = '-' . $matches[1];
+                }
+                $monto = $montoStr;
                 
                 // Formatear la fecha
                 $fechaRaw = $row[4] ?? '';
