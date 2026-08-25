@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
 import 'core/auth_provider.dart';
 import 'modules/auth/splash_screen.dart';
+import 'modules/led_house/screens/ledhouse_detalles_screen.dart';
 import 'modules/projects/projects_screen.dart';
 import 'modules/accounting/catalog_screen.dart';
 import 'modules/accounting/journal_screen.dart';
@@ -40,7 +41,6 @@ import 'modules/nomina/providers/payroll_provider.dart';
 import 'widgets/custom_sidebar.dart';
 import 'modules/nomina/screens/nomina_catalogs_screen.dart';
 import 'modules/led_house/providers/ledhouse_provider.dart';
-import 'modules/led_house/screens/ledhouse_estado_resultado_screen.dart';
 import 'modules/led_house/cxc/screens/cxc_screen.dart';
 import 'modules/led_house/cxp/screens/cxp_screen.dart';
 import 'modules/led_house/cxc/providers/cxc_provider.dart';
@@ -192,7 +192,7 @@ class _MainLayoutState extends State<MainLayout> {
     const EmptyScreen('Exportación a PDF/Excel'), // 46
     const NominaCatalogsScreen(), // 47. Cargos y Departamentos
     // 11. LED-HOUSE (48-50)
-    const LedhouseEstadoResultadoScreen(), // 48
+    const LedhouseDetallesScreen(), // 48
     const CxcScreen(), // 49
     const CxpScreen(), // 50
   ];

@@ -53,12 +53,32 @@ class LedhouseService {
     return {};
   }
 
-  Future<LedhouseEstadoResultado> storeEstadoResultado(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> fetchMatrizAnual({int? year}) async {
+    final queryParams = <String, String>{};
+    if (year != null) queryParams['year'] = year.toString();
+
+    final response = await _http.get(
+      'ledhouse/estado-resultado/matriz',
+      params: queryParams,
+    );
+
+    if (response != null) {
+      return response as Map<String, dynamic>;
+    }
+    return {};
+  }
+
+  Future<LedhouseEstadoResultado> storeEstadoResultado(
+    Map<String, dynamic> data,
+  ) async {
     final response = await _http.post('ledhouse/estado-resultado', data);
     return LedhouseEstadoResultado.fromJson(response);
   }
 
-  Future<Map<String, dynamic>> importEstadoResultado(List<int> fileBytes, String filename) async {
+  Future<Map<String, dynamic>> importEstadoResultado(
+    List<int> fileBytes,
+    String filename,
+  ) async {
     final file = http.MultipartFile.fromBytes(
       'file',
       fileBytes,

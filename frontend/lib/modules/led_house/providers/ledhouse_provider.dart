@@ -14,6 +14,10 @@ class LedhouseProvider with ChangeNotifier {
   List<Map<String, dynamic>> _pieChartData = [];
   List<Map<String, dynamic>> _barChartData = [];
 
+  // Matriz Anual
+  Map<String, dynamic> _matrizData = {};
+  bool _isMatrizLoading = false;
+
   List<LedhouseEstadoResultado> get registros => _registros;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -21,6 +25,8 @@ class LedhouseProvider with ChangeNotifier {
   double get total => _total;
   List<Map<String, dynamic>> get pieChartData => _pieChartData;
   List<Map<String, dynamic>> get barChartData => _barChartData;
+  Map<String, dynamic> get matrizData => _matrizData;
+  bool get isMatrizLoading => _isMatrizLoading;
 
   Future<void> fetchEstadoResultados({
     String? startDate,
@@ -78,6 +84,26 @@ class LedhouseProvider with ChangeNotifier {
     }
 
     _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchMatrizAnual({int? year}) async {
+    _isMatrizLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final data = await _service.fetchMatrizAnual(year: year);
+      if (data['matriz'] != null) {
+        _matrizData = Map<String, dynamic>.from(data['matriz']);
+      } else {
+        _matrizData = {};
+      }
+    } catch (e) {
+      _error = e.toString();
+    }
+
+    _isMatrizLoading = false;
     notifyListeners();
   }
 

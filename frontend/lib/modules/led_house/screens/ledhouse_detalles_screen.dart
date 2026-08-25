@@ -8,17 +8,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants.dart';
 import '../../../core/auth_provider.dart';
 import '../providers/ledhouse_provider.dart';
+import 'ledhouse_matriz_widget.dart';
 
-class LedhouseEstadoResultadoScreen extends StatefulWidget {
-  const LedhouseEstadoResultadoScreen({super.key});
+class LedhouseDetallesScreen extends StatefulWidget {
+  const LedhouseDetallesScreen({super.key});
 
   @override
-  State<LedhouseEstadoResultadoScreen> createState() =>
-      _LedhouseEstadoResultadoScreenState();
+  State<LedhouseDetallesScreen> createState() => _LedhouseDetallesScreenState();
 }
 
-class _LedhouseEstadoResultadoScreenState
-    extends State<LedhouseEstadoResultadoScreen> {
+class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
   final TextEditingController _codigoController = TextEditingController();
   final TextEditingController _moduloController = TextEditingController();
 
@@ -26,8 +25,50 @@ class _LedhouseEstadoResultadoScreenState
   String? _endDate;
   String _selectedRange = 'Todo el año';
   String _selectedModuloFilter = 'TODOS';
-
+  final currencyFormatter = NumberFormat.currency(
+    symbol: '\$',
+    decimalDigits: 2,
+  );
   final ScrollController _tableScrollController = ScrollController();
+  int _selectedYear = DateTime.now().year;
+  final ScrollController _verticalController = ScrollController();
+  final ScrollController _horizontalController = ScrollController();
+
+  final List<String> _meses = [
+    'ENERO',
+    'FEBRERO',
+    'MARZO',
+    'ABRIL',
+    'MAYO',
+    'JUNIO',
+    'JULIO',
+    'AGOSTO',
+    'SEPTIEMBRE',
+    'OCTUBRE',
+    'NOVIEMBRE',
+    'DICIEMBRE',
+  ];
+
+  int _getMesesVisibles(Map<String, dynamic> data) {
+    if (_selectedYear < DateTime.now().year) {
+      return 12;
+    }
+    int maxMonth = 1;
+    for (var modulo in data.values) {
+      if (modulo is Map<String, dynamic> && modulo.containsKey('cuentas')) {
+        for (var cuenta in (modulo['cuentas'] as List)) {
+          var meses = cuenta['meses'] as Map<String, dynamic>;
+          meses.forEach((k, v) {
+            if ((double.tryParse(v.toString()) ?? 0) != 0) {
+              int m = int.tryParse(k) ?? 1;
+              if (m > maxMonth) maxMonth = m;
+            }
+          });
+        }
+      }
+    }
+    return maxMonth;
+  }
 
   @override
   void dispose() {
@@ -42,7 +83,15 @@ class _LedhouseEstadoResultadoScreenState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyQuickFilter('Todo el año');
+      _fetchMatriz();
     });
+  }
+
+  void _fetchMatriz() {
+    Provider.of<LedhouseProvider>(
+      context,
+      listen: false,
+    ).fetchMatrizAnual(year: _selectedYear);
   }
 
   void _applyQuickFilter(String range) {
@@ -179,9 +228,22 @@ class _LedhouseEstadoResultadoScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estado Financiero LED-HOUSE'),
+        title: const Text('Estado Financiero LED-HOUSE (Detalles)'),
         backgroundColor: const Color(0xFFFFFFFF),
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LedhouseMatrizWidget(),
+                ),
+              );
+            },
+            icon: Icon(Icons.info),
+          ),
+        ],
       ),
       body: Consumer<LedhouseProvider>(
         builder: (context, provider, child) {
@@ -207,36 +269,497 @@ class _LedhouseEstadoResultadoScreenState
                 _buildSummaryCards(provider),
                 const SizedBox(height: 20),
                 _buildCharts(provider),
-                const SizedBox(height: 20),
-                _buildDataTable(provider),
+
+                SizedBox(
+                  height: 600,
+
+                  child: Consumer<LedhouseProvider>(
+                    builder: (context, provider, child) {
+                      if (provider.isMatrizLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (provider.matrizData.isEmpty) {
+                        return const Center(
+                          child: Text('No hay datos para este año.'),
+                        );
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Card(
+                                elevation: 4,
+                                child: Scrollbar(
+                                  controller: _verticalController,
+                                  thumbVisibility: true,
+                                  child: SingleChildScrollView(
+                                    controller: _verticalController,
+                                    scrollDirection: Axis.vertical,
+                                    child: Scrollbar(
+                                      controller: _horizontalController,
+                                      thumbVisibility: true,
+                                      child: SingleChildScrollView(
+                                        controller: _horizontalController,
+                                        scrollDirection: Axis.horizontal,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              _buildCabeceraPrincipal(
+                                                provider.matrizData,
+                                              ),
+                                              ..._buildModulo(
+                                                provider.matrizData,
+                                                'VENTAS',
+                                              ),
+                                              const SizedBox(height: 10),
+                                              ..._buildModulo(
+                                                provider.matrizData,
+                                                'COSTOS',
+                                              ),
+                                              const SizedBox(height: 10),
+                                              ..._buildModulo(
+                                                provider.matrizData,
+                                                'GASTOS',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           );
         },
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'btnImport',
-            onPressed: _importExcel,
-            backgroundColor: Colors.green,
-            icon: const Icon(Icons.file_upload, color: Colors.white),
-            label: const Text(
-              'Importar Excel',
-              style: TextStyle(color: Colors.white),
+      // floatingActionButton: Column(
+      //   mainAxisAlignment: MainAxisAlignment.end,
+      //   children: [
+      //     FloatingActionButton.extended(
+      //       heroTag: 'btnImport',
+      //       onPressed: _importExcel,
+      //       backgroundColor: Colors.green,
+      //       icon: const Icon(Icons.file_upload, color: Colors.white),
+      //       label: const Text(
+      //         'Importar Excel',
+      //         style: TextStyle(color: Colors.white),
+      //       ),
+      //     ),
+      //     const SizedBox(height: 16),
+      //     FloatingActionButton(
+      //       heroTag: 'btnAdd',
+      //       onPressed: _showAddRegistroDialog,
+      //       backgroundColor: const Color(0xFFE31E24),
+      //       child: const Icon(Icons.add, color: Colors.white),
+      //     ),
+      //   ],
+      // ),
+    );
+  }
+
+  Widget _buildDataTable(LedhouseProvider provider) {
+    if (provider.registros.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Center(child: Text('No hay registros encontrados.')),
+        ),
+      );
+    }
+
+    final currencyFormatter = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 2,
+    );
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Detalle de Registros',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 450),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Scrollbar(
+                thumbVisibility: true,
+                controller: _tableScrollController,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  controller: _tableScrollController,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingTextStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      headingRowColor: WidgetStateProperty.all(
+                        Colors.grey.shade200,
+                      ),
+                      dividerThickness: 0.5,
+                      dataRowMaxHeight: 50,
+                      columns: const [
+                        DataColumn(label: Text('Fecha')),
+                        DataColumn(label: Text('Código')),
+                        DataColumn(label: Text('Módulo')),
+                        DataColumn(label: Text('Descripción')),
+                        DataColumn(label: Text('Monto')),
+                        DataColumn(label: Text('Registrado por')),
+                      ],
+                      rows: provider.registros.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        var r = entry.value;
+                        return DataRow(
+                          color: WidgetStateProperty.resolveWith<Color?>((
+                            Set<WidgetState> states,
+                          ) {
+                            if (states.contains(WidgetState.hovered)) {
+                              return Colors.blue.withOpacity(0.1);
+                            }
+                            return index.isEven
+                                ? Colors.white
+                                : Colors.grey.shade50;
+                          }),
+                          cells: [
+                            DataCell(Text(r.fecha)),
+                            DataCell(Text(r.codigoCuenta)),
+                            DataCell(
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getColorForModule(
+                                    r.modulo,
+                                  ).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  r.modulo,
+                                  style: TextStyle(
+                                    color: _getColorForModule(r.modulo),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(r.descripcionDeCuenta)),
+                            DataCell(
+                              Text(
+                                currencyFormatter.format(r.monto),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(r.registedBy ?? 'N/A')),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatoMontoCorta(double monto) {
+    if (monto >= 1000000) {
+      return '\$${(monto / 1000000).toStringAsFixed(1)}M';
+    } else if (monto >= 1000) {
+      return '\$${(monto / 1000).toStringAsFixed(1)}K';
+    }
+    return '\$${monto.toStringAsFixed(0)}';
+  }
+
+  Widget _buildSummaryRow(
+    String label,
+    double value,
+    Color color, {
+    bool isPercentage = false,
+    bool isBold = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: isBold ? 14 : 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'btnAdd',
-            onPressed: _showAddRegistroDialog,
-            backgroundColor: const Color(0xFFE31E24),
-            child: const Icon(Icons.add, color: Colors.white),
+        ),
+        Text(
+          isPercentage
+              ? '${value.toStringAsFixed(2)}%'
+              : currencyFormatter.format(value),
+          style: TextStyle(
+            color: color,
+            fontSize: isBold ? 16 : 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCabeceraPrincipal(Map<String, dynamic> data) {
+    int mesesVisibles = _getMesesVisibles(data);
+    return Container(
+      color: Colors.white,
+      child: Row(
+        children: [
+          _buildCell('Código Cuenta', width: 60, isHeader: true),
+          _buildCell('Descripción de la Cuenta', width: 200, isHeader: true),
+          ..._meses
+              .take(mesesVisibles)
+              .map((mes) => _buildCell(mes, width: 80, isHeader: true)),
+          _buildCell(
+            'TOTAL ANUAL',
+            width: 90,
+            isHeader: true,
+            color: Colors.grey.shade300,
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildModulo(Map<String, dynamic> data, String moduloNombre) {
+    if (!data.containsKey(moduloNombre)) {
+      return [];
+    }
+
+    final moduloData = data[moduloNombre];
+    final cuentas = moduloData['cuentas'] as List;
+    final subtotales = moduloData['subtotales'] as Map<String, dynamic>;
+    final totalAnualModulo =
+        double.tryParse(moduloData['total_anual_modulo'].toString()) ?? 0;
+
+    List<Widget> filas = [];
+    int mesesVisibles = _getMesesVisibles(data);
+
+    // Fila del módulo (Cabecera Celeste)
+    filas.add(
+      Container(
+        color: Colors.lightBlue,
+        child: Row(
+          children: [
+            _buildCell(
+              '',
+              width: 60,
+              isHeader: true,
+              textColor: Colors.white,
+              color: Colors.lightBlue,
+            ),
+            _buildCell(
+              moduloNombre,
+              width: 200,
+              isHeader: true,
+              textColor: Colors.white,
+              color: Colors.lightBlue,
+            ),
+            ..._meses
+                .take(mesesVisibles)
+                .map(
+                  (mes) => _buildCell(
+                    mes,
+                    width: 80,
+                    isHeader: true,
+                    textColor: Colors.white,
+                    color: Colors.lightBlue,
+                  ),
+                ),
+            _buildCell(
+              'TOTAL',
+              width: 90,
+              isHeader: true,
+              textColor: Colors.white,
+              color: Colors.lightBlue,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Filas de las cuentas
+    for (int i = 0; i < cuentas.length; i++) {
+      var cuenta = cuentas[i];
+      var montosMeses = cuenta['meses'] as Map<String, dynamic>;
+
+      bool isEven = i % 2 == 0;
+      Color rowColor = isEven ? Colors.white : Colors.grey.shade50;
+
+      filas.add(
+        Container(
+          color: rowColor,
+          child: Row(
+            children: [
+              _buildCell(cuenta['codigo'].toString(), width: 60),
+              _buildCell(
+                cuenta['descripcion'].toString(),
+                width: 200,
+                alignment: Alignment.centerLeft,
+              ),
+              ...List.generate(mesesVisibles, (index) {
+                int mes = index + 1;
+                double monto =
+                    double.tryParse(
+                      montosMeses[mes.toString()]?.toString() ?? '0',
+                    ) ??
+                    0;
+                return _buildCell(
+                  _formatoMonto(monto),
+                  width: 80,
+                  alignment: Alignment.centerRight,
+                );
+              }),
+              _buildCell(
+                _formatoMonto(
+                  double.tryParse(cuenta['total_anual'].toString()) ?? 0,
+                ),
+                width: 90,
+                alignment: Alignment.centerRight,
+                isBold: true,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Fila de SUBTOTAL
+    filas.add(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Colors.black, width: 1.5),
+            bottom: BorderSide(color: Colors.black, width: 1.5),
+          ),
+        ),
+        child: Row(
+          children: [
+            _buildCell('', width: 60, isBold: true),
+            _buildCell(
+              'SUBTOTAL',
+              width: 200,
+              alignment: Alignment.centerLeft,
+              isBold: true,
+            ),
+            ...List.generate(mesesVisibles, (index) {
+              int mes = index + 1;
+              double monto =
+                  double.tryParse(
+                    subtotales[mes.toString()]?.toString() ?? '0',
+                  ) ??
+                  0;
+              return _buildCell(
+                _formatoMonto(monto),
+                width: 80,
+                alignment: Alignment.centerRight,
+                isBold: true,
+              );
+            }),
+            _buildCell(
+              _formatoMonto(totalAnualModulo),
+              width: 90,
+              alignment: Alignment.centerRight,
+              isBold: true,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return filas;
+  }
+
+  Widget _buildCell(
+    String text, {
+    required double width,
+    bool isHeader = false,
+    Alignment alignment = Alignment.center,
+    Color? color,
+    Color? textColor,
+    bool isBold = false,
+  }) {
+    return Container(
+      width: width,
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(color: Colors.grey.shade400, width: 0.5),
+      ),
+      alignment: alignment,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: (isHeader || isBold)
+              ? FontWeight.bold
+              : FontWeight.normal,
+          fontSize: isHeader ? 10 : 9.5,
+          color: textColor ?? Colors.black,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Color _getColorForModule(String modulo) {
+    switch (modulo.toUpperCase()) {
+      case 'VENTAS':
+        return Colors.green;
+      case 'COSTOS':
+        return Colors.orange;
+      case 'GASTOS':
+        return Colors.red;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  String _formatoMonto(double monto) {
+    if (monto == 0) return '';
+    if (monto < 0) {
+      return '(\$ ${currencyFormatter.format(monto.abs()).replaceAll('\$', '')})';
+    }
+    return currencyFormatter.format(monto);
   }
 
   void _showAddRegistroDialog() {
@@ -618,6 +1141,21 @@ class _LedhouseEstadoResultadoScreenState
 
     final sortedMonths = monthlyData.keys.toList()..sort();
 
+    double ventas = 0;
+    double costos = 0;
+    double gastos = 0;
+
+    for (var data in provider.pieChartData) {
+      String modulo = data['modulo'].toString().toUpperCase();
+      double amount = double.tryParse(data['total'].toString()) ?? 0;
+
+      if (modulo == 'VENTAS') ventas = amount;
+      if (modulo == 'COSTOS') costos = amount;
+      if (modulo == 'GASTOS') gastos = amount;
+    }
+
+    double utilidad = ventas - costos - gastos;
+    double margenUtilidad = ventas > 0 ? (utilidad / ventas) * 100 : 0;
     return Column(
       children: [
         Row(
@@ -805,14 +1343,63 @@ class _LedhouseEstadoResultadoScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Distribución por Módulo',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      Card(
+                        elevation: 4,
+                        color: const Color(0xFF1A1C1E),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Resumen Anual',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildSummaryRow(
+                                'Ventas',
+                                ventas,
+                                Colors.greenAccent,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildSummaryRow(
+                                'Costos',
+                                costos,
+                                Colors.orangeAccent,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildSummaryRow(
+                                'Gastos',
+                                gastos,
+                                Colors.redAccent,
+                              ),
+                              const Divider(color: Colors.white24, height: 24),
+                              _buildSummaryRow(
+                                'Utilidad Neta',
+                                utilidad,
+                                utilidad >= 0
+                                    ? Colors.greenAccent
+                                    : Colors.redAccent,
+                                isBold: true,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildSummaryRow(
+                                'Margen',
+                                margenUtilidad,
+                                utilidad >= 0
+                                    ? Colors.greenAccent
+                                    : Colors.redAccent,
+                                isPercentage: true,
+                                isBold: true,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 20),
                       SizedBox(
                         height: 200,
                         child: PieChart(
@@ -861,31 +1448,28 @@ class _LedhouseEstadoResultadoScreenState
                 const SizedBox(height: 20),
                 SizedBox(
                   height: 150,
-                  child: LineChart(
-                    LineChartData(
-                      lineTouchData: LineTouchData(
-                        touchTooltipData: LineTouchTooltipData(
-                          getTooltipColor: (group) =>
-                              Colors.white.withOpacity(0.9),
-                          getTooltipItems: (touchedSpots) {
-                            return touchedSpots.map((spot) {
-                              return LineTooltipItem(
-                                currencyFormatter.format(spot.y),
-                                TextStyle(
-                                  color: spot.y >= 0
-                                      ? Colors.blue.shade700
-                                      : Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              );
-                            }).toList();
-                          },
-                        ),
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey.shade300,
+                            strokeWidth: 1,
+                            dashArray: [5, 5],
+                          );
+                        },
                       ),
-                      gridData: const FlGridData(show: true),
                       titlesData: FlTitlesData(
                         show: true,
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
@@ -924,52 +1508,55 @@ class _LedhouseEstadoResultadoScreenState
                               }
                               return const Text('');
                             },
-                            reservedSize: 30,
                           ),
                         ),
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 60,
+                            reservedSize: 40,
                             getTitlesWidget: (value, meta) {
                               if (value == 0) return const Text('');
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Text(
-                                  currencyFormatter.format(value),
-                                  style: const TextStyle(fontSize: 10),
-                                ),
+                              return Text(
+                                _formatoMontoCorta(value),
+                                style: const TextStyle(fontSize: 10),
                               );
                             },
                           ),
                         ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
                       ),
                       borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: sortedMonths.asMap().entries.map((entry) {
-                            return FlSpot(
-                              entry.key.toDouble(),
-                              monthlyData[entry.value]!['GANANCIA'] ?? 0,
+                      barTouchData: BarTouchData(
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipColor: (group) =>
+                              Colors.white.withOpacity(0.9),
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                            return BarTooltipItem(
+                              currencyFormatter.format(rod.toY),
+                              TextStyle(
+                                color: rod.toY >= 0
+                                    ? Colors.blue.shade700
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             );
-                          }).toList(),
-                          isCurved: true,
-                          color: Colors.blue,
-                          barWidth: 3,
-                          isStrokeCapRound: true,
-                          dotData: const FlDotData(show: true),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.blue.withOpacity(0.15),
-                          ),
+                          },
                         ),
-                      ],
+                      ),
+                      barGroups: sortedMonths.asMap().entries.map((entry) {
+                        double val = monthlyData[entry.value]!['GANANCIA'] ?? 0;
+                        return BarChartGroupData(
+                          x: entry.key,
+                          barRods: [
+                            BarChartRodData(
+                              toY: val,
+                              color: val >= 0 ? Colors.blue : Colors.red,
+                              width: 16,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
@@ -979,19 +1566,6 @@ class _LedhouseEstadoResultadoScreenState
         ),
       ],
     );
-  }
-
-  Color _getColorForModule(String modulo) {
-    switch (modulo.toUpperCase()) {
-      case 'VENTAS':
-        return Colors.green;
-      case 'COSTOS':
-        return Colors.orange;
-      case 'GASTOS':
-        return Colors.red;
-      default:
-        return Colors.blue;
-    }
   }
 
   Widget _buildLegendItem(Color color, String label) {
@@ -1010,128 +1584,9 @@ class _LedhouseEstadoResultadoScreenState
       ],
     );
   }
-
-  Widget _buildDataTable(LedhouseProvider provider) {
-    if (provider.registros.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Center(child: Text('No hay registros encontrados.')),
-        ),
-      );
-    }
-
-    final currencyFormatter = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: 2,
-    );
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Detalle de Registros',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 450),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Scrollbar(
-                thumbVisibility: true,
-                controller: _tableScrollController,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  controller: _tableScrollController,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      headingRowColor: WidgetStateProperty.all(
-                        Colors.grey.shade200,
-                      ),
-                      dividerThickness: 0.5,
-                      dataRowMaxHeight: 50,
-                      columns: const [
-                        DataColumn(label: Text('Fecha')),
-                        DataColumn(label: Text('Código')),
-                        DataColumn(label: Text('Módulo')),
-                        DataColumn(label: Text('Descripción')),
-                        DataColumn(label: Text('Monto')),
-                        DataColumn(label: Text('Registrado por')),
-                      ],
-                      rows: provider.registros.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        var r = entry.value;
-                        return DataRow(
-                          color: WidgetStateProperty.resolveWith<Color?>((
-                            Set<WidgetState> states,
-                          ) {
-                            if (states.contains(WidgetState.hovered)) {
-                              return Colors.blue.withOpacity(0.1);
-                            }
-                            return index.isEven
-                                ? Colors.white
-                                : Colors.grey.shade50;
-                          }),
-                          cells: [
-                            DataCell(Text(r.fecha)),
-                            DataCell(Text(r.codigoCuenta)),
-                            DataCell(
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getColorForModule(
-                                    r.modulo,
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  r.modulo,
-                                  style: TextStyle(
-                                    color: _getColorForModule(r.modulo),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            DataCell(Text(r.descripcionDeCuenta)),
-                            DataCell(
-                              Text(
-                                currencyFormatter.format(r.monto),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            DataCell(Text(r.registedBy ?? 'N/A')),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
+
+final currencyFormatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
 class _AddRegistroDialog extends StatefulWidget {
   const _AddRegistroDialog();

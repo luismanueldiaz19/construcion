@@ -127,6 +127,82 @@ class LedhouseEstadoResultadoController extends Controller
     }
 
     /**
+     * Genera la matriz (pivote) anual para el reporte gerencial.
+     */
+    public function matriz(Request $request)
+    {
+        $year = $request->query('year', date('Y'));
+
+        // Obtener todos los registros del año solicitado
+        $registros = LedhouseEstadoResultado::whereYear('fecha', $year)->get();
+
+        $matriz = [];
+
+        foreach ($registros as $reg) {
+            $modulo = strtoupper($reg->modulo); // ej. VENTAS
+            $codigo = $reg->codigo_cuenta;
+            $mes = (int) date('n', strtotime($reg->fecha)); // 1 a 12
+
+            if (!isset($matriz[$modulo])) {
+                $matriz[$modulo] = [
+                    'cuentas' => [],
+                    'subtotales' => array_fill(1, 12, 0),
+                    'total_anual_modulo' => 0
+                ];
+            }
+
+            if (!isset($matriz[$modulo]['cuentas'][$codigo])) {
+                $matriz[$modulo]['cuentas'][$codigo] = [
+                    'descripcion' => $reg->descripcion_de_cuenta,
+                    'meses' => array_fill(1, 12, 0),
+                    'total_anual' => 0
+                ];
+            }
+
+            // Sumar montos
+            $matriz[$modulo]['cuentas'][$codigo]['meses'][$mes] += $reg->monto;
+            $matriz[$modulo]['cuentas'][$codigo]['total_anual'] += $reg->monto;
+
+            // Subtotales del módulo
+            $matriz[$modulo]['subtotales'][$mes] += $reg->monto;
+            $matriz[$modulo]['total_anual_modulo'] += $reg->monto;
+        }
+
+        // Convertir las cuentas asociativas a arreglos secuenciales para que flutter las itere más fácil si quiere
+        // o dejarlo como objeto. Mejor dejamos 'cuentas' como un objeto map para que sea más fácil de leer, o un array de objetos.
+        $resultado = [];
+        foreach (['VENTAS', 'COSTOS', 'GASTOS'] as $modOpcional) {
+            if (isset($matriz[$modOpcional])) {
+                $cuentasList = [];
+                foreach ($matriz[$modOpcional]['cuentas'] as $cod => $data) {
+                    $cuentasList[] = [
+                        'codigo' => $cod,
+                        'descripcion' => $data['descripcion'],
+                        'meses' => $data['meses'],
+                        'total_anual' => $data['total_anual']
+                    ];
+                }
+                
+                // Ordenar cuentas por código
+                usort($cuentasList, function($a, $b) {
+                    return strcmp($a['codigo'], $b['codigo']);
+                });
+
+                $resultado[$modOpcional] = [
+                    'cuentas' => $cuentasList,
+                    'subtotales' => $matriz[$modOpcional]['subtotales'],
+                    'total_anual_modulo' => $matriz[$modOpcional]['total_anual_modulo']
+                ];
+            }
+        }
+
+        return response()->json([
+            'year' => $year,
+            'matriz' => $resultado
+        ]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
