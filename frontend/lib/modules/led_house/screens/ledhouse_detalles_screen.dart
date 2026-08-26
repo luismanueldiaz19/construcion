@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants.dart';
-import '../../../core/auth_provider.dart';
 import '../providers/ledhouse_provider.dart';
-import 'ledhouse_matriz_widget.dart';
+import '../componentes/ganancia_neta_chart_widget.dart';
+import '../componentes/evolucion_mensual_chart_widget.dart';
+import '../componentes/resumen_anual_widget.dart';
+import '../componentes/add_registro_dialog_widget.dart';
+import '../componentes/reporte_por_cuentas_widget.dart';
+import 'ledhouse_detalles_cuentas.dart';
 
 class LedhouseDetallesScreen extends StatefulWidget {
   const LedhouseDetallesScreen({super.key});
@@ -29,52 +31,14 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
     symbol: '\$',
     decimalDigits: 2,
   );
-  final ScrollController _tableScrollController = ScrollController();
-  int _selectedYear = DateTime.now().year;
-  final ScrollController _verticalController = ScrollController();
-  final ScrollController _horizontalController = ScrollController();
-
-  final List<String> _meses = [
-    'ENERO',
-    'FEBRERO',
-    'MARZO',
-    'ABRIL',
-    'MAYO',
-    'JUNIO',
-    'JULIO',
-    'AGOSTO',
-    'SEPTIEMBRE',
-    'OCTUBRE',
-    'NOVIEMBRE',
-    'DICIEMBRE',
-  ];
-
-  int _getMesesVisibles(Map<String, dynamic> data) {
-    if (_selectedYear < DateTime.now().year) {
-      return 12;
-    }
-    int maxMonth = 1;
-    for (var modulo in data.values) {
-      if (modulo is Map<String, dynamic> && modulo.containsKey('cuentas')) {
-        for (var cuenta in (modulo['cuentas'] as List)) {
-          var meses = cuenta['meses'] as Map<String, dynamic>;
-          meses.forEach((k, v) {
-            if ((double.tryParse(v.toString()) ?? 0) != 0) {
-              int m = int.tryParse(k) ?? 1;
-              if (m > maxMonth) maxMonth = m;
-            }
-          });
-        }
-      }
-    }
-    return maxMonth;
-  }
+  // final ScrollController _tableScrollController = ScrollController();
+  final int _selectedYear = DateTime.now().year;
 
   @override
   void dispose() {
     _codigoController.dispose();
     _moduloController.dispose();
-    _tableScrollController.dispose();
+    // _tableScrollController.dispose();
     super.dispose();
   }
 
@@ -184,65 +148,33 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
     );
   }
 
-  Future<void> _downloadPdf() async {
-    final provider = Provider.of<LedhouseProvider>(context, listen: false);
-
-    if (provider.registros.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay registros para generar el reporte.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final modulo = _selectedModuloFilter == 'TODOS'
-        ? ''
-        : _selectedModuloFilter;
-    final codigo = _codigoController.text.trim();
-
-    final queryParams = <String>[];
-    if (_startDate != null) queryParams.add('start_date=$_startDate');
-    if (_endDate != null) queryParams.add('end_date=$_endDate');
-    if (modulo.isNotEmpty) queryParams.add('modulo=$modulo');
-    if (codigo.isNotEmpty) queryParams.add('codigo_cuenta=$codigo');
-
-    final queryString = queryParams.isNotEmpty
-        ? '?${queryParams.join('&')}'
-        : '';
-    final urlStr = '$host/api/v1/ledhouse/estado-resultado/pdf$queryString';
-    final url = Uri.parse(urlStr);
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No se pudo abrir el PDF.')));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estado Financiero LED-HOUSE (Detalles)'),
+        title: const Text('Estado Financiero LED-HOUSE'),
         backgroundColor: const Color(0xFFFFFFFF),
         foregroundColor: Colors.black,
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LedhouseMatrizWidget(),
-                ),
-              );
-            },
-            icon: Icon(Icons.info),
+            onPressed: _fetchData,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Actualizar',
           ),
+
+          IconButton(
+            tooltip: 'Añadir Registro',
+            onPressed: _showAddRegistroDialog,
+            icon: const Icon(Icons.add_circle_outline),
+            color: const Color(0xFFE31E24), // Rojo
+          ),
+          IconButton(
+            tooltip: 'Importar Excel',
+            onPressed: _importExcel,
+            icon: const Icon(Icons.file_upload),
+            color: Colors.green, // Verde
+          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: Consumer<LedhouseProvider>(
@@ -250,14 +182,19 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
           if (provider.isLoading && provider.registros.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (provider.isMatrizLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (provider.matrizData.isEmpty) {
+            return const Center(child: Text('No hay datos para este año.'));
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildFilters(),
-                const SizedBox(height: 20),
                 if (provider.error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 20),
@@ -266,82 +203,14 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   ),
-                _buildSummaryCards(provider),
-                const SizedBox(height: 20),
+
                 _buildCharts(provider),
-
                 SizedBox(
-                  height: 600,
-
-                  child: Consumer<LedhouseProvider>(
-                    builder: (context, provider, child) {
-                      if (provider.isMatrizLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (provider.matrizData.isEmpty) {
-                        return const Center(
-                          child: Text('No hay datos para este año.'),
-                        );
-                      }
-
-                      return Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Card(
-                                elevation: 4,
-                                child: Scrollbar(
-                                  controller: _verticalController,
-                                  thumbVisibility: true,
-                                  child: SingleChildScrollView(
-                                    controller: _verticalController,
-                                    scrollDirection: Axis.vertical,
-                                    child: Scrollbar(
-                                      controller: _horizontalController,
-                                      thumbVisibility: true,
-                                      child: SingleChildScrollView(
-                                        controller: _horizontalController,
-                                        scrollDirection: Axis.horizontal,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              _buildCabeceraPrincipal(
-                                                provider.matrizData,
-                                              ),
-                                              ..._buildModulo(
-                                                provider.matrizData,
-                                                'VENTAS',
-                                              ),
-                                              const SizedBox(height: 10),
-                                              ..._buildModulo(
-                                                provider.matrizData,
-                                                'COSTOS',
-                                              ),
-                                              const SizedBox(height: 10),
-                                              ..._buildModulo(
-                                                provider.matrizData,
-                                                'GASTOS',
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                  height: 1000,
+                  child: ReportePorCuentasWidget(
+                    matrizData: provider.matrizData,
+                    selectedYear: _selectedYear,
+                    currencyFormatter: currencyFormatter,
                   ),
                 ),
               ],
@@ -349,39 +218,12 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
           );
         },
       ),
-      // floatingActionButton: Column(
-      //   mainAxisAlignment: MainAxisAlignment.end,
-      //   children: [
-      //     FloatingActionButton.extended(
-      //       heroTag: 'btnImport',
-      //       onPressed: _importExcel,
-      //       backgroundColor: Colors.green,
-      //       icon: const Icon(Icons.file_upload, color: Colors.white),
-      //       label: const Text(
-      //         'Importar Excel',
-      //         style: TextStyle(color: Colors.white),
-      //       ),
-      //     ),
-      //     const SizedBox(height: 16),
-      //     FloatingActionButton(
-      //       heroTag: 'btnAdd',
-      //       onPressed: _showAddRegistroDialog,
-      //       backgroundColor: const Color(0xFFE31E24),
-      //       child: const Icon(Icons.add, color: Colors.white),
-      //     ),
-      //   ],
-      // ),
     );
   }
 
-  Widget _buildDataTable(LedhouseProvider provider) {
-    if (provider.registros.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Center(child: Text('No hay registros encontrados.')),
-        ),
-      );
+  Widget _buildCharts(LedhouseProvider provider) {
+    if (provider.barChartData.isEmpty && provider.pieChartData.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     final currencyFormatter = NumberFormat.currency(
@@ -389,383 +231,97 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
       decimalDigits: 2,
     );
 
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Detalle de Registros',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 450),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Scrollbar(
-                thumbVisibility: true,
-                controller: _tableScrollController,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  controller: _tableScrollController,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      headingRowColor: WidgetStateProperty.all(
-                        Colors.grey.shade200,
-                      ),
-                      dividerThickness: 0.5,
-                      dataRowMaxHeight: 50,
-                      columns: const [
-                        DataColumn(label: Text('Fecha')),
-                        DataColumn(label: Text('Código')),
-                        DataColumn(label: Text('Módulo')),
-                        DataColumn(label: Text('Descripción')),
-                        DataColumn(label: Text('Monto')),
-                        DataColumn(label: Text('Registrado por')),
-                      ],
-                      rows: provider.registros.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        var r = entry.value;
-                        return DataRow(
-                          color: WidgetStateProperty.resolveWith<Color?>((
-                            Set<WidgetState> states,
-                          ) {
-                            if (states.contains(WidgetState.hovered)) {
-                              return Colors.blue.withOpacity(0.1);
-                            }
-                            return index.isEven
-                                ? Colors.white
-                                : Colors.grey.shade50;
-                          }),
-                          cells: [
-                            DataCell(Text(r.fecha)),
-                            DataCell(Text(r.codigoCuenta)),
-                            DataCell(
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getColorForModule(
-                                    r.modulo,
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  r.modulo,
-                                  style: TextStyle(
-                                    color: _getColorForModule(r.modulo),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            DataCell(Text(r.descripcionDeCuenta)),
-                            DataCell(
-                              Text(
-                                currencyFormatter.format(r.monto),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            DataCell(Text(r.registedBy ?? 'N/A')),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    // Procesar datos para el gráfico de barras por mes y pilar
+    final Map<String, Map<String, double>> monthlyData = {};
+    for (var data in provider.barChartData) {
+      String mes = data['mes']?.toString() ?? '';
+      if (mes.isEmpty) continue;
+      String modulo = data['modulo']?.toString().toUpperCase() ?? '';
+      double total = double.tryParse(data['total'].toString()) ?? 0;
 
-  String _formatoMontoCorta(double monto) {
-    if (monto >= 1000000) {
-      return '\$${(monto / 1000000).toStringAsFixed(1)}M';
-    } else if (monto >= 1000) {
-      return '\$${(monto / 1000).toStringAsFixed(1)}K';
+      monthlyData.putIfAbsent(
+        mes,
+        () => {'VENTAS': 0.0, 'COSTOS': 0.0, 'GASTOS': 0.0, 'GANANCIA': 0.0},
+      );
+      if (['VENTAS', 'COSTOS', 'GASTOS'].contains(modulo)) {
+        monthlyData[mes]![modulo] = (monthlyData[mes]![modulo] ?? 0) + total;
+      }
     }
-    return '\$${monto.toStringAsFixed(0)}';
-  }
 
-  Widget _buildSummaryRow(
-    String label,
-    double value,
-    Color color, {
-    bool isPercentage = false,
-    bool isBold = false,
-  }) {
+    double maxBarY = 0;
+    monthlyData.forEach((mes, values) {
+      values['GANANCIA'] =
+          (values['VENTAS'] ?? 0) -
+          (values['COSTOS'] ?? 0) -
+          (values['GASTOS'] ?? 0);
+
+      // Encontrar el valor máximo para escalar el gráfico
+      for (var val in values.values) {
+        if (val.abs() > maxBarY) maxBarY = val.abs();
+      }
+    });
+
+    final sortedMonths = monthlyData.keys.toList()..sort();
+
+    double ventas = 0;
+    double costos = 0;
+    double gastos = 0;
+
+    for (var data in provider.pieChartData) {
+      String modulo = data['modulo'].toString().toUpperCase();
+      double amount = double.tryParse(data['total'].toString()) ?? 0;
+
+      if (modulo == 'VENTAS') ventas = amount;
+      if (modulo == 'COSTOS') costos = amount;
+      if (modulo == 'GASTOS') gastos = amount;
+    }
+
+    double utilidad = ventas - costos - gastos;
+    double margenUtilidad = ventas > 0 ? (utilidad / ventas) * 100 : 0;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: isBold ? 14 : 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: [
+              EvolucionMensualChartWidget(
+                monthlyData: monthlyData,
+                sortedMonths: sortedMonths,
+                maxBarY: maxBarY,
+                currencyFormatter: currencyFormatter,
+              ),
+
+              const SizedBox(height: 16),
+              GananciaNetaChartWidget(
+                monthlyData: monthlyData,
+                sortedMonths: sortedMonths,
+                currencyFormatter: currencyFormatter,
+              ),
+            ],
           ),
         ),
-        Text(
-          isPercentage
-              ? '${value.toStringAsFixed(2)}%'
-              : currencyFormatter.format(value),
-          style: TextStyle(
-            color: color,
-            fontSize: isBold ? 16 : 14,
-            fontWeight: FontWeight.bold,
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 1,
+          child: ResumenAnualWidget(
+            ventas: ventas,
+            costos: costos,
+            gastos: gastos,
+            utilidad: utilidad,
+            margenUtilidad: margenUtilidad,
+            pieChartData: provider.pieChartData,
+            currencyFormatter: currencyFormatter,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCabeceraPrincipal(Map<String, dynamic> data) {
-    int mesesVisibles = _getMesesVisibles(data);
-    return Container(
-      color: Colors.white,
-      child: Row(
-        children: [
-          _buildCell('Código Cuenta', width: 60, isHeader: true),
-          _buildCell('Descripción de la Cuenta', width: 200, isHeader: true),
-          ..._meses
-              .take(mesesVisibles)
-              .map((mes) => _buildCell(mes, width: 80, isHeader: true)),
-          _buildCell(
-            'TOTAL ANUAL',
-            width: 90,
-            isHeader: true,
-            color: Colors.grey.shade300,
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildModulo(Map<String, dynamic> data, String moduloNombre) {
-    if (!data.containsKey(moduloNombre)) {
-      return [];
-    }
-
-    final moduloData = data[moduloNombre];
-    final cuentas = moduloData['cuentas'] as List;
-    final subtotales = moduloData['subtotales'] as Map<String, dynamic>;
-    final totalAnualModulo =
-        double.tryParse(moduloData['total_anual_modulo'].toString()) ?? 0;
-
-    List<Widget> filas = [];
-    int mesesVisibles = _getMesesVisibles(data);
-
-    // Fila del módulo (Cabecera Celeste)
-    filas.add(
-      Container(
-        color: Colors.lightBlue,
-        child: Row(
-          children: [
-            _buildCell(
-              '',
-              width: 60,
-              isHeader: true,
-              textColor: Colors.white,
-              color: Colors.lightBlue,
-            ),
-            _buildCell(
-              moduloNombre,
-              width: 200,
-              isHeader: true,
-              textColor: Colors.white,
-              color: Colors.lightBlue,
-            ),
-            ..._meses
-                .take(mesesVisibles)
-                .map(
-                  (mes) => _buildCell(
-                    mes,
-                    width: 80,
-                    isHeader: true,
-                    textColor: Colors.white,
-                    color: Colors.lightBlue,
-                  ),
-                ),
-            _buildCell(
-              'TOTAL',
-              width: 90,
-              isHeader: true,
-              textColor: Colors.white,
-              color: Colors.lightBlue,
-            ),
-          ],
-        ),
-      ),
-    );
-
-    // Filas de las cuentas
-    for (int i = 0; i < cuentas.length; i++) {
-      var cuenta = cuentas[i];
-      var montosMeses = cuenta['meses'] as Map<String, dynamic>;
-
-      bool isEven = i % 2 == 0;
-      Color rowColor = isEven ? Colors.white : Colors.grey.shade50;
-
-      filas.add(
-        Container(
-          color: rowColor,
-          child: Row(
-            children: [
-              _buildCell(cuenta['codigo'].toString(), width: 60),
-              _buildCell(
-                cuenta['descripcion'].toString(),
-                width: 200,
-                alignment: Alignment.centerLeft,
-              ),
-              ...List.generate(mesesVisibles, (index) {
-                int mes = index + 1;
-                double monto =
-                    double.tryParse(
-                      montosMeses[mes.toString()]?.toString() ?? '0',
-                    ) ??
-                    0;
-                return _buildCell(
-                  _formatoMonto(monto),
-                  width: 80,
-                  alignment: Alignment.centerRight,
-                );
-              }),
-              _buildCell(
-                _formatoMonto(
-                  double.tryParse(cuenta['total_anual'].toString()) ?? 0,
-                ),
-                width: 90,
-                alignment: Alignment.centerRight,
-                isBold: true,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Fila de SUBTOTAL
-    filas.add(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Colors.black, width: 1.5),
-            bottom: BorderSide(color: Colors.black, width: 1.5),
-          ),
-        ),
-        child: Row(
-          children: [
-            _buildCell('', width: 60, isBold: true),
-            _buildCell(
-              'SUBTOTAL',
-              width: 200,
-              alignment: Alignment.centerLeft,
-              isBold: true,
-            ),
-            ...List.generate(mesesVisibles, (index) {
-              int mes = index + 1;
-              double monto =
-                  double.tryParse(
-                    subtotales[mes.toString()]?.toString() ?? '0',
-                  ) ??
-                  0;
-              return _buildCell(
-                _formatoMonto(monto),
-                width: 80,
-                alignment: Alignment.centerRight,
-                isBold: true,
-              );
-            }),
-            _buildCell(
-              _formatoMonto(totalAnualModulo),
-              width: 90,
-              alignment: Alignment.centerRight,
-              isBold: true,
-            ),
-          ],
-        ),
-      ),
-    );
-
-    return filas;
-  }
-
-  Widget _buildCell(
-    String text, {
-    required double width,
-    bool isHeader = false,
-    Alignment alignment = Alignment.center,
-    Color? color,
-    Color? textColor,
-    bool isBold = false,
-  }) {
-    return Container(
-      width: width,
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-      decoration: BoxDecoration(
-        color: color,
-        border: Border.all(color: Colors.grey.shade400, width: 0.5),
-      ),
-      alignment: alignment,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontWeight: (isHeader || isBold)
-              ? FontWeight.bold
-              : FontWeight.normal,
-          fontSize: isHeader ? 10 : 9.5,
-          color: textColor ?? Colors.black,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Color _getColorForModule(String modulo) {
-    switch (modulo.toUpperCase()) {
-      case 'VENTAS':
-        return Colors.green;
-      case 'COSTOS':
-        return Colors.orange;
-      case 'GASTOS':
-        return Colors.red;
-      default:
-        return Colors.blue;
-    }
-  }
-
-  String _formatoMonto(double monto) {
-    if (monto == 0) return '';
-    if (monto < 0) {
-      return '(\$ ${currencyFormatter.format(monto.abs()).replaceAll('\$', '')})';
-    }
-    return currencyFormatter.format(monto);
-  }
-
   void _showAddRegistroDialog() {
     showDialog(
       context: context,
-      builder: (context) => const _AddRegistroDialog(),
+      builder: (context) => const AddRegistroDialogWidget(),
     ).then((_) {
       _fetchData(); // Recargar datos si se agregó algo
     });
@@ -896,1012 +452,6 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
       ),
     );
   }
-
-  Widget _buildFilters() {
-    final List<String> opcionesFiltro = [
-      'Este mes',
-      'Mes pasado',
-      '3 meses',
-      '6 meses',
-      'Todo el año',
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-
-    return Row(
-      children: [
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.calendar_month),
-          tooltip: 'Filtro de Fecha',
-          onSelected: (range) {
-            _applyQuickFilter(range);
-          },
-          itemBuilder: (context) => opcionesFiltro
-              .map(
-                (range) => PopupMenuItem(
-                  value: range,
-                  child: Text(
-                    range,
-                    style: TextStyle(
-                      fontWeight: _selectedRange == range
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color:
-                          [
-                            'Este mes',
-                            'Mes pasado',
-                            '3 meses',
-                            '6 meses',
-                            'Todo el año',
-                          ].contains(range)
-                          ? Colors.black
-                          : Colors
-                                .blueGrey, // Para diferenciar visualmente los meses estáticos
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 1,
-          child: DropdownButtonFormField<String>(
-            value: _selectedModuloFilter,
-            decoration: const InputDecoration(
-              labelText: 'Módulo',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            items: [
-              'TODOS',
-              'VENTAS',
-              'COSTOS',
-              'GASTOS',
-            ].map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-            onChanged: (val) {
-              if (val != null) {
-                setState(() => _selectedModuloFilter = val);
-                _fetchData();
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 2,
-          child: TextField(
-            controller: _codigoController,
-            decoration: const InputDecoration(
-              labelText: 'Código Cuenta',
-              border: OutlineInputBorder(),
-              isDense: true,
-              prefixIcon: Icon(Icons.search),
-            ),
-            onSubmitted: (_) => _fetchData(),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          onPressed: _fetchData,
-          icon: const Icon(Icons.refresh),
-          tooltip: 'Actualizar',
-          style: IconButton.styleFrom(backgroundColor: Colors.blue.shade50),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          onPressed: _downloadPdf,
-          icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
-          tooltip: 'Descargar PDF',
-          style: IconButton.styleFrom(backgroundColor: Colors.red.shade50),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCards(LedhouseProvider provider) {
-    final currencyFormatter = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: 2,
-    );
-
-    double ventas = 0;
-    double costos = 0;
-    double gastos = 0;
-
-    for (var data in provider.pieChartData) {
-      String modulo = data['modulo'].toString().toUpperCase();
-      double amount = double.tryParse(data['total'].toString()) ?? 0;
-
-      if (modulo == 'VENTAS') ventas = amount;
-      if (modulo == 'COSTOS') costos = amount;
-      if (modulo == 'GASTOS') gastos = amount;
-    }
-
-    double utilidad = ventas - costos - gastos;
-    double margenUtilidad = ventas > 0 ? (utilidad / ventas) * 100 : 0;
-
-    return Card(
-      color: const Color(0xFF1A1C1E),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Ventas',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                Text(
-                  currencyFormatter.format(ventas),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  'Utilidad Neta',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                Text(
-                  currencyFormatter.format(utilidad),
-                  style: TextStyle(
-                    color: utilidad >= 0
-                        ? Colors.greenAccent
-                        : Colors.redAccent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'Margen de Util.',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                Text(
-                  '${margenUtilidad.toStringAsFixed(2)}%',
-                  style: TextStyle(
-                    color: margenUtilidad >= 0
-                        ? Colors.greenAccent
-                        : Colors.redAccent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCharts(LedhouseProvider provider) {
-    if (provider.barChartData.isEmpty && provider.pieChartData.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final currencyFormatter = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: 2,
-    );
-
-    // Procesar datos para el gráfico de barras por mes y pilar
-    final Map<String, Map<String, double>> monthlyData = {};
-    for (var data in provider.barChartData) {
-      String mes = data['mes']?.toString() ?? '';
-      if (mes.isEmpty) continue;
-      String modulo = data['modulo']?.toString().toUpperCase() ?? '';
-      double total = double.tryParse(data['total'].toString()) ?? 0;
-
-      monthlyData.putIfAbsent(
-        mes,
-        () => {'VENTAS': 0.0, 'COSTOS': 0.0, 'GASTOS': 0.0, 'GANANCIA': 0.0},
-      );
-      if (['VENTAS', 'COSTOS', 'GASTOS'].contains(modulo)) {
-        monthlyData[mes]![modulo] = (monthlyData[mes]![modulo] ?? 0) + total;
-      }
-    }
-
-    double maxBarY = 0;
-    monthlyData.forEach((mes, values) {
-      values['GANANCIA'] =
-          (values['VENTAS'] ?? 0) -
-          (values['COSTOS'] ?? 0) -
-          (values['GASTOS'] ?? 0);
-
-      // Encontrar el valor máximo para escalar el gráfico
-      for (var val in values.values) {
-        if (val.abs() > maxBarY) maxBarY = val.abs();
-      }
-    });
-
-    final sortedMonths = monthlyData.keys.toList()..sort();
-
-    double ventas = 0;
-    double costos = 0;
-    double gastos = 0;
-
-    for (var data in provider.pieChartData) {
-      String modulo = data['modulo'].toString().toUpperCase();
-      double amount = double.tryParse(data['total'].toString()) ?? 0;
-
-      if (modulo == 'VENTAS') ventas = amount;
-      if (modulo == 'COSTOS') costos = amount;
-      if (modulo == 'GASTOS') gastos = amount;
-    }
-
-    double utilidad = ventas - costos - gastos;
-    double margenUtilidad = ventas > 0 ? (utilidad / ventas) * 100 : 0;
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Evolución Mensual',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildLegendItem(Colors.green, 'Ventas'),
-                          const SizedBox(width: 12),
-                          _buildLegendItem(Colors.orange, 'Costos'),
-                          const SizedBox(width: 12),
-                          _buildLegendItem(Colors.red, 'Gastos'),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 200,
-                        child: BarChart(
-                          BarChartData(
-                            maxY: maxBarY > 0 ? maxBarY * 1.2 : 100,
-                            alignment: BarChartAlignment.spaceAround,
-                            barTouchData: BarTouchData(
-                              enabled: true,
-                              touchTooltipData: BarTouchTooltipData(
-                                getTooltipColor: (group) =>
-                                    Colors.white.withOpacity(0.9),
-                                tooltipPadding: const EdgeInsets.all(8),
-                                tooltipMargin: 8,
-                                getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                  String label = '';
-                                  if (rodIndex == 0) label = 'Ventas: ';
-                                  if (rodIndex == 1) label = 'Costos: ';
-                                  if (rodIndex == 2) label = 'Gastos: ';
-
-                                  return BarTooltipItem(
-                                    '$label${currencyFormatter.format(rod.toY)}',
-                                    const TextStyle(
-                                      color: Colors.black87,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            titlesData: FlTitlesData(
-                              show: true,
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    if (value.toInt() >= 0 &&
-                                        value.toInt() < sortedMonths.length) {
-                                      String mesStr =
-                                          sortedMonths[value.toInt()];
-                                      final parts = mesStr.split('-');
-                                      if (parts.length == 2) {
-                                        const months = [
-                                          'Ene',
-                                          'Feb',
-                                          'Mar',
-                                          'Abr',
-                                          'May',
-                                          'Jun',
-                                          'Jul',
-                                          'Ago',
-                                          'Sep',
-                                          'Oct',
-                                          'Nov',
-                                          'Dic',
-                                        ];
-                                        int monthIndex =
-                                            int.tryParse(parts[1]) ?? 0;
-                                        if (monthIndex >= 1 &&
-                                            monthIndex <= 12) {
-                                          mesStr = months[monthIndex - 1];
-                                        }
-                                      }
-
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 8.0,
-                                        ),
-                                        child: Text(
-                                          mesStr,
-                                          style: const TextStyle(fontSize: 10),
-                                        ),
-                                      );
-                                    }
-                                    return const Text('');
-                                  },
-                                  reservedSize: 30,
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 60,
-                                  getTitlesWidget: (value, meta) {
-                                    if (value == 0) return const Text('');
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        right: 8.0,
-                                      ),
-                                      child: Text(
-                                        currencyFormatter.format(value),
-                                        style: const TextStyle(fontSize: 10),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                            ),
-                            gridData: const FlGridData(show: true),
-                            borderData: FlBorderData(show: false),
-                            barGroups: sortedMonths.asMap().entries.map((
-                              entry,
-                            ) {
-                              int index = entry.key;
-                              var values = monthlyData[entry.value]!;
-                              return BarChartGroupData(
-                                x: index,
-                                barsSpace: 4,
-                                barRods: [
-                                  BarChartRodData(
-                                    toY: values['VENTAS'] ?? 0,
-                                    color: Colors.green,
-                                    width: 8,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  BarChartRodData(
-                                    toY: values['COSTOS'] ?? 0,
-                                    color: Colors.orange,
-                                    width: 8,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  BarChartRodData(
-                                    toY: values['GASTOS'] ?? 0,
-                                    color: Colors.red,
-                                    width: 8,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 1,
-              child: Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Card(
-                        elevation: 4,
-                        color: const Color(0xFF1A1C1E),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Resumen Anual',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildSummaryRow(
-                                'Ventas',
-                                ventas,
-                                Colors.greenAccent,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSummaryRow(
-                                'Costos',
-                                costos,
-                                Colors.orangeAccent,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSummaryRow(
-                                'Gastos',
-                                gastos,
-                                Colors.redAccent,
-                              ),
-                              const Divider(color: Colors.white24, height: 24),
-                              _buildSummaryRow(
-                                'Utilidad Neta',
-                                utilidad,
-                                utilidad >= 0
-                                    ? Colors.greenAccent
-                                    : Colors.redAccent,
-                                isBold: true,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSummaryRow(
-                                'Margen',
-                                margenUtilidad,
-                                utilidad >= 0
-                                    ? Colors.greenAccent
-                                    : Colors.redAccent,
-                                isPercentage: true,
-                                isBold: true,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        height: 200,
-                        child: PieChart(
-                          PieChartData(
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 30,
-                            sections: provider.pieChartData.map((data) {
-                              double total =
-                                  double.tryParse(data['total'].toString()) ??
-                                  0;
-                              return PieChartSectionData(
-                                color: _getColorForModule(data['modulo']),
-                                value: total,
-                                title:
-                                    '${data['modulo']}\n${currencyFormatter.format(total)}',
-                                radius: 60,
-                                titleStyle: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Evolución de Ganancias Neta',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 150,
-                  child: BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(
-                            color: Colors.grey.shade300,
-                            strokeWidth: 1,
-                            dashArray: [5, 5],
-                          );
-                        },
-                      ),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              if (value.toInt() >= 0 &&
-                                  value.toInt() < sortedMonths.length) {
-                                String mesStr = sortedMonths[value.toInt()];
-                                final parts = mesStr.split('-');
-                                if (parts.length == 2) {
-                                  const months = [
-                                    'Ene',
-                                    'Feb',
-                                    'Mar',
-                                    'Abr',
-                                    'May',
-                                    'Jun',
-                                    'Jul',
-                                    'Ago',
-                                    'Sep',
-                                    'Oct',
-                                    'Nov',
-                                    'Dic',
-                                  ];
-                                  int monthIndex = int.tryParse(parts[1]) ?? 0;
-                                  if (monthIndex >= 1 && monthIndex <= 12) {
-                                    mesStr = months[monthIndex - 1];
-                                  }
-                                }
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    mesStr,
-                                    style: const TextStyle(fontSize: 10),
-                                  ),
-                                );
-                              }
-                              return const Text('');
-                            },
-                          ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              if (value == 0) return const Text('');
-                              return Text(
-                                _formatoMontoCorta(value),
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      barTouchData: BarTouchData(
-                        touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (group) =>
-                              Colors.white.withOpacity(0.9),
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                            return BarTooltipItem(
-                              currencyFormatter.format(rod.toY),
-                              TextStyle(
-                                color: rod.toY >= 0
-                                    ? Colors.blue.shade700
-                                    : Colors.red,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      barGroups: sortedMonths.asMap().entries.map((entry) {
-                        double val = monthlyData[entry.value]!['GANANCIA'] ?? 0;
-                        return BarChartGroupData(
-                          x: entry.key,
-                          barRods: [
-                            BarChartRodData(
-                              toY: val,
-                              color: val >= 0 ? Colors.blue : Colors.red,
-                              width: 16,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
-  }
 }
 
 final currencyFormatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-
-class _AddRegistroDialog extends StatefulWidget {
-  const _AddRegistroDialog();
-
-  @override
-  State<_AddRegistroDialog> createState() => _AddRegistroDialogState();
-}
-
-class _AddRegistroDialogState extends State<_AddRegistroDialog> {
-  final _formKey = GlobalKey<FormState>();
-
-  final _codigoController = TextEditingController();
-  final _descripcionController = TextEditingController();
-  final _montoController = TextEditingController();
-
-  String _selectedModulo = 'VENTAS';
-  DateTime _selectedDate = DateTime.now();
-
-  bool _isSaving = false;
-
-  void _save() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isSaving = true);
-
-    final provider = Provider.of<LedhouseProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final String currentUsername = authProvider.username ?? 'Admin';
-
-    final data = {
-      'codigo_cuenta': _codigoController.text.toUpperCase().trim(),
-      'modulo': _selectedModulo.toUpperCase().trim(),
-      'descripcion_de_cuenta': _descripcionController.text.toUpperCase().trim(),
-      'monto': double.parse(_montoController.text.trim()),
-      'fecha': DateFormat('yyyy-MM-dd').format(_selectedDate),
-      'registed_by': currentUsername,
-    };
-
-    final success = await provider.createRegistro(data);
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    if (success) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registro guardado exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${provider.error}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  InputDecoration _inputDecoration(String label, IconData? icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE31E24), width: 2),
-      ),
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 600,
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.add_chart, color: Color(0xFFE31E24), size: 28),
-                      SizedBox(width: 12),
-                      Text(
-                        'Nuevo Registro',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1C1E),
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const Divider(height: 32),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'INFORMACIÓN GENERAL',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 1,
-                            child: TextFormField(
-                              controller: _codigoController,
-                              decoration: _inputDecoration(
-                                'Código Cuenta *',
-                                Icons.tag,
-                              ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? 'Requerido'
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: DropdownButtonFormField<String>(
-                              value: _selectedModulo,
-                              decoration: _inputDecoration(
-                                'Módulo *',
-                                Icons.category_outlined,
-                              ),
-                              items: ['VENTAS', 'COSTOS', 'GASTOS'].map((m) {
-                                return DropdownMenuItem(
-                                  value: m,
-                                  child: Text(m),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedModulo = val);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _descripcionController,
-                        decoration: _inputDecoration(
-                          'Descripción *',
-                          Icons.description_outlined,
-                        ),
-                        validator: (val) =>
-                            val == null || val.isEmpty ? 'Requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _montoController,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'^\d+(\.\d{0,2})?$'),
-                                ),
-                              ],
-                              decoration: _inputDecoration(
-                                'Monto *',
-                                Icons.attach_money,
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              validator: (val) {
-                                if (val == null || val.isEmpty) {
-                                  return 'Requerido';
-                                }
-                                if (double.tryParse(val) == null) {
-                                  return 'Monto inválido';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                final date = await showDatePicker(
-                                  context: context,
-                                  initialDate: _selectedDate,
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime(2100),
-                                  builder: (context, child) {
-                                    return Theme(
-                                      data: Theme.of(context).copyWith(
-                                        colorScheme: const ColorScheme.light(
-                                          primary: Color(
-                                            0xFFE31E24,
-                                          ), // color principal
-                                        ),
-                                      ),
-                                      child: child!,
-                                    );
-                                  },
-                                );
-                                if (date != null) {
-                                  setState(() => _selectedDate = date);
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: IgnorePointer(
-                                child: TextFormField(
-                                  key: ValueKey(_selectedDate),
-                                  initialValue: DateFormat(
-                                    'dd/MM/yyyy',
-                                  ).format(_selectedDate),
-                                  decoration: _inputDecoration(
-                                    'Fecha',
-                                    Icons.calendar_today_outlined,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'CANCELAR',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE31E24),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'GUARDAR',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

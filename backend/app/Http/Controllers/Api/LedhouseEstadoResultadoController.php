@@ -87,6 +87,105 @@ class LedhouseEstadoResultadoController extends Controller
     }
 
     /**
+     * Generate PDF for the Matrix view.
+     */
+    public function generateMatrizPdf(Request $request)
+    {
+        $year = $request->query('year', date('Y'));
+
+        // Obtener todos los registros del año solicitado
+        $registros = LedhouseEstadoResultado::whereYear('fecha', $year)->get();
+        $matrizBruta = [];
+
+        foreach ($registros as $reg) {
+            $modulo = strtoupper($reg->modulo);
+            $codigo = $reg->codigo_cuenta;
+            $mes = (int) date('n', strtotime($reg->fecha));
+
+            if (!isset($matrizBruta[$modulo])) {
+                $matrizBruta[$modulo] = [
+                    'cuentas' => [],
+                    'subtotales' => array_fill(1, 12, 0),
+                    'total_anual_modulo' => 0
+                ];
+            }
+
+            if (!isset($matrizBruta[$modulo]['cuentas'][$codigo])) {
+                $matrizBruta[$modulo]['cuentas'][$codigo] = [
+                    'descripcion' => $reg->descripcion_de_cuenta,
+                    'meses' => array_fill(1, 12, 0),
+                    'total_anual' => 0
+                ];
+            }
+
+            $matrizBruta[$modulo]['cuentas'][$codigo]['meses'][$mes] += $reg->monto;
+            $matrizBruta[$modulo]['cuentas'][$codigo]['total_anual'] += $reg->monto;
+            $matrizBruta[$modulo]['subtotales'][$mes] += $reg->monto;
+            $matrizBruta[$modulo]['total_anual_modulo'] += $reg->monto;
+        }
+
+        $resultado = [];
+        $maximos = []; // Para el heatmap
+
+        foreach (['VENTAS', 'COSTOS', 'GASTOS'] as $modOpcional) {
+            if (isset($matrizBruta[$modOpcional])) {
+                $cuentasList = [];
+                $maxModulo = 0;
+                
+                foreach ($matrizBruta[$modOpcional]['cuentas'] as $cod => $data) {
+                    $cuentasList[] = [
+                        'codigo' => $cod,
+                        'descripcion' => $data['descripcion'],
+                        'meses' => $data['meses'],
+                        'total_anual' => $data['total_anual']
+                    ];
+
+                    foreach ($data['meses'] as $m => $monto) {
+                        if (abs($monto) > $maxModulo) {
+                            $maxModulo = abs($monto);
+                        }
+                    }
+                }
+                
+                usort($cuentasList, function($a, $b) {
+                    return strcmp($a['codigo'], $b['codigo']);
+                });
+
+                $resultado[$modOpcional] = [
+                    'cuentas' => $cuentasList,
+                    'subtotales' => $matrizBruta[$modOpcional]['subtotales'],
+                    'total_anual_modulo' => $matrizBruta[$modOpcional]['total_anual_modulo']
+                ];
+                $maximos[$modOpcional] = $maxModulo;
+            }
+        }
+
+        $mesesVisibles = 12;
+        if ((int)$year === (int)date('Y')) {
+            $maxMonth = 1;
+            foreach ($resultado as $modData) {
+                foreach ($modData['cuentas'] as $cuenta) {
+                    foreach ($cuenta['meses'] as $m => $monto) {
+                        if ($monto != 0 && $m > $maxMonth) {
+                            $maxMonth = $m;
+                        }
+                    }
+                }
+            }
+            $mesesVisibles = $maxMonth;
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.ledhouse_matriz', [
+            'matriz' => $resultado,
+            'maximos' => $maximos,
+            'year' => $year,
+            'mesesVisibles' => $mesesVisibles
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->stream('Matriz_Cuentas_LEDHOUSE_'.$year.'.pdf');
+    }
+
+    /**
      * Generate PDF report.
      */
     public function generatePdf(Request $request)
@@ -110,6 +209,16 @@ class LedhouseEstadoResultadoController extends Controller
         // Filtro por codigo de cuenta (LIKE)
         if ($request->has('codigo_cuenta')) {
             $query->where('codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
+        }
+
+        // Filtro exacto de IDs (enviado desde la tabla filtrada de Flutter)
+        if ($request->has('ids')) {
+            $ids = explode(',', $request->ids);
+            // Filtramos solo los IDs válidos
+            $ids = array_filter($ids, 'is_numeric');
+            if (count($ids) > 0) {
+                $query->whereIn('id', $ids);
+            }
         }
 
         $registros = $query->orderBy('fecha', 'desc')->get();
@@ -315,5 +424,41 @@ class LedhouseEstadoResultadoController extends Controller
             DB::rollBack();
             return response()->json(['error' => 'Error al procesar el archivo: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Actualiza un registro existente.
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'codigo_cuenta' => 'required|string',
+            'modulo' => 'required|string',
+            'descripcion_de_cuenta' => 'required|string',
+            'monto' => 'required|numeric',
+            'fecha' => 'required|date',
+        ]);
+
+        $registro = LedhouseEstadoResultado::findOrFail($id);
+        $registro->update([
+            'codigo_cuenta' => $request->codigo_cuenta,
+            'modulo' => strtoupper($request->modulo),
+            'descripcion_de_cuenta' => $request->descripcion_de_cuenta,
+            'monto' => $request->monto,
+            'fecha' => $request->fecha,
+        ]);
+
+        return response()->json($registro);
+    }
+
+    /**
+     * Elimina un registro.
+     */
+    public function destroy($id)
+    {
+        $registro = LedhouseEstadoResultado::findOrFail($id);
+        $registro->delete();
+
+        return response()->json(['message' => 'Registro eliminado exitosamente.']);
     }
 }

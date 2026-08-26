@@ -75,6 +75,18 @@ class LedhouseService {
     return LedhouseEstadoResultado.fromJson(response);
   }
 
+  Future<LedhouseEstadoResultado> updateEstadoResultado(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _http.put('ledhouse/estado-resultado/$id', data);
+    return LedhouseEstadoResultado.fromJson(response);
+  }
+
+  Future<void> deleteEstadoResultado(int id) async {
+    await _http.delete('ledhouse/estado-resultado/$id');
+  }
+
   Future<Map<String, dynamic>> importEstadoResultado(
     List<int> fileBytes,
     String filename,

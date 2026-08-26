@@ -200,7 +200,7 @@
             @endif
         </div>
         <div class="header-center">
-            <div class="top-text">EMPRESA / MÓDULO</div>
+            <div class="top-text">EMPRESA</div>
             <div class="main-title">LED-HOUSE</div>
         </div>
         <div class="header-right">
@@ -230,7 +230,7 @@
             </div>
         </div>
         <div class="subheader-right">
-            Generado: {{ date('d M Y, h:i a') }}
+            Generado: {{ \Carbon\Carbon::now()->subHours(4)->format('d/m/Y, h:i A') }}
         </div>
     </div>
 
@@ -242,9 +242,9 @@
             </div>
         </div>
         <div class="footer-right">
-            Av. Presidente Antonio Guzmán Fernández<br>
-            Jamo Las Vegas, tramo Controba - San Francisco de Macorís<br>
-            Tel (809) 697-8028 · RNC 43-30-37238-2
+            Av. Manolo T. Justo No.15, Puerto Plata<br>
+            Tel / WhatsApp: 809-320-1668<br>
+            ledhouselaglez@outlook.com
         </div>
     </div>
 

@@ -125,6 +125,42 @@ class LedhouseProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> updateRegistro(int id, Map<String, dynamic> data) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.updateEstadoResultado(id, data);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteRegistro(int id) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.deleteEstadoResultado(id);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> importRegistros(List<int> fileBytes, String filename) async {
     _isLoading = true;
     _error = null;
