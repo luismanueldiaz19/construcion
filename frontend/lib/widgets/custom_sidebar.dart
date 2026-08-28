@@ -58,7 +58,7 @@ class _CustomSidebarState extends State<CustomSidebar> {
       _expandedSection = '9. CONFIGURACIÓN';
     } else if (widget.selectedIndex >= 43 && widget.selectedIndex <= 46) {
       _expandedSection = '10. REPORTES Y AUDITORÍA';
-    } else if (widget.selectedIndex >= 48 && widget.selectedIndex <= 50) {
+    } else if (widget.selectedIndex >= 48 && widget.selectedIndex <= 51) {
       _expandedSection = '11. LED-HOUSE';
     }
   }
@@ -490,6 +490,13 @@ class _CustomSidebarState extends State<CustomSidebar> {
                       Icons.money_off_outlined,
                       Icons.money_off,
                       'Cuentas por Pagar',
+                      accentColor,
+                    ),
+                    _buildMenuItem(
+                      51,
+                      Icons.list_alt_outlined,
+                      Icons.list_alt,
+                      'Catálogo de Cuentas',
                       accentColor,
                     ),
                   ],

@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/auth_provider.dart';
 import '../providers/ledhouse_provider.dart';
+import '../providers/cuenta_catalogo_provider.dart';
 import '../models/ledhouse_estado_resultado_model.dart';
+import '../models/cuenta_catalogo_model.dart';
 
 class AddRegistroDialogWidget extends StatefulWidget {
   final LedhouseEstadoResultado? registro;
@@ -18,35 +20,75 @@ class AddRegistroDialogWidget extends StatefulWidget {
 class _AddRegistroDialogWidgetState extends State<AddRegistroDialogWidget> {
   final _formKey = GlobalKey<FormState>();
 
-  final _codigoController = TextEditingController();
-  final _descripcionController = TextEditingController();
   final _montoController = TextEditingController();
 
-  String _selectedModulo = 'VENTAS';
-  DateTime _selectedDate = DateTime.now();
+  String? _codigoSeleccionado;
+  String? _selectedMonth;
 
   bool _isSaving = false;
   bool _isNegative = false;
 
+  final List<String> meses = [
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
+  ];
+
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cp = Provider.of<CuentaCatalogoProvider>(context, listen: false);
+      if (cp.cuentas.isEmpty) {
+        cp.fetchCuentas();
+      }
+    });
+
     if (widget.registro != null) {
-      _codigoController.text = widget.registro!.codigoCuenta;
-      _descripcionController.text = widget.registro!.descripcionDeCuenta;
+      _codigoSeleccionado = widget.registro!.codigoCuenta;
       _montoController.text = widget.registro!.monto.abs().toString();
       _isNegative = widget.registro!.monto < 0;
-      _selectedModulo = widget.registro!.modulo;
       try {
-        _selectedDate = DateTime.parse(widget.registro!.fecha);
+        DateTime d = DateTime.parse(widget.registro!.fecha);
+        _selectedMonth = meses[d.month - 1];
       } catch (e) {
-        _selectedDate = DateTime.now();
+        _selectedMonth = meses[DateTime.now().month - 1];
       }
     }
   }
 
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_codigoSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Por favor, selecciona una cuenta del catálogo válida.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_selectedMonth == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, selecciona un mes.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -54,12 +96,21 @@ class _AddRegistroDialogWidgetState extends State<AddRegistroDialogWidget> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final String currentUsername = authProvider.username ?? 'Admin';
 
+    int monthIndex = meses.indexOf(_selectedMonth!) + 1;
+    int year = DateTime.now().year;
+    if (widget.registro != null) {
+      try {
+        year = DateTime.parse(widget.registro!.fecha).year;
+      } catch (e) {}
+    }
+    DateTime lastDay = DateTime(year, monthIndex + 1, 0);
+    String fechaStr = DateFormat('yyyy-MM-dd').format(lastDay);
+
     final data = {
-      'codigo_cuenta': _codigoController.text.toUpperCase().trim(),
-      'modulo': _selectedModulo.toUpperCase().trim(),
-      'descripcion_de_cuenta': _descripcionController.text.toUpperCase().trim(),
-      'monto': double.parse(_montoController.text.trim()) * (_isNegative ? -1 : 1),
-      'fecha': DateFormat('yyyy-MM-dd').format(_selectedDate),
+      'codigo_cuenta': _codigoSeleccionado,
+      'monto':
+          double.parse(_montoController.text.trim()) * (_isNegative ? -1 : 1),
+      'fecha': fechaStr,
       'registed_by': currentUsername,
     };
 
@@ -131,10 +182,16 @@ class _AddRegistroDialogWidgetState extends State<AddRegistroDialogWidget> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.add_chart, color: Color(0xFFE31E24), size: 28),
+                      const Icon(
+                        Icons.add_chart,
+                        color: Color(0xFFE31E24),
+                        size: 28,
+                      ),
                       const SizedBox(width: 12),
                       Text(
-                        widget.registro != null ? 'Editar Registro' : 'Añadir Nuevo Registro',
+                        widget.registro != null
+                            ? 'Editar Registro'
+                            : 'Añadir Nuevo Registro',
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -165,58 +222,79 @@ class _AddRegistroDialogWidgetState extends State<AddRegistroDialogWidget> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      Consumer<CuentaCatalogoProvider>(
+                        builder: (context, cp, child) {
+                          if (cp.isLoading && cp.cuentas.isEmpty) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          return Autocomplete<CuentaCatalogo>(
+                            initialValue: widget.registro != null
+                                ? TextEditingValue(
+                                    text:
+                                        '${widget.registro!.codigoCuenta} - ${widget.registro!.descripcionDeCuenta}',
+                                  )
+                                : TextEditingValue.empty,
+                            displayStringForOption: (option) =>
+                                '${option.codigo} - ${option.descripcion}',
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                                  if (textEditingValue.text.isEmpty) {
+                                    return cp.cuentas;
+                                  }
+                                  return cp.cuentas.where((
+                                    CuentaCatalogo option,
+                                  ) {
+                                    return option.codigo.toUpperCase().contains(
+                                          textEditingValue.text.toUpperCase(),
+                                        ) ||
+                                        option.descripcion
+                                            .toUpperCase()
+                                            .contains(
+                                              textEditingValue.text
+                                                  .toUpperCase(),
+                                            );
+                                  });
+                                },
+                            onSelected: (CuentaCatalogo selection) {
+                              setState(() {
+                                _codigoSeleccionado = selection.codigo;
+                              });
+                            },
+                            fieldViewBuilder:
+                                (
+                                  context,
+                                  controller,
+                                  focusNode,
+                                  onEditingComplete,
+                                ) {
+                                  return TextFormField(
+                                    controller: controller,
+                                    focusNode: focusNode,
+                                    decoration: _inputDecoration(
+                                      'Buscar Cuenta (Código o Descripción) *',
+                                      Icons.search,
+                                    ),
+                                    validator: (val) {
+                                      if (val == null || val.isEmpty)
+                                        return 'Requerido';
+                                      return null;
+                                    },
+                                    onChanged: (val) {
+                                      if (_codigoSeleccionado != null) {
+                                        _codigoSeleccionado = null;
+                                      }
+                                    },
+                                  );
+                                },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 1,
-                            child: TextFormField(
-                              controller: _codigoController,
-                              decoration: _inputDecoration(
-                                'Código Cuenta *',
-                                Icons.tag,
-                              ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? 'Requerido'
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: DropdownButtonFormField<String>(
-                              value: _selectedModulo,
-                              decoration: _inputDecoration(
-                                'Módulo *',
-                                Icons.category_outlined,
-                              ),
-                              items: ['VENTAS', 'COSTOS', 'GASTOS'].map((m) {
-                                return DropdownMenuItem(
-                                  value: m,
-                                  child: Text(m),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedModulo = val);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _descripcionController,
-                        decoration: _inputDecoration(
-                          'Descripción *',
-                          Icons.description_outlined,
-                        ),
-                        validator: (val) =>
-                            val == null || val.isEmpty ? 'Requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
                         children: [
                           Expanded(
                             child: TextFormField(
@@ -247,43 +325,28 @@ class _AddRegistroDialogWidgetState extends State<AddRegistroDialogWidget> {
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                final date = await showDatePicker(
-                                  context: context,
-                                  initialDate: _selectedDate,
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime(2100),
-                                  builder: (context, child) {
-                                    return Theme(
-                                      data: Theme.of(context).copyWith(
-                                        colorScheme: const ColorScheme.light(
-                                          primary: Color(
-                                            0xFFE31E24,
-                                          ), // color principal
-                                        ),
-                                      ),
-                                      child: child!,
-                                    );
-                                  },
-                                );
-                                if (date != null) {
-                                  setState(() => _selectedDate = date);
-                                }
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedMonth,
+                              hint: const Text('Mes'),
+                              items: meses
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(m),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedMonth = val;
+                                });
                               },
-                              borderRadius: BorderRadius.circular(12),
-                              child: IgnorePointer(
-                                child: TextFormField(
-                                  key: ValueKey(_selectedDate),
-                                  initialValue: DateFormat(
-                                    'dd/MM/yyyy',
-                                  ).format(_selectedDate),
-                                  decoration: _inputDecoration(
-                                    'Fecha',
-                                    Icons.calendar_today_outlined,
-                                  ),
-                                ),
+                              decoration: _inputDecoration(
+                                'Mes *',
+                                Icons.calendar_today,
                               ),
+                              validator: (val) =>
+                                  val == null ? 'Requerido' : null,
                             ),
                           ),
                         ],
@@ -358,7 +421,9 @@ class _AddRegistroDialogWidgetState extends State<AddRegistroDialogWidget> {
                               ),
                             )
                           : Text(
-                              widget.registro != null ? 'Actualizar' : 'Guardar',
+                              widget.registro != null
+                                  ? 'Actualizar'
+                                  : 'Guardar',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

@@ -14,8 +14,13 @@ return new class extends Migration
         Schema::create('ledhouse_estado_resultado', function (Blueprint $table) {
             $table->id();
             $table->string('codigo_cuenta');
-            $table->string('modulo');
-            $table->string('descripcion_de_cuenta');
+            
+            // Relación con el catálogo
+            $table->foreign('codigo_cuenta')
+                  ->references('codigo')
+                  ->on('cuenta_catalogo_ledhouse')
+                  ->onDelete('cascade');
+
             $table->decimal('monto', 15, 2);
             $table->date('fecha');
             $table->string('registed_by')->nullable();

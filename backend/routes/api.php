@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\LedhouseEstadoResultadoController;
 use App\Http\Controllers\Api\LedhouseCxpController;
 use App\Http\Controllers\Api\LedhouseCxcController;
+use App\Http\Controllers\Api\LedhouseCuentaCatalogoController;
 
 use App\Http\Controllers\Api\MaterialController;
 use App\Http\Controllers\Api\ClientController;
@@ -267,6 +268,11 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('cxc', LedhouseCxcController::class);
         Route::post('cxc/{cxc}/soporte', [LedhouseCxcController::class, 'addSoporte']);
         Route::get('cxc/{cxc}/soporte', [LedhouseCxcController::class, 'getSoportes']);
+
+        // Cuentas de Catalogo
+        Route::post('cuentas-catalogo/import', [LedhouseCuentaCatalogoController::class, 'import']);
+        Route::apiResource('cuentas-catalogo', LedhouseCuentaCatalogoController::class);
     });
 });
+
 

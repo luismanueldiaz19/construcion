@@ -90,6 +90,7 @@ class LedhouseService {
   Future<Map<String, dynamic>> importEstadoResultado(
     List<int> fileBytes,
     String filename,
+    String fecha,
   ) async {
     final file = http.MultipartFile.fromBytes(
       'file',
@@ -99,6 +100,7 @@ class LedhouseService {
 
     final response = await _http.multipart(
       'ledhouse/estado-resultado/import',
+      fields: {'fecha': fecha},
       files: [file],
     );
 

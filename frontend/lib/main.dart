@@ -47,6 +47,8 @@ import 'modules/led_house/cxc/providers/cxc_provider.dart';
 import 'modules/led_house/cxp/providers/cxp_provider.dart';
 import 'modules/led_house/cxc/services/cxc_service.dart';
 import 'modules/led_house/cxp/services/cxp_service.dart';
+import 'modules/led_house/providers/cuenta_catalogo_provider.dart';
+import 'modules/led_house/screens/cuenta_catalogo_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -65,6 +67,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LedhouseProvider()),
         ChangeNotifierProvider(create: (_) => CxcProvider(CxcService())),
         ChangeNotifierProvider(create: (_) => CxpProvider(CxpService())),
+        ChangeNotifierProvider(create: (_) => CuentaCatalogoProvider()),
       ],
       child: const ConstruccionERP(),
     ),
@@ -191,10 +194,11 @@ class _MainLayoutState extends State<MainLayout> {
     const EmptyScreen('Auditoría de movimientos contables'), // 45
     const EmptyScreen('Exportación a PDF/Excel'), // 46
     const NominaCatalogsScreen(), // 47. Cargos y Departamentos
-    // 11. LED-HOUSE (48-50)
+    // 11. LED-HOUSE (48-51)
     const LedhouseDetallesScreen(), // 48
     const CxcScreen(), // 49
     const CxpScreen(), // 50
+    const CuentaCatalogoScreen(), // 51
   ];
 
   @override
