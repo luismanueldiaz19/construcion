@@ -8,7 +8,7 @@ class LedhouseCxc extends Model
 {
     protected $fillable = [
         'documento',
-        'cliente',
+        'cliente_id',
         'monto_factura',
         'monto_pagado',
         'monto_pendiente',
@@ -19,5 +19,10 @@ class LedhouseCxc extends Model
     public function soportes()
     {
         return $this->hasMany(LedhouseCxcSoporte::class, 'ledhouse_cxc_id');
+    }
+
+    public function cliente()
+    {
+        return $this->belongsTo(LedhouseCliente::class, 'cliente_id');
     }
 }

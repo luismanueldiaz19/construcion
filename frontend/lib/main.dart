@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'core/app_theme.dart';
 import 'core/auth_provider.dart';
 import 'modules/auth/splash_screen.dart';
+import 'modules/led_house/providers/ledhouse_cliente_provider.dart';
 import 'modules/led_house/screens/ledhouse_detalles_screen.dart';
 import 'modules/projects/projects_screen.dart';
 import 'modules/accounting/catalog_screen.dart';
@@ -49,6 +50,8 @@ import 'modules/led_house/cxc/services/cxc_service.dart';
 import 'modules/led_house/cxp/services/cxp_service.dart';
 import 'modules/led_house/providers/cuenta_catalogo_provider.dart';
 import 'modules/led_house/screens/cuenta_catalogo_screen.dart';
+import 'modules/led_house/screens/clientes/ledhouse_clientes_screen.dart';
+import 'modules/led_house/providers/ledhouse_proveedor_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -68,6 +71,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CxcProvider(CxcService())),
         ChangeNotifierProvider(create: (_) => CxpProvider(CxpService())),
         ChangeNotifierProvider(create: (_) => CuentaCatalogoProvider()),
+        ChangeNotifierProvider(create: (_) => LedhouseClienteProvider()),
+        ChangeNotifierProvider(create: (_) => LedhouseProveedorProvider()),
       ],
       child: const ConstruccionERP(),
     ),
@@ -199,6 +204,7 @@ class _MainLayoutState extends State<MainLayout> {
     const CxcScreen(), // 49
     const CxpScreen(), // 50
     const CuentaCatalogoScreen(), // 51
+    const LedhouseClientesScreen(), // 52
   ];
 
   @override

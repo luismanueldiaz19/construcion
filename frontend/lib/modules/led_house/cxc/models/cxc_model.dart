@@ -1,7 +1,10 @@
+import '../../models/ledhouse_cliente.dart';
+
 class CxcModel {
   final int? id;
   final String documento;
-  final String cliente;
+  final int clienteId;
+  final LedhouseCliente? clienteObj;
   final double montoFactura;
   final double montoPagado;
   final double montoPendiente;
@@ -13,7 +16,8 @@ class CxcModel {
   CxcModel({
     this.id,
     required this.documento,
-    required this.cliente,
+    required this.clienteId,
+    this.clienteObj,
     required this.montoFactura,
     this.montoPagado = 0.0,
     required this.montoPendiente,
@@ -23,11 +27,14 @@ class CxcModel {
     this.ultimaFechaVisita,
   });
 
+  String get cliente => clienteObj?.nombre ?? 'Desconocido';
+
   factory CxcModel.fromJson(Map<String, dynamic> json) {
     return CxcModel(
       id: json['id'],
       documento: json['documento'] ?? '',
-      cliente: json['cliente'] ?? '',
+      clienteId: json['cliente_id'] ?? 0,
+      clienteObj: json['cliente'] != null ? LedhouseCliente.fromJson(json['cliente']) : null,
       montoFactura: double.tryParse(json['monto_factura']?.toString() ?? '0') ?? 0.0,
       montoPagado: double.tryParse(json['monto_pagado']?.toString() ?? '0') ?? 0.0,
       montoPendiente: double.tryParse(json['monto_pendiente']?.toString() ?? '0') ?? 0.0,
@@ -41,7 +48,7 @@ class CxcModel {
   Map<String, dynamic> toJson() {
     return {
       'documento': documento,
-      'cliente': cliente,
+      'cliente_id': clienteId,
       'monto_factura': montoFactura,
       'monto_pagado': montoPagado,
       'fecha_vencimiento': fechaVencimiento,

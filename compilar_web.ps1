@@ -57,3 +57,7 @@ Write-Host "¡Proceso terminado con éxito! Listo para hacer git add, commit y p
 
 # powershell -ExecutionPolicy Bypass -File .\compilar_web.ps1
 # toqxih-kAfhyf-xagha6
+# php artisan migrate
+# php artisan migrate:fresh
+# php artisan migrate:fresh --seed
+# php artisan migrate:refresh

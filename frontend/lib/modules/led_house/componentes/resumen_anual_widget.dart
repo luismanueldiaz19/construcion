@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../../../core/app_theme.dart';
 
 class ResumenAnualWidget extends StatelessWidget {
   final double ventas;
@@ -25,13 +26,13 @@ class ResumenAnualWidget extends StatelessWidget {
   Color _getColorForModule(String modulo) {
     switch (modulo.toUpperCase()) {
       case 'VENTAS':
-        return Colors.green;
+        return AppTheme.successColor;
       case 'COSTOS':
-        return Colors.orange;
+        return const Color(0xFFFB8C00); // Naranja
       case 'GASTOS':
-        return Colors.red;
+        return AppTheme.dangerColor;
       default:
-        return Colors.blue;
+        return AppTheme.ledhouseBlue;
     }
   }
 
@@ -49,11 +50,12 @@ class ResumenAnualWidget extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white70,
-            fontSize: isBold ? 13 : 12, // Reducir un punto el tamaño base
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            fontSize: isBold ? 14 : 13,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+            letterSpacing: 0.2,
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 8),
         Expanded(
           child: Align(
             alignment: Alignment.centerRight,
@@ -65,8 +67,9 @@ class ResumenAnualWidget extends StatelessWidget {
                     : currencyFormatter.format(value),
                 style: TextStyle(
                   color: color,
-                  fontSize: isBold ? 15 : 13, // Reducir un punto
+                  fontSize: isBold ? 16 : 14,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -78,81 +81,130 @@ class ResumenAnualWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 4,
-              color: const Color(0xFF1A1C1E),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tarjeta Oscura de Resumen
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     const Text(
                       'Resumen Anual',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildSummaryRow('Ventas', ventas, Colors.greenAccent),
-                    const SizedBox(height: 8),
-                    _buildSummaryRow('Costos', costos, Colors.orangeAccent),
-                    const SizedBox(height: 8),
-                    _buildSummaryRow('Gastos', gastos, Colors.redAccent),
-                    const Divider(color: Colors.white24, height: 24),
-                    _buildSummaryRow(
-                      'Utilidad Neta',
-                      utilidad,
-                      utilidad >= 0 ? Colors.greenAccent : Colors.redAccent,
-                      isBold: true,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildSummaryRow(
-                      'Margen',
-                      margenUtilidad,
-                      utilidad >= 0 ? Colors.greenAccent : Colors.redAccent,
-                      isPercentage: true,
-                      isBold: true,
                     ),
                   ],
                 ),
-              ),
-            ),
-            SizedBox(
-              height: 200,
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 30,
-                  sections: pieChartData.map((data) {
-                    double total =
-                        double.tryParse(data['total'].toString()) ?? 0;
-                    return PieChartSectionData(
-                      color: _getColorForModule(data['modulo']),
-                      value: total,
-                      title:
-                          '${data['modulo']}\n${currencyFormatter.format(total)}',
-                      radius: 60,
-                      titleStyle: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    );
-                  }).toList(),
+                const SizedBox(height: 24),
+                _buildSummaryRow('Ventas', ventas, AppTheme.successColor),
+                const SizedBox(height: 12),
+                _buildSummaryRow('Costos', costos, const Color(0xFFFB8C00)),
+                const SizedBox(height: 12),
+                _buildSummaryRow('Gastos', gastos, AppTheme.dangerColor),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(
+                    color: Colors.white.withOpacity(0.15),
+                    height: 1,
+                  ),
                 ),
+                _buildSummaryRow(
+                  'Utilidad Neta',
+                  utilidad,
+                  utilidad >= 0 ? AppTheme.successColor : AppTheme.dangerColor,
+                  isBold: true,
+                ),
+                const SizedBox(height: 12),
+                _buildSummaryRow(
+                  'Margen',
+                  margenUtilidad,
+                  utilidad >= 0 ? AppTheme.successColor : AppTheme.dangerColor,
+                  isPercentage: true,
+                  isBold: true,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Gráfico de Pastel
+          SizedBox(
+            height: 220,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 3,
+                centerSpaceRadius: 40,
+                sections: pieChartData.map((data) {
+                  double total = double.tryParse(data['total'].toString()) ?? 0;
+                  final color = _getColorForModule(data['modulo']);
+                  return PieChartSectionData(
+                    color: color,
+                    value: total,
+                    title:
+                        '${data['modulo']}\n${currencyFormatter.format(total)}',
+                    radius: 70,
+                    titleStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.3,
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

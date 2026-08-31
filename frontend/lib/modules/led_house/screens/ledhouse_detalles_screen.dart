@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants.dart';
+import '../../../core/app_theme.dart';
 import '../providers/ledhouse_provider.dart';
 import '../componentes/ganancia_neta_chart_widget.dart';
 import '../componentes/evolucion_mensual_chart_widget.dart';
@@ -151,72 +152,186 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Estado Financiero LED-HOUSE'),
-        backgroundColor: const Color(0xFFFFFFFF),
-        foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-            onPressed: _fetchData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualizar',
-          ),
-
-          IconButton(
-            tooltip: 'Añadir Registro',
-            onPressed: _showAddRegistroDialog,
-            icon: const Icon(Icons.add_circle_outline),
-            color: const Color(0xFFE31E24), // Rojo
-          ),
-          IconButton(
-            tooltip: 'Importar Excel',
-            onPressed: _importExcel,
-            icon: const Icon(Icons.file_upload),
-            color: Colors.green, // Verde
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF8F9FA),
       body: Consumer<LedhouseProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading && provider.registros.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (provider.isMatrizLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(provider),
+              Expanded(
+                child: _buildContent(provider),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
-          if (provider.matrizData.isEmpty) {
-            return const Center(child: Text('No hay datos para este año.'));
-          }
+  Widget _buildContent(LedhouseProvider provider) {
+    if (provider.isLoading && provider.registros.isEmpty) {
+      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.ledhouseBlue)));
+    }
+    if (provider.isMatrizLoading) {
+      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.ledhouseBlue)));
+    }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+    if (provider.matrizData.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: AppTheme.ledhouseBlue.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.analytics_outlined,
+                size: 48,
+                color: AppTheme.ledhouseBlue,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No hay datos para este año',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF3C4043),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (provider.error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Text(
+                provider.error!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          _buildCharts(provider),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 1000,
+            child: ReportePorCuentasWidget(
+              matrizData: provider.matrizData,
+              selectedYear: _selectedYear,
+              currencyFormatter: currencyFormatter,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(LedhouseProvider provider) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.ledhouseBlue.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.trending_up_rounded,
+              color: AppTheme.ledhouseBlue,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (provider.error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Text(
-                      provider.error!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                const Text(
+                  'Estado Financiero LED-HOUSE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.2,
                   ),
-
-                _buildCharts(provider),
-                SizedBox(
-                  height: 1000,
-                  child: ReportePorCuentasWidget(
-                    matrizData: provider.matrizData,
-                    selectedYear: _selectedYear,
-                    currencyFormatter: currencyFormatter,
+                ),
+                Text(
+                  'Año $_selectedYear',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+          _buildHeaderButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Actualizar',
+            onTap: _fetchData,
+          ),
+          const SizedBox(width: 4),
+          _buildHeaderButton(
+            icon: Icons.upload_file_rounded,
+            tooltip: 'Importar Excel',
+            onTap: _importExcel,
+            color: AppTheme.successColor,
+          ),
+          const SizedBox(width: 4),
+          _buildHeaderButton(
+            icon: Icons.add_rounded,
+            tooltip: 'Añadir Registro',
+            onTap: _showAddRegistroDialog,
+            color: AppTheme.accentColor,
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderButton({
+    required IconData icon,
+    required String tooltip,
+    VoidCallback? onTap,
+    Color color = Colors.white,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.25), width: 1),
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
       ),
     );
   }

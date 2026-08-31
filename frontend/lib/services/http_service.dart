@@ -123,6 +123,21 @@ class HttpService {
       _handleError(e);
     }
   }
+
+  Future<dynamic> uploadFile(
+    String endpoint,
+    List<int> bytes,
+    String filename, {
+    String fieldName = 'file',
+  }) async {
+    final file = http.MultipartFile.fromBytes(
+      fieldName,
+      bytes,
+      filename: filename,
+    );
+    return multipart(endpoint, files: [file]);
+  }
+
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;

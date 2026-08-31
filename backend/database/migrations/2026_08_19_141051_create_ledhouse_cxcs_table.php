@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('ledhouse_cxcs', function (Blueprint $table) {
             $table->id();
             $table->string('documento');
-            $table->string('cliente');
-            $table->decimal('monto_factura', 15, 2);
+            $table->foreignId('cliente_id')->constrained('ledhouse_clientes')->onDelete('cascade');
+            $table->decimal('monto_factura', 15, 2)->nullable();
             $table->decimal('monto_pagado', 15, 2)->default(0);
             $table->decimal('monto_pendiente', 15, 2);
             $table->date('fecha_vencimiento');

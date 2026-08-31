@@ -20,6 +20,10 @@ class CxcService {
     return CxcModel.fromJson(response);
   }
 
+  Future<void> deleteCxc(int id) async {
+    await _http.delete('ledhouse/cxc/$id');
+  }
+
   Future<List<CxcSoporteModel>> getSoportes(int cxcId) async {
     final response = await _http.get('ledhouse/cxc/$cxcId/soporte');
     return (response as List)
@@ -33,5 +37,19 @@ class CxcService {
   ) async {
     final response = await _http.post('ledhouse/cxc/$cxcId/soporte', data);
     return CxcSoporteModel.fromJson(response);
+  }
+
+  Future<List<Map<String, dynamic>>> getGroupedByCliente() async {
+    final response = await _http.get('ledhouse/cxc/grouped');
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>> importarExcel(int clienteId, List<int> bytes, String filename) async {
+    final response = await _http.uploadFile(
+      'ledhouse/cxc/import-by-cliente/$clienteId',
+      bytes,
+      filename,
+    );
+    return response as Map<String, dynamic>;
   }
 }
