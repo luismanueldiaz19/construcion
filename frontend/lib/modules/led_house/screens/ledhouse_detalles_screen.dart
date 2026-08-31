@@ -328,45 +328,94 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
   }
 
   Future<void> _importExcel() async {
-    final bool? shouldProceed = await showDialog<bool>(
+    String? selectedMonth;
+    final meses = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+
+    final String? fechaResult = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Instrucciones de Importación'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'El archivo Excel (.xlsx o .csv) debe tener exactamente el siguiente orden de columnas:',
-            ),
-            SizedBox(height: 8),
-            Text('1. Código de Cuenta'),
-            Text('2. Módulo (VENTAS, COSTOS o GASTOS)'),
-            Text('3. Descripción de Cuenta'),
-            Text('4. Monto'),
-            Text('5. Fecha (Formato: YYYY-MM-DD)'),
-            SizedBox(height: 16),
-            Text('Nota: La primera fila se ignorará (puedes poner títulos).'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text(
-              'Entendido, buscar archivo',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Importar Estado Financiero'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Selecciona el mes a reportar:'),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedMonth,
+                    hint: const Text('Mes'),
+                    items: meses
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        selectedMonth = val;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'El archivo Excel (.xlsx o .csv) debe tener exactamente 2 columnas:\n1. Código de Cuenta\n2. Monto',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Nota: La primera fila se ignorará (puedes poner títulos).',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: selectedMonth == null
+                      ? null
+                      : () {
+                          int monthIndex = meses.indexOf(selectedMonth!) + 1;
+                          int year = DateTime.now().year;
+                          DateTime lastDay = DateTime(year, monthIndex + 1, 0);
+                          String fechaStr = DateFormat(
+                            'yyyy-MM-dd',
+                          ).format(lastDay);
+                          Navigator.pop(context, fechaStr);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  child: const Text(
+                    'Buscar Archivo',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
-    if (shouldProceed != true) return;
+    if (fechaResult == null) return;
 
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -392,7 +441,11 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
         );
 
         final provider = Provider.of<LedhouseProvider>(context, listen: false);
-        final response = await provider.importRegistros(file.bytes!, file.name);
+        final response = await provider.importRegistros(
+          file.bytes!,
+          file.name,
+          fechaResult,
+        );
 
         if (!mounted) return;
         Navigator.pop(context); // Close loading

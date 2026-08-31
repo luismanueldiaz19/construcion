@@ -161,13 +161,13 @@ class LedhouseProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> importRegistros(List<int> fileBytes, String filename) async {
+  Future<Map<String, dynamic>?> importRegistros(List<int> fileBytes, String filename, String fecha) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final response = await _service.importEstadoResultado(fileBytes, filename);
+      final response = await _service.importEstadoResultado(fileBytes, filename, fecha);
       _isLoading = false;
       notifyListeners();
       return response;

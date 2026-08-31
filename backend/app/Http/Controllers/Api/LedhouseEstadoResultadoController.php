@@ -15,28 +15,29 @@ class LedhouseEstadoResultadoController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LedhouseEstadoResultado::query();
+        $query = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+            ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta');
 
         // Filtro por fecha (rango)
         if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+            $query->whereBetween('ledhouse_estado_resultado.fecha', [$request->start_date, $request->end_date]);
         } elseif ($request->has('start_date')) {
-            $query->where('fecha', '>=', $request->start_date);
+            $query->where('ledhouse_estado_resultado.fecha', '>=', $request->start_date);
         } elseif ($request->has('end_date')) {
-            $query->where('fecha', '<=', $request->end_date);
+            $query->where('ledhouse_estado_resultado.fecha', '<=', $request->end_date);
         }
 
         // Filtro por modulo
         if ($request->has('modulo')) {
-            $query->where('modulo', $request->modulo);
+            $query->where('cuenta_catalogo_ledhouse.origen', $request->modulo);
         }
 
         // Filtro por codigo de cuenta (LIKE)
         if ($request->has('codigo_cuenta')) {
-            $query->where('codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
+            $query->where('ledhouse_estado_resultado.codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
         }
 
-        $query->orderBy('fecha', 'desc');
+        $query->orderBy('ledhouse_estado_resultado.fecha', 'desc');
 
         // Paginación o todos
         if ($request->has('per_page')) {
@@ -51,38 +52,38 @@ class LedhouseEstadoResultadoController extends Controller
      */
     public function summary(Request $request)
     {
-        $query = LedhouseEstadoResultado::query();
+        $query = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo');
 
         // Aplicar los mismos filtros base si existen
         if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+            $query->whereBetween('ledhouse_estado_resultado.fecha', [$request->start_date, $request->end_date]);
         } elseif ($request->has('start_date')) {
-            $query->where('fecha', '>=', $request->start_date);
+            $query->where('ledhouse_estado_resultado.fecha', '>=', $request->start_date);
         } elseif ($request->has('end_date')) {
-            $query->where('fecha', '<=', $request->end_date);
+            $query->where('ledhouse_estado_resultado.fecha', '<=', $request->end_date);
         }
 
         // Para el gráfico de pastel: Agrupar por modulo y sumar monto
         $pieChartQuery = clone $query;
-        $pieChartData = $pieChartQuery->select('modulo', DB::raw('SUM(monto) as total'))
-            ->groupBy('modulo')
+        $pieChartData = $pieChartQuery->select('cuenta_catalogo_ledhouse.origen as modulo', DB::raw('SUM(ledhouse_estado_resultado.monto) as total'))
+            ->groupBy('cuenta_catalogo_ledhouse.origen')
             ->get();
 
         // Para el gráfico de barras/líneas: Agrupar por mes/año y módulo para sumar monto por pilar
         $barChartQuery = clone $query;
         $barChartData = $barChartQuery->select(
-            DB::raw("TO_CHAR(fecha, 'YYYY-MM') as mes"),
-            'modulo',
-            DB::raw('SUM(monto) as total')
+            DB::raw("TO_CHAR(ledhouse_estado_resultado.fecha, 'YYYY-MM') as mes"),
+            'cuenta_catalogo_ledhouse.origen as modulo',
+            DB::raw('SUM(ledhouse_estado_resultado.monto) as total')
         )
-        ->groupBy('mes', 'modulo')
+        ->groupBy('mes', 'cuenta_catalogo_ledhouse.origen')
         ->orderBy('mes', 'asc')
         ->get();
 
         return response()->json([
             'pie_chart' => $pieChartData,
             'bar_chart' => $barChartData,
-            'total' => $query->sum('monto')
+            'total' => $query->sum('ledhouse_estado_resultado.monto')
         ]);
     }
 
@@ -94,7 +95,10 @@ class LedhouseEstadoResultadoController extends Controller
         $year = $request->query('year', date('Y'));
 
         // Obtener todos los registros del año solicitado
-        $registros = LedhouseEstadoResultado::whereYear('fecha', $year)->get();
+        $registros = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+            ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta')
+            ->whereYear('ledhouse_estado_resultado.fecha', $year)
+            ->get();
         $matrizBruta = [];
 
         foreach ($registros as $reg) {
@@ -190,25 +194,26 @@ class LedhouseEstadoResultadoController extends Controller
      */
     public function generatePdf(Request $request)
     {
-        $query = LedhouseEstadoResultado::query();
+        $query = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+            ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta');
 
         // Filtro por fecha (rango)
         if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('fecha', [$request->start_date, $request->end_date]);
+            $query->whereBetween('ledhouse_estado_resultado.fecha', [$request->start_date, $request->end_date]);
         } elseif ($request->has('start_date')) {
-            $query->where('fecha', '>=', $request->start_date);
+            $query->where('ledhouse_estado_resultado.fecha', '>=', $request->start_date);
         } elseif ($request->has('end_date')) {
-            $query->where('fecha', '<=', $request->end_date);
+            $query->where('ledhouse_estado_resultado.fecha', '<=', $request->end_date);
         }
 
         // Filtro por modulo
         if ($request->has('modulo') && $request->modulo !== 'TODOS') {
-            $query->where('modulo', $request->modulo);
+            $query->where('cuenta_catalogo_ledhouse.origen', $request->modulo);
         }
 
         // Filtro por codigo de cuenta (LIKE)
         if ($request->has('codigo_cuenta')) {
-            $query->where('codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
+            $query->where('ledhouse_estado_resultado.codigo_cuenta', 'like', '%' . $request->codigo_cuenta . '%');
         }
 
         // Filtro exacto de IDs (enviado desde la tabla filtrada de Flutter)
@@ -217,11 +222,11 @@ class LedhouseEstadoResultadoController extends Controller
             // Filtramos solo los IDs válidos
             $ids = array_filter($ids, 'is_numeric');
             if (count($ids) > 0) {
-                $query->whereIn('id', $ids);
+                $query->whereIn('ledhouse_estado_resultado.id', $ids);
             }
         }
 
-        $registros = $query->orderBy('fecha', 'desc')->get();
+        $registros = $query->orderBy('ledhouse_estado_resultado.fecha', 'desc')->get();
         
         $ventas = $registros->where('modulo', 'VENTAS')->sum('monto');
         $costos = $registros->where('modulo', 'COSTOS')->sum('monto');
@@ -243,7 +248,10 @@ class LedhouseEstadoResultadoController extends Controller
         $year = $request->query('year', date('Y'));
 
         // Obtener todos los registros del año solicitado
-        $registros = LedhouseEstadoResultado::whereYear('fecha', $year)->get();
+        $registros = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+            ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta')
+            ->whereYear('ledhouse_estado_resultado.fecha', $year)
+            ->get();
 
         $matriz = [];
 
@@ -318,8 +326,6 @@ class LedhouseEstadoResultadoController extends Controller
     {
         $validated = $request->validate([
             'codigo_cuenta' => 'required|string',
-            'modulo' => 'required|string',
-            'descripcion_de_cuenta' => 'required|string',
             'monto' => 'required|numeric',
             'fecha' => 'required|date',
             'registed_by' => 'nullable|string',
@@ -327,7 +333,12 @@ class LedhouseEstadoResultadoController extends Controller
 
         $item = LedhouseEstadoResultado::create($validated);
 
-        return response()->json($item, 201);
+        $itemWithJoin = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+            ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta')
+            ->where('ledhouse_estado_resultado.id', $item->id)
+            ->first();
+
+        return response()->json($itemWithJoin, 201);
     }
 
     /**
@@ -337,9 +348,11 @@ class LedhouseEstadoResultadoController extends Controller
     {
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240', // max 10MB
+            'fecha' => 'required|date',
         ]);
 
         $file = $request->file('file');
+        $fecha = $request->fecha;
         
         try {
             $spreadsheet = IOFactory::load($file->getPathname());
@@ -355,45 +368,35 @@ class LedhouseEstadoResultadoController extends Controller
 
             DB::beginTransaction();
 
-            // Asumimos estructura: [0] Código, [1] Módulo, [2] Descripción, [3] Monto, [4] Fecha
+            // Asumimos estructura: [0] Código, [1] Monto
             foreach ($rows as $index => $row) {
                 if ($index === 0) continue; // Saltar encabezado
 
-                // Si la fila está vacía, saltarla
                 if (empty(array_filter($row))) continue;
 
                 $codigo = trim((string)($row[0] ?? ''));
-                $modulo = trim((string)($row[1] ?? ''));
-                $descripcion = trim((string)($row[2] ?? ''));
-                $montoRaw = trim((string)($row[3] ?? '0'));
-                // Limpiar formato de contabilidad (ej. "( 138,364.40 )" -> "-138364.40") y separadores de miles
+                $montoRaw = trim((string)($row[1] ?? '0'));
+                
                 $montoStr = str_replace([',', ' '], '', $montoRaw);
                 if (preg_match('/^\((.+)\)$/', $montoStr, $matches)) {
                     $montoStr = '-' . $matches[1];
                 }
                 $monto = $montoStr;
-                
-                // Formatear la fecha
-                $fechaRaw = $row[4] ?? '';
-                $fecha = null;
-                
-                // Intentar parsear fecha Excel o texto
-                if (is_numeric($fechaRaw)) {
-                    $fecha = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($fechaRaw)->format('Y-m-d');
-                } else {
-                    $fecha = date('Y-m-d', strtotime(str_replace('/', '-', $fechaRaw)));
-                }
 
-                // Validaciones mínimas
-                if (!$codigo || !$modulo || !$descripcion || !is_numeric($monto) || !$fecha) {
+                if (!$codigo || !is_numeric($monto)) {
                     $errors[] = "Fila " . ($index + 1) . ": Datos incompletos o inválidos.";
                     continue;
                 }
 
+                // Relacionar con el catálogo
+                $cuentaCatalogo = \App\Models\CuentaCatalogoLedhouse::where('codigo', $codigo)->first();
+                if (!$cuentaCatalogo) {
+                    $errors[] = "Fila " . ($index + 1) . ": El código $codigo no existe en el catálogo.";
+                    continue; // Skip or save with default? User wants relation, so it must exist.
+                }
+
                 LedhouseEstadoResultado::create([
                     'codigo_cuenta' => $codigo,
-                    'modulo' => strtoupper($modulo),
-                    'descripcion_de_cuenta' => $descripcion,
                     'monto' => floatval($monto),
                     'fecha' => $fecha,
                     'registed_by' => $request->user() ? $request->user()->name : 'Import',
@@ -433,8 +436,6 @@ class LedhouseEstadoResultadoController extends Controller
     {
         $request->validate([
             'codigo_cuenta' => 'required|string',
-            'modulo' => 'required|string',
-            'descripcion_de_cuenta' => 'required|string',
             'monto' => 'required|numeric',
             'fecha' => 'required|date',
         ]);
@@ -442,13 +443,16 @@ class LedhouseEstadoResultadoController extends Controller
         $registro = LedhouseEstadoResultado::findOrFail($id);
         $registro->update([
             'codigo_cuenta' => $request->codigo_cuenta,
-            'modulo' => strtoupper($request->modulo),
-            'descripcion_de_cuenta' => $request->descripcion_de_cuenta,
             'monto' => $request->monto,
             'fecha' => $request->fecha,
         ]);
 
-        return response()->json($registro);
+        $itemWithJoin = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+            ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta')
+            ->where('ledhouse_estado_resultado.id', $registro->id)
+            ->first();
+
+        return response()->json($itemWithJoin);
     }
 
     /**

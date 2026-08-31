@@ -10,10 +10,13 @@ class LedhouseEstadoResultado extends Model
 
     protected $fillable = [
         'codigo_cuenta',
-        'modulo',
-        'descripcion_de_cuenta',
         'monto',
         'fecha',
         'registed_by',
     ];
+
+    public function catalogo()
+    {
+        return $this->belongsTo(CuentaCatalogoLedhouse::class, 'codigo_cuenta', 'codigo');
+    }
 }
