@@ -94,11 +94,25 @@ class LedhouseEstadoResultadoController extends Controller
     {
         $year = $request->query('year', date('Y'));
 
-        // Obtener todos los registros del año solicitado
-        $registros = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
+        $query = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
             ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta')
-            ->whereYear('ledhouse_estado_resultado.fecha', $year)
-            ->get();
+            ->whereYear('ledhouse_estado_resultado.fecha', $year);
+
+        if ($request->has('modulo') && $request->modulo != 'TODOS') {
+            $query->where('cuenta_catalogo_ledhouse.origen', $request->modulo);
+        }
+
+        $mesesFiltrados = [];
+        if ($request->has('meses') && !empty($request->meses)) {
+            $mesesArr = explode(',', $request->meses);
+            $mesesArr = array_filter($mesesArr, 'is_numeric');
+            if (count($mesesArr) > 0) {
+                $mesesFiltrados = $mesesArr;
+                sort($mesesFiltrados);
+            }
+        }
+
+        $registros = $query->get();
         $matrizBruta = [];
 
         foreach ($registros as $reg) {
@@ -183,7 +197,8 @@ class LedhouseEstadoResultadoController extends Controller
             'matriz' => $resultado,
             'maximos' => $maximos,
             'year' => $year,
-            'mesesVisibles' => $mesesVisibles
+            'mesesVisibles' => $mesesVisibles,
+            'mesesFiltrados' => $mesesFiltrados
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('Matriz_Cuentas_LEDHOUSE_'.$year.'.pdf');
@@ -226,7 +241,10 @@ class LedhouseEstadoResultadoController extends Controller
             }
         }
 
-        $registros = $query->orderBy('ledhouse_estado_resultado.fecha', 'desc')->get();
+        $query->orderByRaw("CASE WHEN UPPER(cuenta_catalogo_ledhouse.origen) = 'VENTAS' THEN 1 WHEN UPPER(cuenta_catalogo_ledhouse.origen) = 'COSTOS' THEN 2 WHEN UPPER(cuenta_catalogo_ledhouse.origen) = 'GASTOS' THEN 3 ELSE 4 END")
+              ->orderBy('ledhouse_estado_resultado.fecha', 'desc');
+
+        $registros = $query->get();
         
         $ventas = $registros->where('modulo', 'VENTAS')->sum('monto');
         $costos = $registros->where('modulo', 'COSTOS')->sum('monto');

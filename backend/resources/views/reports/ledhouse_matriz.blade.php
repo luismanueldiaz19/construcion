@@ -230,6 +230,8 @@
         
         $utilidad = $tot_ventas - $tot_costos - $tot_gastos;
         $margen = $tot_ventas > 0 ? ($utilidad / $tot_ventas) * 100 : 0;
+
+        $mesesARenderizar = (!empty($mesesFiltrados)) ? $mesesFiltrados : range(1, $mesesVisibles);
     @endphp
 
     <div class="pdf-header-container">
@@ -290,9 +292,9 @@
                 <tr>
                     <th>CÓDIGO</th>
                     <th>CUENTA</th>
-                    @for($i = 0; $i < $mesesVisibles; $i++)
-                        <th>{{ strtoupper($meses[$i]) }}</th>
-                    @endfor
+                    @foreach($mesesARenderizar as $mIndex)
+                        <th>{{ strtoupper($meses[$mIndex - 1]) }}</th>
+                    @endforeach
                     <th>TOTAL</th>
                 </tr>
             </thead>
@@ -307,7 +309,7 @@
                         <!-- Cabecera del Modulo -->
                         <tr class="mod-header-{{ $modNombre }}">
                             <td></td>
-                            <td colspan="{{ $mesesVisibles + 2 }}">{{ $modNombre }}</td>
+                            <td colspan="{{ count($mesesARenderizar) + 2 }}">{{ $modNombre }}</td>
                         </tr>
                         
                         <!-- Cuentas -->
@@ -315,7 +317,7 @@
                             <tr>
                                 <td>{{ $cta['codigo'] }}</td>
                                 <td>{{ $cta['descripcion'] }}</td>
-                                @for($i = 1; $i <= $mesesVisibles; $i++)
+                                @foreach($mesesARenderizar as $i)
                                     @php
                                         $val = $cta['meses'][$i] ?? 0;
                                         $colorData = getHeatmapColor($val, $maxModulo, $modNombre);
@@ -323,7 +325,7 @@
                                     <td style="background-color: {{ $colorData['bg'] }};" class="{{ $colorData['text'] }}">
                                         {{ formatMonto($val) }}
                                     </td>
-                                @endfor
+                                @endforeach
                                 <td class="text-bold">{{ formatMonto($cta['total_anual']) }}</td>
                             </tr>
                         @endforeach
@@ -332,9 +334,9 @@
                         <tr class="mod-subtotal">
                             <td></td>
                             <td>Subtotal {{ $modNombre }}</td>
-                            @for($i = 1; $i <= $mesesVisibles; $i++)
+                            @foreach($mesesARenderizar as $i)
                                 <td>{{ formatMonto($modData['subtotales'][$i] ?? 0) }}</td>
-                            @endfor
+                            @endforeach
                             <td class="text-bold">{{ formatMonto($modData['total_anual_modulo']) }}</td>
                         </tr>
                     @endif

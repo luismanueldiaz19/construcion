@@ -26,6 +26,9 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
 
+  List<int> _selectedMonths = [];
+  String? _selectedModulo;
+
   final List<String> _meses = [
     'Ene',
     'Feb',
@@ -46,8 +49,16 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
       const SnackBar(content: Text('Generando PDF, por favor espera...')),
     );
 
-    final urlStr =
+    String urlStr =
         '$host/api/v1/ledhouse/estado-resultado/matriz-pdf?year=${widget.selectedYear}';
+    
+    if (_selectedModulo != null) {
+      urlStr += '&modulo=$_selectedModulo';
+    }
+    if (_selectedMonths.isNotEmpty) {
+      urlStr += '&meses=${_selectedMonths.join(",")}';
+    }
+
     final url = Uri.parse(urlStr);
 
     if (await canLaunchUrl(url)) {
@@ -150,6 +161,10 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
     double cuentaWidth,
   ) {
     int mesesVisibles = _getMesesVisibles(data);
+    List<int> mesesARenderizar = _selectedMonths.isNotEmpty
+        ? (_selectedMonths.toList()..sort())
+        : List.generate(mesesVisibles, (index) => index + 1);
+
     const headerColor = Color(0xFF1E293B); // Dark slate
     return Container(
       decoration: const BoxDecoration(
@@ -168,12 +183,10 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
             isHeader: true,
             alignment: Alignment.centerLeft,
           ),
-          ..._meses
-              .take(mesesVisibles)
-              .map(
-                (mes) =>
-                    _buildCell(mes.toUpperCase(), width: 110, isHeader: true),
-              ),
+          ...mesesARenderizar.map(
+            (mesIndex) =>
+                _buildCell(_meses[mesIndex - 1].toUpperCase(), width: 110, isHeader: true),
+          ),
           _buildCell('TOTAL ANUAL', width: 120, isHeader: true, isLast: true),
         ],
       ),
@@ -189,6 +202,10 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
       return [];
     }
 
+    if (_selectedModulo != null && moduloNombre.toUpperCase() != _selectedModulo) {
+      return [];
+    }
+
     final moduloData = data[moduloNombre];
     final cuentas = moduloData['cuentas'] as List;
     final subtotales = moduloData['subtotales'] as Map<String, dynamic>;
@@ -197,6 +214,9 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
 
     List<Widget> filas = [];
     int mesesVisibles = _getMesesVisibles(data);
+    List<int> mesesARenderizar = _selectedMonths.isNotEmpty
+        ? (_selectedMonths.toList()..sort())
+        : List.generate(mesesVisibles, (index) => index + 1);
 
     // Definir colores pastel según el módulo
     Color bgColor;
@@ -237,16 +257,14 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
               textColor: textColor,
               color: bgColor,
             ),
-            ..._meses
-                .take(mesesVisibles)
-                .map(
-                  (mes) => _buildCell(
-                    '',
-                    width: 110,
-                    textColor: textColor,
-                    color: bgColor,
-                  ),
-                ),
+            ...mesesARenderizar.map(
+              (mes) => _buildCell(
+                '',
+                width: 110,
+                textColor: textColor,
+                color: bgColor,
+              ),
+            ),
             _buildCell(
               '',
               width: 120,
@@ -296,8 +314,7 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
                   width: cuentaWidth,
                   alignment: Alignment.centerLeft,
                 ),
-                ...List.generate(mesesVisibles, (index) {
-                  int mes = index + 1;
+                ...mesesARenderizar.map((mes) {
                   double monto =
                       double.tryParse(
                         montosMeses[mes.toString()]?.toString() ?? '0',
@@ -364,8 +381,7 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
               isBold: true,
               textColor: textColor,
             ),
-            ...List.generate(mesesVisibles, (index) {
-              int mes = index + 1;
+            ...mesesARenderizar.map((mes) {
               double monto =
                   double.tryParse(
                     subtotales[mes.toString()]?.toString() ?? '0',
@@ -393,6 +409,57 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
     );
 
     return filas;
+  }
+
+  void _showMesesFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Seleccionar Meses'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(12, (index) {
+                    final mesIndex = index + 1;
+                    final isSelected = _selectedMonths.contains(mesIndex);
+                    return CheckboxListTile(
+                      title: Text(_meses[index]),
+                      value: isSelected,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          if (val == true) {
+                            _selectedMonths.add(mesIndex);
+                          } else {
+                            _selectedMonths.remove(mesIndex);
+                          }
+                        });
+                        setState(() {});
+                      },
+                    );
+                  }),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() => _selectedMonths.clear());
+                    setState(() {});
+                  },
+                  child: const Text('Limpiar'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Aceptar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -481,6 +548,66 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
               ],
             ),
           ),
+          
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0).copyWith(bottom: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        hint: const Text('Filtrar por módulo'),
+                        value: _selectedModulo,
+                        icon: const Icon(Icons.category_outlined, color: Colors.grey, size: 20),
+                        items: const [
+                          DropdownMenuItem(value: null, child: Text('Todos los módulos')),
+                          DropdownMenuItem(value: 'VENTAS', child: Text('Ventas')),
+                          DropdownMenuItem(value: 'COSTOS', child: Text('Costos')),
+                          DropdownMenuItem(value: 'GASTOS', child: Text('Gastos')),
+                        ],
+                        onChanged: (val) {
+                          setState(() => _selectedModulo = val);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: TextButton.icon(
+                      onPressed: _showMesesFilterDialog,
+                      icon: const Icon(Icons.calendar_month, color: Colors.grey, size: 20),
+                      label: Text(
+                        _selectedMonths.isEmpty 
+                            ? 'Todos los meses' 
+                            : '${_selectedMonths.length} meses seleccionados',
+                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.normal),
+                      ),
+                      style: TextButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
 
@@ -489,8 +616,9 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 int mesesVisibles = _getMesesVisibles(widget.matrizData);
-                // Width of CODIGO(70) + MESES(110*mesesVisibles) + TOTAL(120) = 190 + (110*mesesVisibles)
-                double fixedWidths = 70 + (110 * mesesVisibles) + 120.0;
+                int numMesesARenderizar = _selectedMonths.isNotEmpty ? _selectedMonths.length : mesesVisibles;
+                // Width of CODIGO(70) + MESES(110*numMesesARenderizar) + TOTAL(120) = 190 + (110*numMesesARenderizar)
+                double fixedWidths = 70 + (110 * numMesesARenderizar) + 120.0;
                 // Subtract 40 for padding inside SingleChildScrollView and 2 for border width
                 double availableCuentaWidth =
                     constraints.maxWidth - 42 - fixedWidths;
