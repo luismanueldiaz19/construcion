@@ -274,7 +274,7 @@ class _LedhouseClientesScreenState extends State<LedhouseClientesScreen>
                         elevation: 0,
                       ),
                       child: const Text(
-                        'Continuar importación',
+                        'Continuar',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.3,
