@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/app_theme.dart';
+import '../../../../core/constants.dart';
 import '../models/cxc_model.dart';
 import '../providers/cxc_provider.dart';
 import '../widgets/cxc_form_dialog.dart';
@@ -72,7 +74,7 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
   void _showFormDialog([cxc]) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (_) => CxcFormDialog(cxc: cxc),
     );
   }
@@ -80,7 +82,7 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
   void _showSoporteDialog(cxc) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (_) => CxcSoporteDialog(cxc: cxc),
     );
   }
@@ -283,7 +285,7 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
               border: Border.all(color: Colors.grey.shade300),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -327,18 +329,28 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
           child: groupedClients.isEmpty
               ? const Center(child: Text('No hay clientes coincidentes.'))
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   itemCount: groupedClients.length,
                   itemBuilder: (context, index) {
                     final cliente = groupedClients[index];
-                    final totalPendiente = double.tryParse(cliente['total_pendiente']?.toString() ?? '0') ?? 0;
-                    
+                    final totalPendiente =
+                        double.tryParse(
+                          cliente['total_pendiente']?.toString() ?? '0',
+                        ) ??
+                        0;
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.02),
@@ -376,13 +388,17 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
                                       end: Alignment.bottomRight,
                                       colors: [
                                         _avatarColor(cliente['nombre'] ?? ''),
-                                        _avatarColor(cliente['nombre'] ?? '').withOpacity(0.7)
+                                        _avatarColor(
+                                          cliente['nombre'] ?? '',
+                                        ).withOpacity(0.7),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(14),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: _avatarColor(cliente['nombre'] ?? '').withOpacity(0.3),
+                                        color: _avatarColor(
+                                          cliente['nombre'] ?? '',
+                                        ).withOpacity(0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -401,7 +417,8 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         cliente['nombre'] ?? 'Sin Nombre',
@@ -442,8 +459,8 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
-                                        color: totalPendiente > 0 
-                                            ? AppTheme.dangerColor 
+                                        color: totalPendiente > 0
+                                            ? AppTheme.dangerColor
                                             : Colors.grey.shade400,
                                         letterSpacing: -0.5,
                                       ),
@@ -536,6 +553,28 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
+          _buildHeaderButton(
+            icon: Icons.picture_as_pdf_rounded,
+            tooltip: 'Generar PDF',
+            color: Colors.redAccent,
+            onTap: () async {
+              String endpoint = _tabController.index == 0
+                  ? '/api/v1/ledhouse/cxc/reporte-agrupado-pdf'
+                  : '/api/v1/ledhouse/cxc/reporte-general-pdf';
+              final url = Uri.parse('$host$endpoint');
+              if (!await launchUrl(url)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No se pudo abrir el PDF'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          const SizedBox(width: 4),
           _buildHeaderButton(
             icon: Icons.refresh_rounded,
             tooltip: 'Actualizar',

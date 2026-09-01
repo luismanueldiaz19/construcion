@@ -267,6 +267,9 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('cxp', LedhouseCxpController::class);
 
         // CXC
+        Route::get('cxc/reporte-general-pdf', [LedhouseCxcController::class, 'reporteGeneralPdf']);
+        Route::get('cxc/reporte-agrupado-pdf', [LedhouseCxcController::class, 'reporteAgrupadoPdf']);
+        Route::get('cxc/reporte-pdf/{cliente_id}', [LedhouseCxcController::class, 'reportePdf']);
         Route::get('cxc/grouped', [LedhouseCxcController::class, 'groupedByCliente']);
         Route::post('cxc/import-by-cliente/{cliente_id}', [LedhouseCxcController::class, 'importByCliente']);
         Route::apiResource('cxc', LedhouseCxcController::class);

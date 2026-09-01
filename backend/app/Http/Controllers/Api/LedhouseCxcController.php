@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\LedhouseCxc;
 use App\Models\LedhouseCxcSoporte;
+use App\Models\LedhouseCliente;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class LedhouseCxcController extends Controller
 {
@@ -25,6 +27,44 @@ class LedhouseCxcController extends Controller
             ->withSum('cxcs as total_pendiente', 'monto_pendiente')
             ->get();
         return response()->json($clientes);
+    }
+
+    public function reportePdf($cliente_id)
+    {
+        $cliente = LedhouseCliente::findOrFail($cliente_id);
+        $cxcs = LedhouseCxc::where('cliente_id', $cliente_id)->get();
+
+        $pdf = Pdf::loadView('pdf.example_temp_url', [
+            'cliente' => $cliente,
+            'cxcs' => $cxcs,
+            'imageUrl' => null // Placeholder
+        ]);
+
+        return $pdf->stream("Reporte_CXC_{$cliente->nombre}.pdf");
+    }
+
+    public function reporteGeneralPdf()
+    {
+        $cxcs = LedhouseCxc::with('cliente')->orderBy('fecha_vencimiento', 'asc')->get();
+
+        $pdf = Pdf::loadView('pdf.cxc_general', [
+            'cxcs' => $cxcs,
+        ]);
+
+        return $pdf->stream("Reporte_General_CXC.pdf");
+    }
+
+    public function reporteAgrupadoPdf()
+    {
+        $clientes = LedhouseCliente::withSum('cxcs as total_facturado', 'monto_factura')
+            ->withSum('cxcs as total_pendiente', 'monto_pendiente')
+            ->get();
+
+        $pdf = Pdf::loadView('pdf.cxc_agrupado', [
+            'clientes' => $clientes,
+        ]);
+
+        return $pdf->stream("Reporte_Agrupado_CXC.pdf");
     }
 
     public function store(Request $request)

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../core/app_theme.dart';
 import '../../../core/constants.dart';
 import '../providers/ledhouse_provider.dart';
 import '../componentes/add_registro_dialog_widget.dart';
+import '../componentes/dialog_confimacion_delete.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LedhouseDetallesCuentas extends StatefulWidget {
@@ -374,47 +376,28 @@ class _LedhouseDetallesCuentasState extends State<LedhouseDetallesCuentas> {
     LedhouseProvider provider,
     int id,
   ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar Eliminación'),
-        content: const Text(
-          '¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+    DialogConfirmacionDelete.mostrar(
+      context,
+      titulo: 'Eliminar cliente',
+      onConfirm: () async {
+        final success = await provider.deleteRegistro(id);
+        if (success && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registro eliminado'),
+              backgroundColor: Colors.green,
             ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final success = await provider.deleteRegistro(id);
-              if (success && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Registro eliminado'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                provider.fetchEstadoResultados();
-              } else if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${provider.error}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+          );
+          provider.fetchEstadoResultados();
+        } else if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${provider.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
     );
   }
 }

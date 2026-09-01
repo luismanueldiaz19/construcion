@@ -6,6 +6,9 @@ import '../../../../core/app_theme.dart';
 import '../providers/cxc_provider.dart';
 import '../services/cxc_service.dart';
 import '../widgets/cxc_form_dialog.dart';
+import '../../componentes/dialog_confimacion_delete.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/constants.dart';
 
 class CxcClienteDetailScreen extends StatefulWidget {
   final Map<String, dynamic> clienteAgrupado;
@@ -364,6 +367,31 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 1,
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.picture_as_pdf_rounded,
+              color: Colors.redAccent,
+            ),
+            tooltip: 'Generar PDF',
+            onPressed: () async {
+              final url = Uri.parse(
+                '$host/api/v1/ledhouse/cxc/reporte-pdf/$_clienteId',
+              );
+              if (!await launchUrl(url)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No se pudo abrir el PDF'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Consumer<CxcProvider>(
         builder: (context, provider, _) {
@@ -380,6 +408,18 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                   ),
                 )
                 .toList();
+          }
+
+          double totalFacturado = 0;
+          double totalPendiente = 0;
+          double totalVencido = 0;
+
+          for (var c in clienteCxcs) {
+            totalFacturado += c.montoFactura;
+            totalPendiente += c.montoPendiente;
+            if (_isPastDue(c.fechaVencimiento, c.estado)) {
+              totalVencido += c.montoPendiente;
+            }
           }
 
           final headerWidget = Container(
@@ -792,51 +832,19 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                                             size: 20,
                                           ),
                                           tooltip: 'Eliminar',
-                                          onPressed: () async {
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (ctx) => AlertDialog(
-                                                backgroundColor: Colors.white,
-                                                title: const Text(
-                                                  'Eliminar Documento',
-                                                ),
-                                                content: const Text(
-                                                  '¿Está seguro de que desea eliminar este documento? Esta acción no se puede deshacer.',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.pop(
-                                                          ctx,
-                                                          false,
-                                                        ),
-                                                    child: const Text(
-                                                      'Cancelar',
-                                                      style: TextStyle(
-                                                        color: Colors.grey,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.pop(
-                                                          ctx,
-                                                          true,
-                                                        ),
-                                                    style: TextButton.styleFrom(
-                                                      foregroundColor:
-                                                          AppTheme.dangerColor,
-                                                    ),
-                                                    child: const Text(
-                                                      'Eliminar',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm == true &&
-                                                cxc.id != null) {
-                                              await provider.deleteCxc(cxc.id!);
+                                          onPressed: () {
+                                            if (cxc.id != null) {
+                                              DialogConfirmacionDelete.mostrar(
+                                                context,
+                                                titulo: 'Eliminar Documento',
+                                                mensaje:
+                                                    '¿Está seguro de que desea eliminar este documento? Esta acción no se puede deshacer.',
+                                                onConfirm: () async {
+                                                  await provider.deleteCxc(
+                                                    cxc.id!,
+                                                  );
+                                                },
+                                              );
                                             }
                                           },
                                         ),
@@ -851,6 +859,92 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                       ),
                     ),
                   ),
+                // Animated Totals Footer
+                if (clienteCxcs.isNotEmpty) ...[
+                  Divider(height: 1, color: Colors.grey.shade200),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24,
+                      horizontal: 20,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
+                        bottom: Radius.circular(12),
+                      ),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isSmall = constraints.maxWidth < 600;
+
+                        if (isSmall) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _AnimatedTotalItem(
+                                title: 'TOTAL FACTURADO',
+                                amount: totalFacturado,
+                                color: Colors.grey.shade700,
+                                icon: Icons.receipt_rounded,
+                                isMobile: true,
+                              ),
+                              Divider(height: 32, color: Colors.grey.shade200),
+                              _AnimatedTotalItem(
+                                title: 'DEUDA PENDIENTE',
+                                amount: totalPendiente,
+                                color: const Color(0xFF1F2937),
+                                icon: Icons.account_balance_wallet_rounded,
+                                isMobile: true,
+                              ),
+                              Divider(height: 32, color: Colors.grey.shade200),
+                              _AnimatedTotalItem(
+                                title: 'TOTAL VENCIDO',
+                                amount: totalVencido,
+                                color: AppTheme.dangerColor,
+                                icon: Icons.warning_rounded,
+                                isMobile: true,
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _AnimatedTotalItem(
+                              title: 'TOTAL FACTURADO',
+                              amount: totalFacturado,
+                              color: Colors.grey.shade700,
+                              icon: Icons.receipt_rounded,
+                            ),
+                            Container(
+                              width: 1,
+                              height: 48,
+                              color: Colors.grey.shade200,
+                            ),
+                            _AnimatedTotalItem(
+                              title: 'DEUDA PENDIENTE',
+                              amount: totalPendiente,
+                              color: const Color(0xFF1F2937),
+                              icon: Icons.account_balance_wallet_rounded,
+                            ),
+                            Container(
+                              width: 1,
+                              height: 48,
+                              color: Colors.grey.shade200,
+                            ),
+                            _AnimatedTotalItem(
+                              title: 'TOTAL VENCIDO',
+                              amount: totalVencido,
+                              color: AppTheme.dangerColor,
+                              icon: Icons.warning_rounded,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           );
@@ -883,5 +977,80 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
         },
       ),
     );
+  }
+}
+
+class _AnimatedTotalItem extends StatelessWidget {
+  final String title;
+  final double amount;
+  final Color color;
+  final IconData icon;
+  final bool isMobile;
+
+  const _AnimatedTotalItem({
+    required this.title,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    this.isMobile = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormatter = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 2,
+    );
+
+    final child = Row(
+      mainAxisAlignment: isMobile
+          ? MainAxisAlignment.start
+          : MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.06),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade500,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 4),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: amount),
+              duration: const Duration(milliseconds: 1500),
+              curve: Curves.easeOutExpo,
+              builder: (context, value, animChild) {
+                return Text(
+                  currencyFormatter.format(value),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: -0.5,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+
+    return isMobile ? child : Expanded(child: child);
   }
 }

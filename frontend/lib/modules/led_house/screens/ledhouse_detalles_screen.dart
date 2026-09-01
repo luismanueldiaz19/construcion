@@ -11,7 +11,6 @@ import '../componentes/evolucion_mensual_chart_widget.dart';
 import '../componentes/resumen_anual_widget.dart';
 import '../componentes/add_registro_dialog_widget.dart';
 import '../componentes/reporte_por_cuentas_widget.dart';
-import 'ledhouse_detalles_cuentas.dart';
 
 class LedhouseDetallesScreen extends StatefulWidget {
   const LedhouseDetallesScreen({super.key});
@@ -159,9 +158,7 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(provider),
-              Expanded(
-                child: _buildContent(provider),
-              ),
+              Expanded(child: _buildContent(provider)),
             ],
           );
         },
@@ -171,10 +168,18 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
 
   Widget _buildContent(LedhouseProvider provider) {
     if (provider.isLoading && provider.registros.isEmpty) {
-      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.ledhouseBlue)));
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation(AppTheme.ledhouseBlue),
+        ),
+      );
     }
     if (provider.isMatrizLoading) {
-      return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppTheme.ledhouseBlue)));
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation(AppTheme.ledhouseBlue),
+        ),
+      );
     }
 
     if (provider.matrizData.isEmpty) {
