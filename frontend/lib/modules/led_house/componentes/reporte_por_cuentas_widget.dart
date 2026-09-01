@@ -553,58 +553,118 @@ class _ReportePorCuentasWidgetState extends State<ReportePorCuentasWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 20.0).copyWith(bottom: 20),
             child: Row(
               children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
+                // Filter Modulo
+                Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _selectedModulo != null ? Colors.blue.shade50 : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _selectedModulo != null ? Colors.blue.shade200 : Colors.grey.shade300,
                     ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        hint: const Text('Filtrar por módulo'),
-                        value: _selectedModulo,
-                        icon: const Icon(Icons.category_outlined, color: Colors.grey, size: 20),
-                        items: const [
-                          DropdownMenuItem(value: null, child: Text('Todos los módulos')),
-                          DropdownMenuItem(value: 'VENTAS', child: Text('Ventas')),
-                          DropdownMenuItem(value: 'COSTOS', child: Text('Costos')),
-                          DropdownMenuItem(value: 'GASTOS', child: Text('Gastos')),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isDense: true,
+                      borderRadius: BorderRadius.circular(12),
+                      hint: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.filter_list, size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          const Text('Todos los módulos', style: TextStyle(fontSize: 13, color: Colors.black87)),
                         ],
-                        onChanged: (val) {
-                          setState(() => _selectedModulo = val);
-                        },
                       ),
+                      value: _selectedModulo,
+                      icon: Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Icon(
+                          Icons.keyboard_arrow_down, 
+                          color: _selectedModulo != null ? Colors.blue.shade700 : Colors.grey.shade600, 
+                          size: 18
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 13, 
+                        color: _selectedModulo != null ? Colors.blue.shade700 : Colors.black87,
+                        fontWeight: _selectedModulo != null ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('Todos los módulos')),
+                        DropdownMenuItem(value: 'VENTAS', child: Text('Ventas')),
+                        DropdownMenuItem(value: 'COSTOS', child: Text('Costos')),
+                        DropdownMenuItem(value: 'GASTOS', child: Text('Gastos')),
+                      ],
+                      onChanged: (val) {
+                        setState(() => _selectedModulo = val);
+                      },
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
+                // Filter Meses
+                Container(
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: _selectedMonths.isNotEmpty ? Colors.blue.shade50 : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _selectedMonths.isNotEmpty ? Colors.blue.shade200 : Colors.grey.shade300,
                     ),
-                    child: TextButton.icon(
-                      onPressed: _showMesesFilterDialog,
-                      icon: const Icon(Icons.calendar_month, color: Colors.grey, size: 20),
-                      label: Text(
-                        _selectedMonths.isEmpty 
-                            ? 'Todos los meses' 
-                            : '${_selectedMonths.length} meses seleccionados',
-                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.normal),
-                      ),
-                      style: TextButton.styleFrom(
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onHover: (hovering) {},
+                    onTap: _showMesesFilterDialog,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined, 
+                            color: _selectedMonths.isNotEmpty ? Colors.blue.shade700 : Colors.grey.shade600, 
+                            size: 16
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _selectedMonths.isEmpty 
+                                ? 'Todos los meses' 
+                                : '${_selectedMonths.length} meses',
+                            style: TextStyle(
+                              fontSize: 13, 
+                              color: _selectedMonths.isNotEmpty ? Colors.blue.shade700 : Colors.black87,
+                              fontWeight: _selectedMonths.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          if (_selectedMonths.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Icon(Icons.check_circle, color: Colors.blue.shade700, size: 16),
+                          ],
+                        ],
                       ),
                     ),
                   ),
                 ),
+                const Spacer(),
+                // Clear filters button (only if active)
+                if (_selectedModulo != null || _selectedMonths.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _selectedModulo = null;
+                        _selectedMonths.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.clear, size: 16),
+                    label: const Text('Limpiar filtros', style: TextStyle(fontSize: 13)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade600,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    ),
+                  ),
               ],
             ),
           ),
