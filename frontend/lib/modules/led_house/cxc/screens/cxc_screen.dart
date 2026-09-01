@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/app_theme.dart';
 import '../../../../core/constants.dart';
 import '../models/cxc_model.dart';
@@ -451,6 +452,104 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
                                     ],
                                   ),
                                 ),
+                                if (cliente['whatsapp'] != null &&
+                                    cliente['whatsapp']
+                                        .toString()
+                                        .trim()
+                                        .isNotEmpty &&
+                                    totalPendiente > 0)
+                                  IconButton(
+                                    icon: const FaIcon(
+                                      FontAwesomeIcons.whatsapp,
+                                      color: Colors.green,
+                                    ),
+                                    tooltip: 'Enviar WhatsApp',
+                                    onPressed: () async {
+                                      final cxcsCliente = provider.cxcs
+                                          .where(
+                                            (c) =>
+                                                c.clienteId == cliente['id'] &&
+                                                c.montoPendiente > 0,
+                                          )
+                                          .toList();
+                                      if (cxcsCliente.isEmpty) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'El cliente no tiene deudas pendientes',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+
+                                      String mensaje =
+                                          'Hola *${cliente['nombre']}*,\n\nLe recordamos que tiene facturas pendientes con *Ledhouse*:\n\n';
+                                      for (var cxc in cxcsCliente) {
+                                        int diasAtraso = 0;
+                                        try {
+                                          final date = DateTime.parse(
+                                            cxc.fechaVencimiento,
+                                          );
+                                          final todayDate = DateTime(
+                                            DateTime.now().year,
+                                            DateTime.now().month,
+                                            DateTime.now().day,
+                                          );
+                                          final diff = todayDate
+                                              .difference(date)
+                                              .inDays;
+                                          if (diff > 0) diasAtraso = diff;
+                                        } catch (e) {}
+
+                                        mensaje +=
+                                            '*Doc:* ${cxc.documento} | *Vence:* ${cxc.fechaVencimiento}';
+                                        if (diasAtraso > 0) {
+                                          mensaje +=
+                                              ' (*$diasAtraso días de atraso*)';
+                                        }
+                                        mensaje +=
+                                            ' | *Pendiente:* ${currencyFormatter.format(cxc.montoPendiente)}\n';
+                                      }
+                                      mensaje +=
+                                          '\n*Total Pendiente:* ${currencyFormatter.format(totalPendiente)}\n\nPor favor, contáctenos para coordinar el pago. Gracias.';
+
+                                      String phone = cliente['whatsapp']
+                                          .toString()
+                                          .replaceAll(RegExp(r'\D'), '');
+                                      if (!phone.startsWith('1') &&
+                                          phone.length == 10) {
+                                        phone = '1$phone';
+                                      }
+
+                                      if (phone.isNotEmpty) {
+                                        final url = Uri.parse(
+                                          'https://wa.me/$phone?text=${Uri.encodeComponent(mensaje)}',
+                                        );
+                                        if (!await launchUrl(url)) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'No se pudo abrir WhatsApp',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                                  ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
@@ -1180,56 +1279,123 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
                   ),
                 ),
 
-                // Menú de acciones
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert_rounded,
-                    color: Colors.grey.shade400,
-                    size: 20,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 8,
-                  onSelected: (val) {
-                    if (val == 'support') _showSoporteDialog(cxc);
-                    if (val == 'edit') _showFormDialog(cxc);
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'support',
-                      child: Row(
-                        children: const [
-                          Icon(
-                            Icons.support_agent_rounded,
-                            size: 18,
-                            color: Colors.purple,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Gestión de Cobro',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                        ],
+                // Menú de acciones y WhatsApp
+                Column(
+                  children: [
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        color: Colors.grey.shade400,
+                        size: 20,
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: const [
-                          Icon(
-                            Icons.edit_rounded,
-                            size: 18,
-                            color: Color(0xFF1A73E8),
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Editar / Pagar',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                        ],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 8,
+                      onSelected: (val) {
+                        if (val == 'support') _showSoporteDialog(cxc);
+                        if (val == 'edit') _showFormDialog(cxc);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'support',
+                          child: Row(
+                            children: const [
+                              Icon(
+                                Icons.support_agent_rounded,
+                                size: 18,
+                                color: Colors.purple,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Gestión de Cobro',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: const [
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 18,
+                                color: Color(0xFF1A73E8),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Editar / Pagar',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
+                    if (cxc.clienteObj?.whatsapp != null &&
+                        cxc.clienteObj!.whatsapp!.toString().trim().isNotEmpty)
+                      IconButton(
+                        icon: const FaIcon(
+                          FontAwesomeIcons.whatsapp,
+                          color: Colors.green,
+                          size: 24,
+                        ),
+                        tooltip: 'Enviar WhatsApp',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () async {
+                          int diasAtraso = 0;
+                          try {
+                            final date = DateTime.parse(cxc.fechaVencimiento);
+                            final todayDate = DateTime(
+                              DateTime.now().year,
+                              DateTime.now().month,
+                              DateTime.now().day,
+                            );
+                            final diff = todayDate.difference(date).inDays;
+                            if (diff > 0) diasAtraso = diff;
+                          } catch (e) {}
+
+                          String mensaje =
+                              'Hola *${cxc.cliente}*,\n\nLe recordamos que tiene un saldo pendiente con *Ledhouse*.\n\n';
+                          mensaje += '*Doc:* ${cxc.documento}\n';
+                          mensaje += '*Vencimiento:* ${cxc.fechaVencimiento}\n';
+                          if (diasAtraso > 0) {
+                            mensaje += '*Días de atraso:* $diasAtraso días\n';
+                          }
+                          mensaje +=
+                              '*Monto:* ${currencyFormatter.format(cxc.montoPendiente)}\n\n';
+                          mensaje +=
+                              'Por favor, contáctenos para coordinar el pago. Gracias.';
+
+                          String phone = cxc.clienteObj!.whatsapp!
+                              .toString()
+                              .replaceAll(RegExp(r'\D'), '');
+                          if (!phone.startsWith('1') && phone.length == 10) {
+                            phone = '1$phone';
+                          }
+
+                          if (phone.isNotEmpty) {
+                            final url = Uri.parse(
+                              'https://wa.me/$phone?text=${Uri.encodeComponent(mensaje)}',
+                            );
+                            if (!await launchUrl(url)) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No se pudo abrir WhatsApp',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      ),
                   ],
                 ),
               ],

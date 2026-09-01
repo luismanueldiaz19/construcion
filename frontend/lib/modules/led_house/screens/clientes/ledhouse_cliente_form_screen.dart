@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/app_theme.dart';
 import '../../models/ledhouse_cliente.dart';
 import '../../services/ledhouse_cliente_service.dart';
@@ -144,6 +145,10 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
                       icon: Icons.phone_rounded,
                       iconColor: AppTheme.whatsappColor,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(15),
+                      ],
                       optional: true,
                     ),
                     const SizedBox(height: 16),
@@ -296,6 +301,7 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
     required IconData icon,
     Color iconColor = const Color(0xFF1A73E8),
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
     bool optional = false,
   }) {
@@ -332,6 +338,7 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           validator: validator,
           style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
           decoration: InputDecoration(

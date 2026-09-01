@@ -8,6 +8,7 @@ import '../services/cxc_service.dart';
 import '../widgets/cxc_form_dialog.dart';
 import '../../componentes/dialog_confimacion_delete.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../core/constants.dart';
 
 class CxcClienteDetailScreen extends StatefulWidget {
@@ -694,6 +695,45 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                                   DataCell(
                                     Row(
                                       children: [
+                                        if (widget.clienteAgrupado['whatsapp'] != null && widget.clienteAgrupado['whatsapp'].toString().trim().isNotEmpty)
+                                          IconButton(
+                                            icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.green, size: 20),
+                                            tooltip: 'Enviar WhatsApp',
+                                            padding: const EdgeInsets.only(right: 8),
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () async {
+                                              int diasAtraso = 0;
+                                              try {
+                                                final date = DateTime.parse(cxc.fechaVencimiento);
+                                                final todayDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+                                                final diff = todayDate.difference(date).inDays;
+                                                if (diff > 0) diasAtraso = diff;
+                                              } catch (e) {}
+
+                                              String mensaje = 'Hola *${widget.clienteAgrupado['nombre']}*,\n\nLe recordamos que tiene un saldo pendiente con *Ledhouse*.\n\n';
+                                              mensaje += '*Doc:* ${cxc.documento}\n';
+                                              mensaje += '*Vencimiento:* ${cxc.fechaVencimiento}\n';
+                                              if (diasAtraso > 0) {
+                                                mensaje += '*Días de atraso:* $diasAtraso días\n';
+                                              }
+                                              mensaje += '*Monto:* ${currencyFormatter.format(cxc.montoPendiente)}\n\n';
+                                              mensaje += 'Por favor, contáctenos para coordinar el pago. Gracias.';
+                                              
+                                              String phone = widget.clienteAgrupado['whatsapp'].toString().replaceAll(RegExp(r'\D'), '');
+                                              if (!phone.startsWith('1') && phone.length == 10) {
+                                                  phone = '1$phone';
+                                              }
+                                              
+                                              if (phone.isNotEmpty) {
+                                                final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(mensaje)}');
+                                                if (!await launchUrl(url)) {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir WhatsApp', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+                                                  }
+                                                }
+                                              }
+                                            },
+                                          ),
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
