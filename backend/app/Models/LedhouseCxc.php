@@ -12,6 +12,7 @@ class LedhouseCxc extends Model
         'monto_factura',
         'monto_pagado',
         'monto_pendiente',
+        'fecha_factura',
         'fecha_vencimiento',
         'estado',
     ];

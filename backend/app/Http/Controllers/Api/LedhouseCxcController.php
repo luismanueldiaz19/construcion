@@ -58,7 +58,10 @@ class LedhouseCxcController extends Controller
     {
         $clientes = LedhouseCliente::withSum('cxcs as total_facturado', 'monto_factura')
             ->withSum('cxcs as total_pendiente', 'monto_pendiente')
-            ->get();
+            ->get()
+            ->filter(function ($cliente) {
+                return $cliente->total_pendiente > 0;
+            });
 
         $pdf = Pdf::loadView('pdf.cxc_agrupado', [
             'clientes' => $clientes,
@@ -74,6 +77,7 @@ class LedhouseCxcController extends Controller
             'cliente_id' => 'required|exists:ledhouse_clientes,id',
             'monto_factura' => 'nullable|numeric|min:0',
             'monto_pagado' => 'nullable|numeric|min:0',
+            'fecha_factura' => 'nullable|date',
             'fecha_vencimiento' => 'required|date',
             'estado' => 'nullable|string|in:pendiente,pagado,cancelado',
         ]);
@@ -103,6 +107,7 @@ class LedhouseCxcController extends Controller
             'cliente_id' => 'sometimes|exists:ledhouse_clientes,id',
             'monto_factura' => 'nullable|numeric|min:0',
             'monto_pagado' => 'sometimes|numeric|min:0',
+            'fecha_factura' => 'sometimes|nullable|date',
             'fecha_vencimiento' => 'sometimes|date',
             'estado' => 'sometimes|string|in:pendiente,pagado,cancelado',
         ]);
@@ -141,17 +146,29 @@ class LedhouseCxcController extends Controller
             array_shift($rows);
             
             $importedCount = 0;
+            
+            $cliente = LedhouseCliente::find($cliente_id);
+            $dias_credito = $cliente ? ($cliente->dias_credito ?? 0) : 0;
 
             foreach ($rows as $row) {
                 $documento = isset($row[0]) ? trim((string)$row[0]) : null;
                 $monto = isset($row[1]) ? trim((string)$row[1]) : null;
-                $fecha_vencimiento = isset($row[2]) ? trim((string)$row[2]) : null;
+                $fecha_factura = isset($row[2]) ? trim((string)$row[2]) : null;
                 $monto_factura = isset($row[3]) ? trim((string)$row[3]) : null;
 
-                if ($documento && $monto !== null && $fecha_vencimiento) {
+                if ($documento && $monto !== null && $fecha_factura) {
                     $monto = (float)$monto;
                     $monto_factura = ($monto_factura !== '' && is_numeric($monto_factura)) ? (float)$monto_factura : null;
                     $estado = $monto <= 0 ? 'pagado' : 'pendiente';
+                    
+                    try {
+                        $fechaObj = \Carbon\Carbon::parse($fecha_factura);
+                        $fecha_factura_db = $fechaObj->format('Y-m-d');
+                        $fecha_vencimiento_db = $fechaObj->copy()->addDays($dias_credito)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $fecha_factura_db = $fecha_factura;
+                        $fecha_vencimiento_db = $fecha_factura;
+                    }
 
                     // Si ya existe el documento, actualizamos. Si no, lo creamos.
                     LedhouseCxc::updateOrCreate(
@@ -162,7 +179,8 @@ class LedhouseCxcController extends Controller
                         [
                             'monto_pendiente' => $monto,
                             'monto_factura' => $monto_factura,
-                            'fecha_vencimiento' => $fecha_vencimiento,
+                            'fecha_factura' => $fecha_factura_db,
+                            'fecha_vencimiento' => $fecha_vencimiento_db,
                             'estado' => $estado,
                             // Si está pagado completamente, asumo monto_pagado = monto_factura
                             'monto_pagado' => $estado === 'pagado' ? ($monto_factura ?? 0) : 0, 

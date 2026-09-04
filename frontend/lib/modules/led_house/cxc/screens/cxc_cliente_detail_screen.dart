@@ -58,6 +58,17 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
     return name.substring(0, name.length > 1 ? 2 : 1).toUpperCase();
   }
 
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pagado':
+        return AppTheme.successColor;
+      case 'cancelado':
+        return AppTheme.dangerColor;
+      default:
+        return const Color(0xFFFB8C00); // Naranja
+    }
+  }
+
   Widget _buildPremiumChip(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -159,7 +170,7 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                       ),
                       _buildFormatRow(
                         'Columna C',
-                        'Fecha Venc. (YYYY-MM-DD)',
+                        'Fecha Factura (YYYY-MM-DD)',
                         isRequired: true,
                       ),
                       _buildFormatRow(
@@ -571,6 +582,38 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                   child: Row(
                     children: [
                       Expanded(
+                        flex: 6,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await showDialog(
+                              context: context,
+                              builder: (_) => CxcFormDialog(
+                                preselectedClienteId: _clienteId,
+                              ),
+                            );
+                            if (result == true && mounted) {
+                              Provider.of<CxcProvider>(
+                                context,
+                                listen: false,
+                              ).fetchCxcs();
+                            }
+                          },
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Nueva Cuenta'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.successColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 5,
                         child: ElevatedButton.icon(
                           onPressed: _isImporting ? null : _importExcel,
                           icon: _isImporting
@@ -583,9 +626,7 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                                   ),
                                 )
                               : const Icon(Icons.upload_file_rounded),
-                          label: const Text(
-                            'Importación Masiva de CXC (Excel/CSV)',
-                          ),
+                          label: const Text('Importación Masiva'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFF1A1A1A,
@@ -695,40 +736,87 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                                   DataCell(
                                     Row(
                                       children: [
-                                        if (widget.clienteAgrupado['whatsapp'] != null && widget.clienteAgrupado['whatsapp'].toString().trim().isNotEmpty)
+                                        if (widget.clienteAgrupado['whatsapp'] !=
+                                                null &&
+                                            widget.clienteAgrupado['whatsapp']
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty)
                                           IconButton(
-                                            icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.green, size: 20),
+                                            icon: const FaIcon(
+                                              FontAwesomeIcons.whatsapp,
+                                              color: Colors.green,
+                                              size: 20,
+                                            ),
                                             tooltip: 'Enviar WhatsApp',
-                                            padding: const EdgeInsets.only(right: 8),
+                                            padding: const EdgeInsets.only(
+                                              right: 8,
+                                            ),
                                             constraints: const BoxConstraints(),
                                             onPressed: () async {
                                               int diasAtraso = 0;
                                               try {
-                                                final date = DateTime.parse(cxc.fechaVencimiento);
-                                                final todayDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-                                                final diff = todayDate.difference(date).inDays;
+                                                final date = DateTime.parse(
+                                                  cxc.fechaVencimiento,
+                                                );
+                                                final todayDate = DateTime(
+                                                  DateTime.now().year,
+                                                  DateTime.now().month,
+                                                  DateTime.now().day,
+                                                );
+                                                final diff = todayDate
+                                                    .difference(date)
+                                                    .inDays;
                                                 if (diff > 0) diasAtraso = diff;
                                               } catch (e) {}
 
-                                              String mensaje = 'Hola *${widget.clienteAgrupado['nombre']}*,\n\nLe recordamos que tiene un saldo pendiente con *Ledhouse*.\n\n';
-                                              mensaje += '*Doc:* ${cxc.documento}\n';
-                                              mensaje += '*Vencimiento:* ${cxc.fechaVencimiento}\n';
+                                              String mensaje =
+                                                  'Hola *${widget.clienteAgrupado['nombre']}*,\n\nLe recordamos que tiene un saldo pendiente con *Ledhouse*.\n\n';
+                                              mensaje +=
+                                                  '*Doc:* ${cxc.documento}\n';
+                                              mensaje +=
+                                                  '*Vencimiento:* ${cxc.fechaVencimiento}\n';
                                               if (diasAtraso > 0) {
-                                                mensaje += '*Días de atraso:* $diasAtraso días\n';
+                                                mensaje +=
+                                                    '*Días de atraso:* $diasAtraso días\n';
                                               }
-                                              mensaje += '*Monto:* ${currencyFormatter.format(cxc.montoPendiente)}\n\n';
-                                              mensaje += 'Por favor, contáctenos para coordinar el pago. Gracias.';
-                                              
-                                              String phone = widget.clienteAgrupado['whatsapp'].toString().replaceAll(RegExp(r'\D'), '');
-                                              if (!phone.startsWith('1') && phone.length == 10) {
-                                                  phone = '1$phone';
+                                              mensaje +=
+                                                  '*Monto:* ${currencyFormatter.format(cxc.montoPendiente)}\n\n';
+                                              mensaje +=
+                                                  'Por favor, contáctenos para coordinar el pago. Gracias.';
+
+                                              String phone = widget
+                                                  .clienteAgrupado['whatsapp']
+                                                  .toString()
+                                                  .replaceAll(
+                                                    RegExp(r'\D'),
+                                                    '',
+                                                  );
+                                              if (!phone.startsWith('1') &&
+                                                  phone.length == 10) {
+                                                phone = '1$phone';
                                               }
-                                              
+
                                               if (phone.isNotEmpty) {
-                                                final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(mensaje)}');
+                                                final url = Uri.parse(
+                                                  'https://wa.me/$phone?text=${Uri.encodeComponent(mensaje)}',
+                                                );
                                                 if (!await launchUrl(url)) {
                                                   if (context.mounted) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir WhatsApp', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'No se pudo abrir WhatsApp',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                      ),
+                                                    );
                                                   }
                                                 }
                                               }
@@ -827,19 +915,23 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                                               vertical: 4,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: AppTheme.successColor
-                                                  .withOpacity(0.1),
+                                              color: _getStatusColor(
+                                                cxc.estado,
+                                              ).withOpacity(0.1),
                                               borderRadius:
                                                   BorderRadius.circular(4),
                                               border: Border.all(
-                                                color: AppTheme.successColor
-                                                    .withOpacity(0.3),
+                                                color: _getStatusColor(
+                                                  cxc.estado,
+                                                ).withOpacity(0.3),
                                               ),
                                             ),
                                             child: Text(
                                               cxc.estado.toUpperCase(),
-                                              style: const TextStyle(
-                                                color: AppTheme.successColor,
+                                              style: TextStyle(
+                                                color: _getStatusColor(
+                                                  cxc.estado,
+                                                ),
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                               ),

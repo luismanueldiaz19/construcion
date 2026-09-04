@@ -21,6 +21,10 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
   late TextEditingController _nombreController;
   late TextEditingController _whatsappController;
   late TextEditingController _direccionController;
+  late TextEditingController _documentoController;
+  String? _tipoDocumento;
+  late TextEditingController _limiteCreditoController;
+  late TextEditingController _diasCreditoController;
 
   bool _isLoading = false;
 
@@ -38,6 +42,20 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
     _direccionController = TextEditingController(
       text: widget.cliente?.direccion ?? '',
     );
+    _documentoController = TextEditingController(
+      text: widget.cliente?.documento ?? '',
+    );
+    _tipoDocumento = widget.cliente?.tipoDocumento;
+    _limiteCreditoController = TextEditingController(
+      text: widget.cliente?.limiteCredito != null
+          ? widget.cliente!.limiteCredito!.toInt().toString()
+          : '',
+    );
+    _diasCreditoController = TextEditingController(
+      text: widget.cliente?.diasCredito != null
+          ? widget.cliente!.diasCredito.toString()
+          : '',
+    );
   }
 
   @override
@@ -45,6 +63,9 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
     _nombreController.dispose();
     _whatsappController.dispose();
     _direccionController.dispose();
+    _documentoController.dispose();
+    _limiteCreditoController.dispose();
+    _diasCreditoController.dispose();
     super.dispose();
   }
 
@@ -63,6 +84,16 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
         direccion: _direccionController.text.trim().isEmpty
             ? null
             : _direccionController.text.trim(),
+        tipoDocumento: _tipoDocumento,
+        documento: _documentoController.text.trim().isEmpty
+            ? null
+            : _documentoController.text.trim(),
+        limiteCredito: _limiteCreditoController.text.trim().isEmpty
+            ? null
+            : double.tryParse(_limiteCreditoController.text.trim()),
+        diasCredito: _diasCreditoController.text.trim().isEmpty
+            ? null
+            : int.tryParse(_diasCreditoController.text.trim()),
       );
 
       if (_isEditing) {
@@ -159,6 +190,75 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
                       icon: Icons.location_on_outlined,
                       iconColor: AppTheme.dangerColor,
                       optional: true,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildDropdownField(
+                            label: 'Tipo documento',
+                            value: _tipoDocumento,
+                            items: const ['Cédula', 'RNC'],
+                            icon: Icons.assignment_ind_outlined,
+                            iconColor: Colors.blueGrey,
+                            onChanged: (val) {
+                              setState(() {
+                                _tipoDocumento = val;
+                              });
+                            },
+                            optional: true,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 3,
+                          child: _buildField(
+                            controller: _documentoController,
+                            label: 'Documento',
+                            hint: 'Ej: 000-0000000-0',
+                            icon: Icons.badge_outlined,
+                            iconColor: Colors.teal,
+                            keyboardType: TextInputType.text,
+                            optional: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildField(
+                            controller: _limiteCreditoController,
+                            label: 'Límite de crédito',
+                            hint: 'Ej: 10000',
+                            icon: Icons.attach_money_rounded,
+                            iconColor: Colors.orange,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            optional: true,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildField(
+                            controller: _diasCreditoController,
+                            label: 'Días de crédito',
+                            hint: 'Ej: 30',
+                            icon: Icons.calendar_today_rounded,
+                            iconColor: AppTheme.primaryColor,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            optional: true,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 28),
 
@@ -310,12 +410,15 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (optional) ...[
@@ -378,6 +481,100 @@ class _LedhouseClienteFormScreenState extends State<LedhouseClienteFormScreen> {
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(
                 color: Color(0xFFEA4335),
+                width: 1.5,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required IconData icon,
+    required ValueChanged<String?> onChanged,
+    Color iconColor = const Color(0xFF1A73E8),
+    bool optional = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (optional) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Opcional',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          items: items
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+          icon: const Icon(Icons.expand_more_rounded, color: Colors.grey),
+          decoration: InputDecoration(
+            prefixIcon: Container(
+              margin: const EdgeInsets.all(10),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: AppTheme.ledhouseBlue,
                 width: 1.5,
               ),
             ),
