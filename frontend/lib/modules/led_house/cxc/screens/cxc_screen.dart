@@ -154,6 +154,10 @@ class _CxcScreenState extends State<CxcScreen> with TickerProviderStateMixin {
       builder: (context, provider, _) {
         final filteredCxcs = _getFilteredList(provider.cxcs);
         final groupedClients = provider.clientesAgrupados.where((c) {
+          final totalPendienteStr = c['total_pendiente']?.toString() ?? '0';
+          final totalPendiente = double.tryParse(totalPendienteStr) ?? 0.0;
+          if (totalPendiente <= 0) return false;
+
           if (_searchGroupedQuery.isEmpty) return true;
           final normalizedQuery = _normalizeText(_searchGroupedQuery);
           final normalizedName = _normalizeText(c['nombre'] ?? '');

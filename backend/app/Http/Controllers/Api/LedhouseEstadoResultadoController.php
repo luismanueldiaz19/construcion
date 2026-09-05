@@ -112,7 +112,11 @@ class LedhouseEstadoResultadoController extends Controller
             }
         }
 
-        $registros = $query->get();
+        $registros = $query->get()->filter(function ($reg) use ($mesesFiltrados) {
+            if (empty($mesesFiltrados)) return true;
+            $mes = (int) date('n', strtotime($reg->fecha));
+            return in_array($mes, $mesesFiltrados);
+        });
         $matrizBruta = [];
 
         foreach ($registros as $reg) {
@@ -265,11 +269,26 @@ class LedhouseEstadoResultadoController extends Controller
     {
         $year = $request->query('year', date('Y'));
 
+        // Extraer los meses filtrados
+        $mesesFiltrados = [];
+        if ($request->has('meses') && !empty($request->meses)) {
+            $mesesArr = explode(',', $request->meses);
+            $mesesArr = array_filter($mesesArr, 'is_numeric');
+            if (count($mesesArr) > 0) {
+                $mesesFiltrados = $mesesArr;
+            }
+        }
+
         // Obtener todos los registros del año solicitado
         $registros = LedhouseEstadoResultado::join('cuenta_catalogo_ledhouse', 'ledhouse_estado_resultado.codigo_cuenta', '=', 'cuenta_catalogo_ledhouse.codigo')
             ->select('ledhouse_estado_resultado.*', 'cuenta_catalogo_ledhouse.origen as modulo', 'cuenta_catalogo_ledhouse.descripcion as descripcion_de_cuenta')
             ->whereYear('ledhouse_estado_resultado.fecha', $year)
-            ->get();
+            ->get()
+            ->filter(function ($reg) use ($mesesFiltrados) {
+                if (empty($mesesFiltrados)) return true;
+                $mes = (int) date('n', strtotime($reg->fecha));
+                return in_array($mes, $mesesFiltrados);
+            });
 
         $matriz = [];
 

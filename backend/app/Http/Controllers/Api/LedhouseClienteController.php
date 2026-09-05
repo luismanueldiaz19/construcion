@@ -35,6 +35,10 @@ class LedhouseClienteController extends Controller
             'nombre' => 'required|string',
             'whatsapp' => 'nullable|string',
             'direccion' => 'nullable|string',
+            'tipo_documento' => 'nullable|string|in:Cédula,RNC',
+            'documento' => 'nullable|string',
+            'limite_credito' => 'nullable|numeric',
+            'dias_credito' => 'nullable|integer',
         ]);
 
         $cliente = LedhouseCliente::create($validated);
@@ -62,6 +66,10 @@ class LedhouseClienteController extends Controller
             'nombre' => 'required|string',
             'whatsapp' => 'nullable|string',
             'direccion' => 'nullable|string',
+            'tipo_documento' => 'nullable|string|in:Cédula,RNC',
+            'documento' => 'nullable|string',
+            'limite_credito' => 'nullable|numeric',
+            'dias_credito' => 'nullable|integer',
         ]);
 
         $cliente->update($validated);
@@ -96,10 +104,26 @@ class LedhouseClienteController extends Controller
                 $direccion = isset($row[2]) ? trim((string)$row[2]) : null;
                 $limite_credito = isset($row[3]) ? trim((string)$row[3]) : null;
                 $dias_credito = isset($row[4]) ? trim((string)$row[4]) : null;
+                $tipo_documento = isset($row[5]) ? trim((string)$row[5]) : null;
+                $documento = isset($row[6]) ? trim((string)$row[6]) : null;
 
                 // Whatsapp can be empty, only nombre is required
                 $whatsapp = $whatsapp !== '' ? $whatsapp : null;
                 $direccion = $direccion !== '' ? $direccion : null;
+                $documento = $documento !== '' ? $documento : null;
+
+                if ($tipo_documento !== '') {
+                    $lower_tipo = strtolower($tipo_documento);
+                    if ($lower_tipo === 'cedula' || $lower_tipo === 'cédula') {
+                        $tipo_documento = 'Cédula';
+                    } elseif ($lower_tipo === 'rnc') {
+                        $tipo_documento = 'RNC';
+                    } else {
+                        $tipo_documento = null;
+                    }
+                } else {
+                    $tipo_documento = null;
+                }
                 
                 $limite_credito = ($limite_credito !== '' && is_numeric($limite_credito)) ? (float)$limite_credito : 0;
                 $dias_credito = ($dias_credito !== '' && is_numeric($dias_credito)) ? (int)$dias_credito : 0;
@@ -110,6 +134,8 @@ class LedhouseClienteController extends Controller
                         [
                             'whatsapp'  => $whatsapp,
                             'direccion' => $direccion,
+                            'tipo_documento' => $tipo_documento,
+                            'documento' => $documento,
                             'limite_credito' => $limite_credito,
                             'dias_credito' => $dias_credito,
                         ]

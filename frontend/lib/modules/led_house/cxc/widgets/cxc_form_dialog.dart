@@ -9,8 +9,9 @@ import '../../providers/ledhouse_cliente_provider.dart';
 
 class CxcFormDialog extends StatefulWidget {
   final CxcModel? cxc;
+  final int? preselectedClienteId;
 
-  const CxcFormDialog({super.key, this.cxc});
+  const CxcFormDialog({super.key, this.cxc, this.preselectedClienteId});
 
   @override
   State<CxcFormDialog> createState() => _CxcFormDialogState();
@@ -23,6 +24,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
   final _montoFacturaController = TextEditingController();
   final _montoPagadoController = TextEditingController();
 
+  DateTime? _fechaFactura;
   DateTime _fechaVencimiento = DateTime.now();
   String _estado = 'pendiente';
   bool _isSaving = false;
@@ -41,6 +43,13 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
       try {
         _fechaVencimiento = DateTime.parse(widget.cxc!.fechaVencimiento);
       } catch (_) {}
+      try {
+        if (widget.cxc!.fechaFactura != null) {
+          _fechaFactura = DateTime.parse(widget.cxc!.fechaFactura!);
+        }
+      } catch (_) {}
+    } else if (widget.preselectedClienteId != null) {
+      _selectedClienteId = widget.preselectedClienteId;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<LedhouseClienteProvider>(
@@ -56,6 +65,23 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
     _montoFacturaController.dispose();
     _montoPagadoController.dispose();
     super.dispose();
+  }
+
+  void _calculateFechaVencimiento() {
+    if (_fechaFactura == null || _selectedClienteId == null) return;
+    
+    final provider = Provider.of<LedhouseClienteProvider>(context, listen: false);
+    final index = provider.clientes.indexWhere((c) => c.id == _selectedClienteId);
+    
+    if (index != -1) {
+      final cliente = provider.clientes[index];
+      final dias = cliente.diasCredito ?? 0;
+      if (dias > 0) {
+        setState(() {
+          _fechaVencimiento = _fechaFactura!.add(Duration(days: dias));
+        });
+      }
+    }
   }
 
   void _save() async {
@@ -92,6 +118,8 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
       'monto_pagado': _montoPagadoController.text.isEmpty
           ? 0
           : double.parse(_montoPagadoController.text.trim()),
+      if (_fechaFactura != null)
+        'fecha_factura': DateFormat('yyyy-MM-dd').format(_fechaFactura!),
       'fecha_vencimiento': DateFormat('yyyy-MM-dd').format(_fechaVencimiento),
       'estado': _estado,
     };
@@ -215,6 +243,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                               ),
                               const SizedBox(height: 8),
                               DropdownMenu<int>(
+                                enabled: widget.preselectedClienteId == null && !_isEditing,
                                 initialSelection: _selectedClienteId,
                                 expandedInsets: EdgeInsets.zero,
                                 inputDecorationTheme: InputDecorationTheme(
@@ -248,6 +277,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                                 ),
                                 enableFilter: true,
                                 enableSearch: true,
+                                menuHeight: 300,
                                 hintText: 'Seleccione un cliente',
                                 textStyle: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
                                 dropdownMenuEntries: provider.clientes.map((c) {
@@ -258,6 +288,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                                 }).toList(),
                                 onSelected: (val) {
                                   setState(() => _selectedClienteId = val);
+                                  _calculateFechaVencimiento();
                                 },
                               ),
                             ],
@@ -308,7 +339,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Fecha Vencimiento',
+                            'Fecha Factura',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -320,7 +351,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                             onTap: () async {
                               final date = await showDatePicker(
                                 context: context,
-                                initialDate: _fechaVencimiento,
+                                initialDate: _fechaFactura ?? DateTime.now(),
                                 firstDate: DateTime(2000),
                                 lastDate: DateTime(2100),
                                 builder: (context, child) {
@@ -334,14 +365,21 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                                   );
                                 },
                               );
-                              if (date != null) setState(() => _fechaVencimiento = date);
+                              if (date != null) {
+                                setState(() => _fechaFactura = date);
+                                _calculateFechaVencimiento();
+                              }
                             },
                             child: IgnorePointer(
                               child: TextFormField(
-                                key: ValueKey(_fechaVencimiento),
-                                initialValue: DateFormat('dd/MM/yyyy').format(_fechaVencimiento),
+                                key: ValueKey(_fechaFactura),
+                                initialValue: _fechaFactura != null 
+                                  ? DateFormat('dd/MM/yyyy').format(_fechaFactura!)
+                                  : '',
                                 style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
                                 decoration: InputDecoration(
+                                  hintText: 'Seleccione...',
+                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                                   prefixIcon: Container(
                                     margin: const EdgeInsets.all(10),
                                     width: 36,
@@ -350,7 +388,7 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                                       color: AppTheme.successColor.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Icon(Icons.calendar_today_rounded, color: AppTheme.successColor, size: 18),
+                                    child: const Icon(Icons.event_available_rounded, color: AppTheme.successColor, size: 18),
                                   ),
                                   filled: true,
                                   fillColor: const Color(0xFFF9FAFB),
@@ -369,6 +407,51 @@ class _CxcFormDialogState extends State<CxcFormDialog> {
                                     horizontal: 16,
                                     vertical: 14,
                                   ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Fecha Vencimiento',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          IgnorePointer(
+                            child: TextFormField(
+                              key: ValueKey(_fechaVencimiento),
+                              initialValue: DateFormat('dd/MM/yyyy').format(_fechaVencimiento),
+                              style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
+                              decoration: InputDecoration(
+                                prefixIcon: Container(
+                                  margin: const EdgeInsets.all(10),
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(Icons.calendar_today_rounded, color: Colors.grey.shade600, size: 18),
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFFF3F4F6),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: Colors.grey.shade200),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
                                 ),
                               ),
                             ),

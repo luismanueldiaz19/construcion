@@ -13,6 +13,8 @@ class LedhouseCliente extends Model
         'nombre',
         'whatsapp',
         'direccion',
+        'tipo_documento',
+        'documento',
         'limite_credito',
         'dias_credito'
     ];

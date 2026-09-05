@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/app_theme.dart';
@@ -230,6 +229,16 @@ class _LedhouseClientesScreenState extends State<LedhouseClientesScreen>
                       _buildFormatRow(
                         'Columna E',
                         'Días de Crédito',
+                        isRequired: false,
+                      ),
+                      _buildFormatRow(
+                        'Columna F',
+                        'Tipo Documento (Cédula o RNC)',
+                        isRequired: false,
+                      ),
+                      _buildFormatRow(
+                        'Columna G',
+                        'Documento',
                         isRequired: false,
                       ),
                     ],

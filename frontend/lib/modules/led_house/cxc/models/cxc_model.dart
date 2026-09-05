@@ -8,6 +8,7 @@ class CxcModel {
   final double montoFactura;
   final double montoPagado;
   final double montoPendiente;
+  final String? fechaFactura;
   final String fechaVencimiento;
   final String estado;
   final int totalIntervenciones;
@@ -21,6 +22,7 @@ class CxcModel {
     required this.montoFactura,
     this.montoPagado = 0.0,
     required this.montoPendiente,
+    this.fechaFactura,
     required this.fechaVencimiento,
     this.estado = 'pendiente',
     this.totalIntervenciones = 0,
@@ -38,6 +40,7 @@ class CxcModel {
       montoFactura: double.tryParse(json['monto_factura']?.toString() ?? '0') ?? 0.0,
       montoPagado: double.tryParse(json['monto_pagado']?.toString() ?? '0') ?? 0.0,
       montoPendiente: double.tryParse(json['monto_pendiente']?.toString() ?? '0') ?? 0.0,
+      fechaFactura: json['fecha_factura'],
       fechaVencimiento: json['fecha_vencimiento'] ?? '',
       estado: json['estado'] ?? 'pendiente',
       totalIntervenciones: json['total_intervenciones'] ?? 0,
@@ -51,6 +54,7 @@ class CxcModel {
       'cliente_id': clienteId,
       'monto_factura': montoFactura,
       'monto_pagado': montoPagado,
+      if (fechaFactura != null) 'fecha_factura': fechaFactura,
       'fecha_vencimiento': fechaVencimiento,
       'estado': estado,
     };
