@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../assets/presentation/asset_categories_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,19 +25,28 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: accentColor.withValues(alpha: 0.1),
                 child: Icon(Icons.category, color: accentColor),
               ),
-              title: const Text('Categorías de Activos', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Gestionar categorías de equipos, herramientas y vehículos'),
+              title: const Text(
+                'Categorías de Activos',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                'Gestionar categorías de equipos, herramientas y vehículos',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AssetCategoriesScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const AssetCategoriesScreen(),
+                  ),
                 );
               },
             ),
