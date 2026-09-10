@@ -718,6 +718,7 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                               DataColumn(label: Text('Documento')),
                               DataColumn(label: Text('Factura')),
                               DataColumn(label: Text('Deuda Pendiente')),
+                              DataColumn(label: Text('Fecha')),
                               DataColumn(label: Text('Vencimiento')),
                               DataColumn(label: Text('Estado')),
                               DataColumn(label: Text('Acciones')),
@@ -872,6 +873,14 @@ class _CxcClienteDetailScreenState extends State<CxcClienteDetailScreen> {
                                         color: pastDue
                                             ? AppTheme.dangerColor
                                             : const Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      cxc.fechaFactura ?? '',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
                                       ),
                                     ),
                                   ),

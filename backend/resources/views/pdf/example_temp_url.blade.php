@@ -180,6 +180,7 @@
                 <th>Facturado</th>
                 <th>Pagado</th>
                 <th>Deuda Pendiente</th>
+                <th>Fecha</th>
                 <th>Vencimiento</th>
                 <th>Estado</th>
             </tr>
@@ -206,6 +207,7 @@
                     <td>${{ number_format($cxc->monto_factura, 2) }}</td>
                     <td>${{ number_format($cxc->monto_pagado, 2) }}</td>
                     <td style="color: #d93025; font-weight: bold;">${{ number_format($cxc->monto_pendiente, 2) }}</td>
+                    <td>{{ \Carbon\Carbon::parse($cxc->fecha_factura)->format('Y-m-d') }}</td>
                     <td>{{ $fechaVencimiento->format('Y-m-d') }}</td>
                     <td>
                         @if(strtolower($cxc->estado) === 'pagado')
@@ -219,7 +221,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 20px;">No hay cuentas por cobrar registradas para este cliente.</td>
+                    <td colspan="7" style="text-align: center; padding: 20px;">No hay cuentas por cobrar registradas para este cliente.</td>
                 </tr>
             @endforelse
             
@@ -229,7 +231,7 @@
                 <td>${{ number_format($totalFacturado, 2) }}</td>
                 <td>${{ number_format($totalPagado, 2) }}</td>
                 <td style="color: #d93025;">${{ number_format($totalPendiente, 2) }}</td>
-                <td colspan="2"></td>
+                <td colspan="3"></td>
             </tr>
         </tbody>
     </table>
