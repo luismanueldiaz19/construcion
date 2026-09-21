@@ -1,18 +1,34 @@
-Write-Host "Iniciando compilación de Flutter Web..." -ForegroundColor Cyan
+Write-Host "Iniciando compilacion de Flutter Web..." -ForegroundColor Cyan
 #comando para hacer la compilacion y hacer el push
 # powershell -ExecutionPolicy Bypass -File .\compilar_web.ps1
 
-# 1. Navegar y compilar Flutter Web
+# 1. Navegar, limpiar y compilar Flutter Web
 Push-Location "$PSScriptRoot\frontend"
+
+Write-Host "Ejecutando flutter clean..." -ForegroundColor Yellow
+flutter clean
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Advertencia al ejecutar flutter clean, continuando..." -ForegroundColor DarkYellow
+}
+
+Write-Host "Ejecutando flutter pub get..." -ForegroundColor Yellow
+flutter pub get
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error al obtener dependencias de Flutter." -ForegroundColor Red
+    Pop-Location
+    exit 1
+}
+
+Write-Host "Compilando Flutter Web en modo Release..." -ForegroundColor Cyan
 flutter build web --release
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error en la compilación de Flutter Web." -ForegroundColor Red
+    Write-Host "Error en la compilacion de Flutter Web." -ForegroundColor Red
     Pop-Location
     exit 1
 }
 Pop-Location
 
-Write-Host "Compilación completada. Copiando archivos a Laravel..." -ForegroundColor Cyan
+Write-Host "compilacion completada. Copiando archivos a Laravel..." -ForegroundColor Cyan
 
 # Rutas
 $buildWebDir = "$PSScriptRoot\frontend\build\web"
@@ -42,7 +58,7 @@ if (Test-Path "$buildWebDir\index.html") {
     # Reemplazamos la ruta estática de Flutter por el asset dinámico de Laravel
     $htmlContent = $htmlContent -replace '<base href="/">', '<base href="{{ asset(''/'') }}">'
     Set-Content -Path $bladeViewPath -Value $htmlContent -Force
-    Write-Host "Se actualizó app.blade.php con el nuevo index.html (y base href dinámico)." -ForegroundColor Green
+    Write-Host "Se actualizo app.blade.php con el nuevo index.html (y base href dinamico)." -ForegroundColor Green
 }
 
 # 6. Borrar index.html del public de Laravel para evitar conflictos con las rutas amigables de Laravel
@@ -51,6 +67,7 @@ if (Test-Path $publicIndexHtml) {
     Remove-Item -Path $publicIndexHtml -Force
 }
 
-Write-Host "¡Proceso terminado con éxito! Listo para hacer git add, commit y push en producción." -ForegroundColor Green
+Write-Host "¡Proceso terminado con éxito! Listo para hacer git add, commit y push en produccion." -ForegroundColor Green
+
 
 
