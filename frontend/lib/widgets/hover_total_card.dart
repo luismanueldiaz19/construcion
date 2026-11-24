@@ -34,15 +34,15 @@ class _HoverTotalCardState extends State<HoverTotalCard> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: _isHovered ? widget.color.withOpacity(0.05) : Colors.white,
+            color: _isHovered ? widget.color.withValues(alpha: 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _isHovered ? widget.color.withOpacity(0.5) : Colors.grey.shade200,
+              color: _isHovered ? widget.color.withValues(alpha: 0.5) : Colors.grey.shade200,
               width: _isHovered ? 2 : 1,
             ),
             boxShadow: _isHovered ? [
               BoxShadow(
-                color: widget.color.withOpacity(0.15),
+                color: widget.color.withValues(alpha: 0.15),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               )
@@ -54,7 +54,7 @@ class _HoverTotalCardState extends State<HoverTotalCard> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.color.withOpacity(0.1),
+                  color: widget.color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(widget.icon, color: widget.color, size: 24),

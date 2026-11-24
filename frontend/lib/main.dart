@@ -211,6 +211,10 @@ class _MainLayoutState extends State<MainLayout> {
   Widget build(BuildContext context) {
     final bool isMobile = MediaQuery.of(context).size.width <= 850;
 
+    print(
+      'Tamano de pantalla S24 ultra : ${MediaQuery.of(context).size.toString()}',
+    );
+
     return Scaffold(
       appBar: isMobile
           ? AppBar(
@@ -280,7 +284,7 @@ class _MainLayoutState extends State<MainLayout> {
                 ),
               ),
               child: Container(
-                color: Colors.white.withValues(alpha: 0.7),
+                // color: Colors.white.withValues(alpha: 0.7),
                 child: _screens[_selectedIndex],
               ),
             ),

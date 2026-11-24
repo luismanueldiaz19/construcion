@@ -131,11 +131,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               },
             ),
           ),
-          Positioned.fill(
-            child: Container(
-              color: const Color(0xFF1A1C1E).withValues(alpha: 0.8),
-            ),
-          ),
+          // Positioned.fill(
+          //   child: Container(
+          //     color: const Color(0xFF1A1C1E).withValues(alpha: 0.8),
+          //   ),
+          // ),
 
           // Back Button
           Positioned(

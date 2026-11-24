@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../../../../core/app_theme.dart';
 import '../providers/suppliers_provider.dart';
 
+/// Franja horizontal ultra-compacta de métricas para proveedores.
+///
+/// Ocupa sólo ~34px de altura, reemplazando las tarjetas grandes para
+/// maximizar el espacio vertical visible de la tabla.
 class SupplierMetricsCards extends StatelessWidget {
   const SupplierMetricsCards({super.key});
 
@@ -16,173 +20,109 @@ class SupplierMetricsCards extends StatelessWidget {
         final int inactivos = total - activos;
         final int conCredito = proveedores.where((p) => p.allowCredit).length;
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final double cardWidth = (constraints.maxWidth - 48) / 4;
-              final bool useGrid = constraints.maxWidth < 750;
-
-              if (useGrid) {
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 2.8,
-                  children: [
-                    _buildPremiumMetricCard('Proveedores Totales', total.toString(), Icons.domain_rounded, Colors.blueAccent),
-                    _buildPremiumMetricCard('Activos', activos.toString(), Icons.check_circle_rounded, Colors.teal),
-                    _buildPremiumMetricCard('Inactivos', inactivos.toString(), Icons.cancel_rounded, Colors.redAccent),
-                    _buildPremiumMetricCard('Con Crédito', conCredito.toString(), Icons.credit_card_rounded, Colors.orangeAccent),
-                  ],
-                );
-              }
-
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SizedBox(
-                    width: cardWidth,
-                    child: _buildPremiumMetricCard(
-                      'Proveedores Totales',
-                      total.toString(),
-                      Icons.domain_rounded,
-                      Colors.blueAccent,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: cardWidth,
-                    child: _buildPremiumMetricCard(
-                      'Activos',
-                      activos.toString(),
-                      Icons.check_circle_rounded,
-                      Colors.teal,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: cardWidth,
-                    child: _buildPremiumMetricCard(
-                      'Inactivos',
-                      inactivos.toString(),
-                      Icons.cancel_rounded,
-                      Colors.redAccent,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: cardWidth,
-                    child: _buildPremiumMetricCard(
-                      'Con Crédito',
-                      conCredito.toString(),
-                      Icons.credit_card_rounded,
-                      Colors.orangeAccent,
-                    ),
-                  ),
-                ],
-              );
-            },
+        return Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _MetricItem(
+                  icon: Icons.business_rounded,
+                  iconColor: const Color(0xFF2563EB),
+                  value: total.toString(),
+                  label: 'Proveedores',
+                ),
+                _buildDivider(),
+                _MetricItem(
+                  icon: Icons.check_circle_rounded,
+                  iconColor: const Color(0xFF16A34A),
+                  value: activos.toString(),
+                  label: 'Activos',
+                  valueColor: const Color(0xFF15803D),
+                ),
+                _buildDivider(),
+                _MetricItem(
+                  icon: Icons.cancel_rounded,
+                  iconColor: const Color(0xFFDC2626),
+                  value: inactivos.toString(),
+                  label: 'Inactivos',
+                  valueColor: inactivos > 0 ? const Color(0xFFDC2626) : AppTheme.textSecondary,
+                ),
+                _buildDivider(),
+                _MetricItem(
+                  icon: Icons.credit_card_rounded,
+                  iconColor: const Color(0xFFD97706),
+                  value: conCredito.toString(),
+                  label: 'Con Crédito',
+                  valueColor: const Color(0xFFB45309),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildPremiumMetricCard(
-    String label,
-    String value,
-    IconData icon,
-    Color primaryColor,
-  ) {
+  Widget _buildDivider() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+      height: 16,
+      width: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      color: const Color(0xFFCBD5E1),
+    );
+  }
+}
+
+class _MetricItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+  final Color? valueColor;
+
+  const _MetricItem({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 14, color: iconColor),
+        const SizedBox(width: 5),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? const Color(0xFF0F172A),
           ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.white, width: 1.5),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          children: [
-            // Decorative background circle
-            Positioned(
-              right: -15,
-              top: -15,
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: primaryColor.withValues(alpha: 0.04),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 12.0,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: primaryColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          value,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.textPrimary,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary,
-                            letterSpacing: 0.2,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
-      ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

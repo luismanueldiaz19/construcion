@@ -1,354 +1,211 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../../../core/app_theme.dart';
-import '../providers/purchase_provider.dart';
 import '../../../../models/proveedor.dart';
+import '../../../../widgets/app_card.dart';
+import '../../../../widgets/app_date_picker_field.dart';
+import '../../../../widgets/app_dropdown.dart';
+import '../../../../widgets/app_text_field.dart';
 import '../../../../widgets/search_selector_dialog.dart';
+import '../providers/purchase_provider.dart';
 
+/// Tarjeta de detalles de compra estandarizada con componentes globales.
+///
+/// Elimina desbordamientos de pantalla (overflows), adapta campos en 1 o 2 columnas
+/// según el ancho disponible y sigue las directrices ultra-compactas del sistema.
 class PurchaseDetailsCard extends StatelessWidget {
   const PurchaseDetailsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade200),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Detalles de la Compra',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 24),
+    final provider = context.watch<PurchaseProvider>();
 
-                // Supplier Search
-                _buildLabel('Proveedor'),
-                Consumer<PurchaseProvider>(
-                  builder: (context, provider, child) {
-                    return _buildSearchField(
-                      context: context,
-                      hint: 'Buscar Proveedor',
-                      value: provider.selectedProveedorId,
-                      items: provider.proveedores,
-                      displayMapper: (p) => (p as Proveedor).name,
-                      onTap: () => _showSupplierSearch(context, provider),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Project Dropdown
-                _buildLabel('Proyecto'),
-                Consumer<PurchaseProvider>(
-                  builder: (context, provider, child) {
-                    return DropdownButtonFormField<int>(
-                      value: provider.selectedProyectoId,
-                      decoration: _inputDecoration(
-                        'Seleccionar Proyecto',
-                        null,
-                      ),
-                      items: provider.proyectos
-                          .map(
-                            (p) => DropdownMenuItem<int>(
-                              value: p['id'],
-                              child: Text(p['nombre']),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => provider.updateProyecto(v),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Purchase Type & Date
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth < 400) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildTipoCompra(context),
-                          const SizedBox(height: 16),
-                          _buildFechaFactura(context),
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _buildTipoCompra(context)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildFechaFactura(context)),
-                      ],
-                    );
-                  },
-                ),
-                // Reference & Comprobante
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth < 400) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildReferencia(context),
-                          const SizedBox(height: 16),
-                          _buildComprobante(context),
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _buildReferencia(context)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildComprobante(context)),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Internal Notes
-                _buildLabel('Notas Internas'),
-                Consumer<PurchaseProvider>(
-                  builder: (context, provider, child) {
-                    return TextFormField(
-                      controller: provider.notaController,
-                      maxLines: 3,
-                      decoration: _inputDecoration(
-                        'Añadir información adicional...',
-                        null,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Upload Invoice PDF Placeholder Card
-        _buildUploadCard(),
-      ],
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey.shade600,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTipoCompra(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('Tipo de Compra'),
-        Consumer<PurchaseProvider>(
-          builder: (context, provider, child) {
-            return DropdownButtonFormField<String>(
-              value: provider.tipoCompra,
-              decoration: _inputDecoration(null, null),
-              items: const [
-                DropdownMenuItem(value: 'Contado', child: Text('Contado')),
-                DropdownMenuItem(value: 'Crédito', child: Text('Crédito')),
-              ],
-              onChanged: (v) => provider.updateTipoCompra(v!),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFechaFactura(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('Fecha de Factura'),
-        Consumer<PurchaseProvider>(
-          builder: (context, provider, child) {
-            return InkWell(
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: provider.fecha,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (date != null) provider.updateFecha(date);
-              },
-              child: InputDecorator(
-                decoration: _inputDecoration(
-                  null,
-                  Icons.calendar_today_outlined,
-                ),
-                child: Text(DateFormat('MM/dd/yyyy').format(provider.fecha)),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReferencia(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('Referencia / No. Orden'),
-        Consumer<PurchaseProvider>(
-          builder: (context, provider, child) {
-            return TextFormField(
-              controller: provider.ordenController,
-              decoration: _inputDecoration('REF-XXXXX-X', null),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildComprobante(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('No. de Comprobante'),
-        Consumer<PurchaseProvider>(
-          builder: (context, provider, child) {
-            return TextFormField(
-              controller: provider.comprobanteController,
-              decoration: _inputDecoration('B0100000001', null),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  InputDecoration _inputDecoration(String? hint, IconData? suffixIcon) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      isDense: true,
-      suffixIcon: suffixIcon != null
-          ? Icon(suffixIcon, size: 18, color: Colors.grey.shade500)
-          : null,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.blue, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
-      ),
-      filled: true,
-      fillColor: Colors.grey.shade100,
-    );
-  }
-
-  Widget _buildSearchField({
-    required BuildContext context,
-    required String hint,
-    required dynamic value,
-    required List<dynamic> items,
-    required String Function(dynamic) displayMapper,
-    required VoidCallback onTap,
-  }) {
-    final selectedItem = items.cast<dynamic>().firstWhere(
-      (i) => (i is Proveedor ? i.id : i['id']) == value,
+    // Obtener nombre del proveedor seleccionado
+    final selectedProveedor = provider.proveedores.cast<dynamic>().firstWhere(
+      (p) => (p is Proveedor ? p.id : p['id']) == provider.selectedProveedorId,
       orElse: () => null,
     );
-    final displayText = selectedItem != null
-        ? displayMapper(selectedItem)
-        : hint;
+    final String proveedorTexto = selectedProveedor != null
+        ? (selectedProveedor is Proveedor
+            ? selectedProveedor.name
+            : selectedProveedor['nombre'] ?? '')
+        : '';
 
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey.shade500),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppCard(
+          title: 'Detalles de la Compra',
+          subtitle: 'Proveedor, proyecto y comprobante fiscal',
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Selector de Proveedor
+              InkWell(
+                onTap: () => _showSupplierSearch(context, provider),
+                borderRadius: BorderRadius.circular(10),
+                child: IgnorePointer(
+                  child: AppTextField(
+                    labelText: 'Proveedor',
+                    hintText: 'Buscar y seleccionar proveedor...',
+                    controller: TextEditingController(text: proveedorTexto),
+                    prefixIconData: Icons.storefront_rounded,
+                    suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 2. Dropdown de Proyecto (con isExpanded: true para prevenir overflows)
+              AppDropdown<int>(
+                labelText: 'Proyecto Destino',
+                hintText: 'Seleccionar Proyecto',
+                prefixIconData: Icons.construction_rounded,
+                value: provider.selectedProyectoId,
+                isExpanded: true,
+                items: provider.proyectos.map((p) {
+                  return DropdownMenuItem<int>(
+                    value: p['id'] as int,
+                    child: Text(
+                      p['nombre']?.toString() ?? '',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (v) => provider.updateProyecto(v),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 3. Fila flexible: Tipo de Compra y Fecha de Factura
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isTight = constraints.maxWidth < 280;
+
+                  final tipoField = AppDropdown<String>(
+                    labelText: 'Tipo de Compra',
+                    value: provider.tipoCompra,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Contado',
+                        child: Text('Contado', style: TextStyle(fontSize: 12.5)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Crédito',
+                        child: Text('Crédito', style: TextStyle(fontSize: 12.5)),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) provider.updateTipoCompra(v);
+                    },
+                  );
+
+                  final fechaField = AppDatePickerField(
+                    labelText: 'Fecha de Factura',
+                    selectedDate: provider.fecha,
+                    isClearable: false,
+                    onDateChanged: (d) {
+                      if (d != null) provider.updateFecha(d);
+                    },
+                  );
+
+                  if (isTight) {
+                    return Column(
+                      children: [
+                        tipoField,
+                        const SizedBox(height: 12),
+                        fechaField,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: tipoField),
+                      const SizedBox(width: 10),
+                      Expanded(child: fechaField),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              // 4. Fila flexible: Referencia y Número de Comprobante
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isTight = constraints.maxWidth < 280;
+
+                  final ordenField = AppTextField(
+                    labelText: 'Referencia / No. Orden',
+                    hintText: 'REF-XXXXX-X',
+                    controller: provider.ordenController,
+                    prefixIconData: Icons.tag_rounded,
+                  );
+
+                  final ncfField = AppTextField(
+                    labelText: 'No. Comprobante (NCF)',
+                    hintText: 'B0100000001',
+                    controller: provider.comprobanteController,
+                    prefixIconData: Icons.receipt_long_rounded,
+                  );
+
+                  if (isTight) {
+                    return Column(
+                      children: [
+                        ordenField,
+                        const SizedBox(height: 12),
+                        ncfField,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: ordenField),
+                      const SizedBox(width: 10),
+                      Expanded(child: ncfField),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              // 5. Notas Internas
+              AppTextField(
+                labelText: 'Notas Internas / Observaciones',
+                hintText: 'Añadir información adicional sobre la compra...',
+                controller: provider.notaController,
+                maxLines: 2,
+              ),
+            ],
           ),
-          isDense: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.blue, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.red, width: 1.5),
-          ),
-          filled: true,
-          fillColor: Colors.grey.shade100,
         ),
-        child: Text(
-          displayText,
-          style: TextStyle(
-            color: selectedItem != null ? Colors.black : Colors.grey.shade400,
-            fontSize: 13,
-          ),
-        ),
-      ),
+
+        const SizedBox(height: 12),
+
+        // 6. Tarjeta para adjuntar documento PDF
+        _buildUploadInvoiceCard(),
+      ],
     );
   }
 
-  void _showSupplierSearch(
-    BuildContext context,
-    PurchaseProvider provider,
-  ) async {
+  void _showSupplierSearch(BuildContext context, PurchaseProvider provider) async {
     final result = await showDialog<int>(
       context: context,
       builder: (context) => SearchSelectorDialog(
-        title: 'Supplier',
+        title: 'Seleccionar Proveedor',
         items: provider.proveedores,
         displayMapper: (p) => (p as Proveedor).name,
-        subtitleMapper: (p) => "RNC: ${(p as Proveedor).rnc ?? 'N/A'}",
+        subtitleMapper: (p) => 'RNC: ${(p as Proveedor).rnc ?? 'N/A'}',
         onAdd: () {
-          Navigator.pop(context); // close
-          // Add supplier logic if necessary
+          Navigator.pop(context);
         },
       ),
     );
@@ -358,50 +215,59 @@ class PurchaseDetailsCard extends StatelessWidget {
     }
   }
 
-  Widget _buildUploadCard() {
-    return Card(
-      elevation: 0,
-      color: Colors.grey.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Colors.grey.shade300,
-          style: BorderStyle
-              .none, // Can use dotted_border package ideally, we use solid or none
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+  Widget _buildUploadInvoiceCard() {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: InkWell(
+        onTap: () {
+          // Acción de subir archivo (placeholder)
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.cloud_upload_outlined,
+                  color: AppTheme.accentColor,
+                  size: 20,
+                ),
               ),
-              child: const Icon(
-                Icons.cloud_upload_outlined,
-                color: Colors.black,
-                size: 24,
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Adjuntar Factura PDF',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Formatos admitidos: PDF, JPG, PNG (máx. 5MB)',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Subir PDF de Factura',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Tamaño máximo: 5MB (PDF, JPG, PNG)',
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-            ),
-          ],
+              const Icon(Icons.attach_file_rounded, size: 18, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );

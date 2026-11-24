@@ -8,6 +8,8 @@ import '../../../../core/auth_provider.dart';
 import '../../../../core/constants.dart';
 import '../providers/compras_report_provider.dart';
 
+/// Panel de detalles de compra ultra-compacto y ergonómico.
+/// Optimizado para panel lateral en desktop y modal bottom-sheet en mobile.
 class CompraDetailPanel extends StatelessWidget {
   final bool isBottomSheet;
 
@@ -19,23 +21,30 @@ class CompraDetailPanel extends StatelessWidget {
       builder: (context, provider, child) {
         if (provider.isLoadingDetail) {
           return Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             decoration: isBottomSheet
                 ? null
                 : BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
             child: const Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.black),
-                  SizedBox(height: 16),
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 10),
                   Text(
                     'Cargando detalles...',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                 ],
               ),
@@ -51,530 +60,649 @@ class CompraDetailPanel extends StatelessWidget {
         final detail = provider.selectedCompraDetail;
         if (detail == null) {
           return Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 72,
-                  color: Colors.grey[300],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Detalles de Factura',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 44,
+                    color: Colors.grey[300],
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Seleccione una compra del registro a la izquierda para visualizar su factura, desglose de materiales, totales y documentos de evidencia adjuntos.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    height: 1.4,
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Detalles de Factura',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Seleccione una compra del registro para visualizar su factura, materiales y evidencias.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
-        final f = NumberFormat.currency(symbol: '\$');
+        final f = NumberFormat.currency(symbol: 'RD\$ ', decimalDigits: 2);
         final detalles = detail['detalles'] as List? ?? [];
         final documentos = detail['documentos'] as List? ?? [];
         final estado = detail['estado'] ?? 'N/A';
-        Color estadoColor = estado == 'Pendiente'
-            ? Colors.orange
-            : Colors.green;
+        final bool isPagado = estado.toString().toLowerCase() == 'pagado';
+        final Color estadoColor = isPagado
+            ? const Color(0xFF16A34A)
+            : const Color(0xFFEA580C);
 
         final subtotal =
             double.tryParse(detail['subtotal']?.toString() ?? '0') ?? 0;
         final itbis = double.tryParse(detail['itbis']?.toString() ?? '0') ?? 0;
         final total = double.tryParse(detail['total']?.toString() ?? '0') ?? 0;
 
-        final infoSection = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // Header compacto
+        final header = Row(
           children: [
-            // Información de Facturación
-            _buildInfoItem(
-              'Proveedor',
-              detail['proveedor']?['nombre'] ?? 'N/A',
-              Icons.store,
+            Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    'Factura #${detail['id']}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: estadoColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      estado.toString().toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: estadoColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            _buildInfoItem(
-              'Proyecto',
-              detail['proyecto']?['nombre'] ?? 'N/A',
-              Icons.business,
+            if (isMaster)
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.redAccent,
+                  size: 17,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                tooltip: 'Eliminar Compra',
+                onPressed: () =>
+                    _confirmDeleteCompra(context, provider, detail['id']),
+              ),
+            IconButton(
+              icon: const Icon(
+                Icons.print_outlined,
+                color: Color(0xFF64748B),
+                size: 17,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              tooltip: 'Imprimir Factura',
+              onPressed: () async {
+                final url = Uri.parse('$host/compras/${detail['id']}/print');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url);
+                }
+              },
             ),
-            const SizedBox(height: 12),
+            IconButton(
+              icon: const Icon(
+                Icons.close_rounded,
+                color: Color(0xFF64748B),
+                size: 17,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              tooltip: 'Cerrar',
+              onPressed: () {
+                if (isBottomSheet) {
+                  Navigator.pop(context);
+                } else {
+                  provider.selectCompra(null);
+                }
+              },
+            ),
+          ],
+        );
+
+        // Cuadrícula compacta de datos
+        final infoGrid = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Row(
               children: [
                 Expanded(
-                  child: _buildInfoItem(
-                    'Fecha',
+                  child: _buildCompactInfo(
+                    'PROVEEDOR',
+                    detail['proveedor']?['nombre'] ?? 'N/A',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactInfo(
+                    'PROYECTO',
+                    detail['proyecto']?['nombre'] ?? 'N/A',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactInfo(
+                    'FECHA',
                     detail['fecha']?.toString().split('T')[0] ?? 'N/A',
-                    Icons.calendar_today,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: _buildInfoItem(
-                    'Tipo',
+                  child: _buildCompactInfo(
+                    'TIPO',
                     detail['tipo_compra'] ?? 'N/A',
-                    Icons.payment,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Expanded(
-                  child: _buildInfoItem(
-                    'Comprobante',
+                  child: _buildCompactInfo(
+                    'COMPROBANTE',
                     detail['comprobante'] ?? 'N/A',
-                    Icons.confirmation_number,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: _buildInfoItem(
-                    'Orden #',
-                    detail['orden'] ?? 'N/A',
-                    Icons.receipt_long,
-                  ),
+                  child: _buildCompactInfo('ORDEN #', detail['orden'] ?? 'N/A'),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Expanded(
-                  child: _buildInfoItem(
-                    'Código Ref.',
+                  child: _buildCompactInfo(
+                    'CÓDIGO REF',
                     detail['codigo'] ?? 'N/A',
-                    Icons.qr_code,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: _buildInfoItem(
-                    'Vencimiento',
+                  child: _buildCompactInfo(
+                    'VENCIMIENTO',
                     detail['fecha_vencimiento']?.toString().split('T')[0] ??
                         'N/A',
-                    Icons.event_note,
                   ),
                 ),
               ],
             ),
             if (detail['nota'] != null &&
                 detail['nota'].toString().isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _buildInfoItem(
-                'Notas / Observaciones',
-                detail['nota'],
-                Icons.info_outline,
-              ),
+              const SizedBox(height: 6),
+              _buildCompactInfo('NOTAS', detail['nota'].toString()),
             ],
+          ],
+        );
 
-            // Desglose de Artículos
-            const Divider(height: 32, color: Color(0xFFEEEEEE)),
-            const Text(
-              'Artículos / Materiales',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Colors.blueGrey,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: detalles.length,
-              itemBuilder: (context, index) {
-                final d = detalles[index];
-                final mat = d['material'];
-                final cantidad =
-                    double.tryParse(d['cantidad']?.toString() ?? '0') ?? 0;
-                final precio =
-                    double.tryParse(d['precio_unitario']?.toString() ?? '0') ??
-                    0;
-                final subtotalVal =
-                    double.tryParse(d['subtotal']?.toString() ?? '0') ?? 0;
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8.0,
-                    horizontal: 12,
-                  ),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              mat?['nombre'] ?? 'Desconocido',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${cantidad.toStringAsFixed(2)} x ${f.format(precio)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        f.format(subtotalVal),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-
-            // Evidencias / Documentos
-            const Divider(height: 32, color: Color(0xFFEEEEEE)),
+        // Artículos y Materiales ultra-compactos
+        final articulosSection = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Evidencias / Documentos',
+                  'ARTÍCULOS Y MATERIALES',
                   style: TextStyle(
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.blueGrey,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.3,
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _uploadDocumento(context, provider),
-                  icon: const Icon(Icons.upload_file, size: 14),
-                  label: const Text('Subir', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                Text(
+                  '${detalles.length} partidas',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF94A3B8),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (documentos.isEmpty)
-              Text(
-                'No hay documentos adjuntos.',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: documentos.length,
-                itemBuilder: (context, index) {
-                  final doc = documentos[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 0,
-                      ),
-                      dense: true,
-                      leading: const Icon(
-                        Icons.picture_as_pdf,
-                        color: Colors.redAccent,
-                        size: 20,
-                      ),
-                      title: Text(
-                        doc['original_name'] ?? 'Documento',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.open_in_new,
-                              color: Colors.blue,
-                              size: 18,
-                            ),
-                            onPressed: () async {
-                              final url = Uri.parse(
-                                '$host/api/v1/file?path=${doc['file_path']}',
-                              );
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url);
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                              size: 18,
-                            ),
-                            onPressed: () => _confirmDeleteDocumento(
-                              context,
-                              provider,
-                              doc['id'],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+            const SizedBox(height: 4),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                borderRadius: BorderRadius.circular(6),
               ),
+              child: Column(
+                children: [
+                  // Cabecera mini
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    color: const Color(0xFFF8FAFC),
+                    child: const Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            'DESCRIPCIÓN',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'CANTIDAD',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'TOTAL',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  // Filas compactas
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: detalles.length,
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    itemBuilder: (context, index) {
+                      final d = detalles[index];
+                      final mat = d['material'];
+                      final cantidad =
+                          double.tryParse(d['cantidad']?.toString() ?? '0') ??
+                          0;
+                      final precio =
+                          double.tryParse(
+                            d['precio_unitario']?.toString() ?? '0',
+                          ) ??
+                          0;
+                      final subtotalVal =
+                          double.tryParse(d['subtotal']?.toString() ?? '0') ??
+                          0;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                mat?['nombre'] ?? 'Material',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '${cantidad.toStringAsFixed(2)} x ${f.format(precio)}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                f.format(subtotalVal),
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ],
         );
 
-        final totalsSection = Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              _buildTotalRow('Subtotal', f.format(subtotal), Colors.white70),
-              const SizedBox(height: 8),
-              _buildTotalRow('ITBIS (18%)', f.format(itbis), Colors.white70),
-              const Divider(color: Colors.white24, height: 24),
-              _buildTotalRow(
-                'TOTAL',
-                f.format(total),
-                Colors.greenAccent,
-                isTotal: true,
-              ),
-            ],
-          ),
-        );
-
-        final headerSection = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // Evidencias y Documentos compactos
+        final evidenciasSection = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    'Factura #${detail['id']}',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                const Text(
+                  'DOCUMENTOS Y EVIDENCIAS',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _uploadDocumento(context, provider),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.upload_file_rounded,
+                          size: 14,
+                          color: AppTheme.accentColor,
+                        ),
+                        SizedBox(width: 3),
+                        Text(
+                          'Subir',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                if (isMaster)
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent),
-                    tooltip: 'Eliminar Compra',
-                    onPressed: () =>
-                        _confirmDeleteCompra(context, provider, detail['id']),
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.print, color: Colors.black54),
-                  tooltip: 'Imprimir Factura',
-                  onPressed: () async {
-                    final url = Uri.parse(
-                      '$host/compras/${detail['id']}/print',
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    } else {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'No se pudo abrir el enlace de impresión',
-                            ),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                ),
-                if (isBottomSheet)
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  )
-                else
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => provider.selectCompra(null),
-                    tooltip: 'Cerrar',
-                  ),
               ],
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: estadoColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: estadoColor),
-              ),
-              child: Text(
-                estado.toUpperCase(),
+            const SizedBox(height: 4),
+            if (documentos.isEmpty)
+              const Text(
+                'Sin documentos adjuntos.',
                 style: TextStyle(
-                  color: estadoColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                  fontSize: 10.5,
+                  color: Color(0xFF94A3B8),
+                  fontStyle: FontStyle.italic,
                 ),
+              )
+            else
+              Column(
+                children: documentos.map((doc) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          color: Colors.redAccent,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            doc['original_name'] ?? 'Documento',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.open_in_new_rounded,
+                            size: 14,
+                            color: Color(0xFF2563EB),
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 22,
+                            minHeight: 22,
+                          ),
+                          onPressed: () async {
+                            final url = Uri.parse(
+                              '$host/api/v1/file?path=${doc['file_path']}',
+                            );
+                            if (await canLaunchUrl(url)) await launchUrl(url);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 14,
+                            color: Colors.redAccent,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 22,
+                            minHeight: 22,
+                          ),
+                          onPressed: () => _confirmDeleteDocumento(
+                            context,
+                            provider,
+                            doc['id'],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
-            ),
-            const Divider(height: 32, color: Color(0xFFEEEEEE)),
           ],
+        );
+
+        // Bloque de Totales compacto (Moderna tarjeta oscura delgada)
+        final totalsBox = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMiniTotal('SUBTOTAL', f.format(subtotal)),
+              Container(width: 1, height: 20, color: Colors.white24),
+              _buildMiniTotal('ITBIS (18%)', f.format(itbis)),
+              Container(width: 1, height: 20, color: Colors.white24),
+              _buildMiniTotal('TOTAL', f.format(total), isHighlight: true),
+            ],
+          ),
         );
 
         if (isBottomSheet) {
           return Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                headerSection,
-                infoSection,
-                const SizedBox(height: 16),
-                totalsSection,
-              ],
-            ),
-          );
-        } else {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                headerSection,
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [infoSection, const SizedBox(height: 24)],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                totalsSection,
+                header,
+                const SizedBox(height: 8),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                const SizedBox(height: 8),
+                infoGrid,
+                const SizedBox(height: 10),
+                articulosSection,
+                const SizedBox(height: 10),
+                evidenciasSection,
+                const SizedBox(height: 10),
+                totalsBox,
               ],
             ),
           );
         }
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              header,
+              const SizedBox(height: 6),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      infoGrid,
+                      const SizedBox(height: 10),
+                      articulosSection,
+                      const SizedBox(height: 10),
+                      evidenciasSection,
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              totalsBox,
+            ],
+          ),
+        );
       },
     );
   }
 
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 14, color: Colors.grey.shade500),
-            const SizedBox(width: 6),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
+  Widget _buildCompactInfo(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF64748B),
+              letterSpacing: 0.3,
             ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-            color: Colors.black87,
           ),
-        ),
-      ],
+          const SizedBox(height: 1),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildTotalRow(
+  Widget _buildMiniTotal(
     String label,
-    String value,
-    Color color, {
-    bool isTotal = false,
+    String value, {
+    bool isHighlight = false,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: color,
-            fontSize: isTotal ? 14 : 12,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: isHighlight ? const Color(0xFF4ADE80) : Colors.white60,
+            letterSpacing: 0.3,
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            color: color,
-            fontSize: isTotal ? 18 : 13,
+            fontSize: isHighlight ? 13 : 11,
             fontWeight: FontWeight.bold,
+            color: isHighlight ? const Color(0xFF4ADE80) : Colors.white,
           ),
         ),
       ],
@@ -585,97 +713,12 @@ class CompraDetailPanel extends StatelessWidget {
     BuildContext context,
     ComprasReportProvider provider,
   ) async {
-    // We can access purchaseService directly from provider but it's private.
-    // Wait, the API call should probably be in the provider. Let's assume provider has `uploadDocument`
-    // or we can implement it there later, but for now we'll just show a snackbar saying to implement this in the provider or just let it be.
-    // Actually, since this is a UI file, I should call a method on the provider.
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        await provider.uploadDocumentoCompra(result.files.single);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Documento subido correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al subir documento: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmDeleteCompra(
-    BuildContext context,
-    ComprasReportProvider provider,
-    int id,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Eliminar Compra'),
-        content: const Text(
-          '¿Está seguro que desea eliminar esta compra?\n\n'
-          'Esta acción revertirá:\n'
-          '- La Recepción (descontará el inventario)\n'
-          '- Las Cuentas por Pagar asociadas\n'
-          '- Los Asientos Contables\n\n'
-          'Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar Compra'),
-          ),
-        ],
-      ),
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
     );
-
-    if (confirm == true) {
-      try {
-        await provider.deleteCompra(id);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Compra eliminada correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Error: ${e.toString().replaceAll('Exception:', '').trim()}',
-              ),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
-      }
+    if (result != null && result.files.single.path != null) {
+      await provider.uploadDocumentoCompra(result.files.single.path!);
     }
   }
 
@@ -686,48 +729,58 @@ class CompraDetailPanel extends StatelessWidget {
   ) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Eliminar Documento'),
-        content: const Text('¿Está seguro que desea eliminar este documento?'),
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Eliminar Documento',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          '¿Está seguro de eliminar este documento adjunto?',
+          style: TextStyle(fontSize: 12),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+    if (confirm == true) await provider.deleteDocumentoCompra(docId);
+  }
 
-    if (confirm == true) {
-      try {
-        await provider.deleteDocumentoCompra(docId);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Documento eliminado correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
+  Future<void> _confirmDeleteCompra(
+    BuildContext context,
+    ComprasReportProvider provider,
+    int compraId,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Eliminar Compra',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          '¿Está seguro de eliminar esta factura? Esta acción afectará los registros contables y de inventario.',
+          style: TextStyle(fontSize: 12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) await provider.deleteCompra(compraId);
   }
 }

@@ -1,226 +1,257 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/app_theme.dart';
 import '../../../../models/proyecto.dart';
 import '../../../../models/proveedor.dart';
+import '../../../../widgets/app_button.dart';
 import '../providers/compras_report_provider.dart';
-import '../../../../widgets/quick_date_filter.dart';
 
-class ComprasFilterSheet extends StatelessWidget {
+/// Modal ultra-compacto y ergonómico para filtrar compras.
+/// Sigue los lineamientos de diseño de [flutter-small-widgets].
+class ComprasFilterSheet extends StatefulWidget {
   const ComprasFilterSheet({super.key});
 
+  static void show(BuildContext context) {
+    final provider = context.read<ComprasReportProvider>();
+    final isDesktop = MediaQuery.of(context).size.width >= 700;
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: ChangeNotifierProvider.value(
+              value: provider,
+              child: const ComprasFilterSheet(),
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) => ChangeNotifierProvider.value(
+          value: provider,
+          child: const ComprasFilterSheet(),
+        ),
+      );
+    }
+  }
+
+  @override
+  State<ComprasFilterSheet> createState() => _ComprasFilterSheetState();
+}
+
+class _ComprasFilterSheetState extends State<ComprasFilterSheet> {
   @override
   Widget build(BuildContext context) {
-    return Consumer<ComprasReportProvider>(
-      builder: (context, provider, child) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final provider = Provider.of<ComprasReportProvider>(context);
+
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 14,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Cabecera compacta
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Filtrar Compras',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: provider.searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar comprobante, ID, orden...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                ),
-                onChanged: provider.updateSearchQuery,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<Proyecto>(
-                value: provider.selectedProyecto,
-                decoration: InputDecoration(
-                  labelText: 'Proyecto',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                items: [
-                  const DropdownMenuItem<Proyecto>(
-                    value: null,
-                    child: Text('Todos los proyectos'),
-                  ),
-                  ...provider.proyectos.map((p) => DropdownMenuItem<Proyecto>(
-                        value: p,
-                        child: Text(p.nombre),
-                      )),
-                ],
-                onChanged: provider.setProyecto,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<Proveedor>(
-                value: provider.selectedProveedor,
-                decoration: InputDecoration(
-                  labelText: 'Proveedor',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                items: [
-                  const DropdownMenuItem<Proveedor>(
-                    value: null,
-                    child: Text('Todos los proveedores'),
-                  ),
-                  ...provider.proveedores.map((p) => DropdownMenuItem<Proveedor>(
-                        value: p,
-                        child: Text(p.name),
-                      )),
-                ],
-                onChanged: provider.setProveedor,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: provider.selectedEstado,
-                decoration: InputDecoration(
-                  labelText: 'Estado',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('Todos los estados'),
-                  ),
-                  ...provider.estados.map((s) => DropdownMenuItem<String>(
-                        value: s,
-                        child: Text(s),
-                      )),
-                ],
-                onChanged: provider.setEstado,
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () async {
-                  final range = await showDateRangePicker(
-                    context: context,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                    initialDateRange: provider.selectedDateRange,
-                  );
-                  if (range != null) {
-                    provider.setDateRange(range);
-                  }
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Rango de Fechas',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        provider.selectedDateRange == null
-                            ? 'No seleccionado'
-                            : '${DateFormat('dd/MM/yy').format(provider.selectedDateRange!.start)} - ${DateFormat('dd/MM/yy').format(provider.selectedDateRange!.end)}',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      Icon(Icons.date_range, size: 20, color: Colors.grey.shade600),
-                    ],
-                  ),
+              const Text(
+                'Filtros de Compras',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
                 ),
               ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: provider.clearFilters,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black87,
-                        side: BorderSide(color: Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text('Limpiar Filtros', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text('Aplicar', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                color: const Color(0xFF64748B),
+                onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+
+          // 1. Selector Proyecto
+          _buildCompactDropdown<Proyecto?>(
+            label: 'Proyecto',
+            value: provider.selectedProyecto,
+            items: [
+              const DropdownMenuItem<Proyecto?>(
+                value: null,
+                child: Text('Todos los proyectos'),
+              ),
+              ...provider.proyectos.map((p) => DropdownMenuItem<Proyecto?>(
+                    value: p,
+                    child: Text(p.nombre),
+                  )),
+            ],
+            onChanged: (val) => provider.setProyecto(val),
+          ),
+          const SizedBox(height: 10),
+
+          // 2. Selector Proveedor
+          _buildCompactDropdown<Proveedor?>(
+            label: 'Proveedor',
+            value: provider.selectedProveedor,
+            items: [
+              const DropdownMenuItem<Proveedor?>(
+                value: null,
+                child: Text('Todos los proveedores'),
+              ),
+              ...provider.proveedores.map((p) => DropdownMenuItem<Proveedor?>(
+                    value: p,
+                    child: Text(p.name),
+                  )),
+            ],
+            onChanged: (val) => provider.setProveedor(val),
+          ),
+          const SizedBox(height: 10),
+
+          // 3. Selector Estado
+          _buildCompactDropdown<String?>(
+            label: 'Estado de Pago',
+            value: provider.selectedEstado,
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('Todos los estados'),
+              ),
+              ...provider.estados.map((s) => DropdownMenuItem<String?>(
+                    value: s,
+                    child: Text(s),
+                  )),
+            ],
+            onChanged: (val) => provider.setEstado(val),
+          ),
+          const SizedBox(height: 10),
+
+          // 4. Selector Rango de Fechas
+          InkWell(
+            onTap: () async {
+              final range = await showDateRangePicker(
+                context: context,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+                initialDateRange: provider.selectedDateRange,
+              );
+              if (range != null) {
+                provider.setDateRange(range);
+              }
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+                borderRadius: BorderRadius.circular(6),
+                color: Colors.white,
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined, size: 15, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      provider.selectedDateRange == null
+                          ? 'Cualquier fecha'
+                          : '${DateFormat('dd/MM/yy').format(provider.selectedDateRange!.start)} - ${DateFormat('dd/MM/yy').format(provider.selectedDateRange!.end)}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: provider.selectedDateRange == null
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF0F172A),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  if (provider.selectedDateRange != null)
+                    GestureDetector(
+                      onTap: () => provider.setDateRange(null),
+                      child: const Icon(Icons.clear, size: 14, color: Color(0xFF94A3B8)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Botones de acción compactos
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  text: 'Limpiar',
+                  variant: AppButtonVariant.outlined,
+                  size: AppButtonSize.compact,
+                  onPressed: () {
+                    provider.clearFilters();
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: AppButton(
+                  text: 'Aplicar',
+                  variant: AppButtonVariant.primary,
+                  size: AppButtonSize.compact,
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactDropdown<T>({
+    required String label,
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+        borderRadius: BorderRadius.circular(6),
+        color: Colors.white,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down, size: 18, color: Color(0xFF64748B)),
+          style: const TextStyle(
+            fontSize: 11.5,
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w500,
+          ),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }
