@@ -58,6 +58,18 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
     _loadProyectos();
   }
 
+  Future<void> _openCreateProject() async {
+    final created = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProjectFormScreen(),
+      ),
+    );
+    if (created == true) {
+      _loadProyectos();
+    }
+  }
+
   double _getPresupuestoTotal(Proyecto proyecto) {
     if (proyecto.totalPresupuestoConGlobales != null &&
         proyecto.totalPresupuestoConGlobales! > 0) {
@@ -119,29 +131,40 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
                   ) /
                   filteredList.length);
 
-        return RefreshIndicator(
-          onRefresh: () async => _loadProyectos(),
-          color: const Color(0xFFE31E24),
-          child: Column(
-            children: [
-              // Barra superior de filtros, búsqueda y botón nueva obra
-              _buildControlBar(totalObras),
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'fab_nueva_obra',
+            onPressed: _openCreateProject,
+            tooltip: 'Nueva Obra',
+            backgroundColor: const Color(0xFFE31E24),
+            foregroundColor: Colors.white,
+            child: const Icon(Icons.add_rounded),
+          ),
+          body: RefreshIndicator(
+            onRefresh: () async => _loadProyectos(),
+            color: const Color(0xFFE31E24),
+            child: Column(
+              children: [
+                // Barra superior de filtros y búsqueda
+                _buildControlBar(totalObras),
 
-              // Métricas rápidas (KPIs)
-              _buildKpiSummaryBar(
-                totalObras: totalObras,
-                totalPresupuesto: totalPresupuesto,
-                promedioAvance: promedioAvance,
-              ),
-
-              // Contenido principal: Grid de Cards o Estados
-              Expanded(
-                child: _buildMainContent(
-                  provider: provider,
-                  proyectos: filteredList,
+                // Métricas rápidas (KPIs)
+                _buildKpiSummaryBar(
+                  totalObras: totalObras,
+                  totalPresupuesto: totalPresupuesto,
+                  promedioAvance: promedioAvance,
                 ),
-              ),
-            ],
+
+                // Contenido principal: Grid de Cards o Estados
+                Expanded(
+                  child: _buildMainContent(
+                    provider: provider,
+                    proyectos: filteredList,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -158,92 +181,48 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              // Campo de Búsqueda moderno
-              Expanded(
-                child: Container(
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF0F172A),
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar obra, cliente o ubicación...',
-                      hintStyle: const TextStyle(
-                        fontSize: 12.5,
-                        color: Color(0xFF94A3B8),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: Color(0xFF64748B),
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 16),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 9,
-                        horizontal: 8,
-                      ),
-                    ),
-                  ),
-                ),
+          // Campo de Búsqueda moderno
+          Container(
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF0F172A),
               ),
-              const SizedBox(width: 10),
-
-              // Botón de recarga rápida
-              IconButton(
-                onPressed: _loadProyectos,
-                tooltip: 'Actualizar lista',
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                  size: 20,
+              decoration: InputDecoration(
+                hintText: 'Buscar obra, cliente o ubicación...',
+                hintStyle: const TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFF94A3B8),
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 18,
                   color: Color(0xFF64748B),
                 ),
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 16),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 9,
+                  horizontal: 8,
                 ),
               ),
-              const SizedBox(width: 10),
-
-              // Botón Crear Proyecto
-              AppButton(
-                text: 'Nueva Obra',
-                icon: Icons.add_rounded,
-                size: AppButtonSize.compact,
-                variant: AppButtonVariant.primary,
-                onPressed: () async {
-                  final created = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProjectFormScreen(),
-                    ),
-                  );
-                  if (created == true) {
-                    _loadProyectos();
-                  }
-                },
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 10),
 
@@ -541,13 +520,7 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
         description:
             'Intenta cambiar los filtros de búsqueda o crea una nueva obra para comenzar su seguimiento.',
         actionText: 'Crear Nueva Obra',
-        onAction: () async {
-          final created = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProjectFormScreen()),
-          );
-          if (created == true) _loadProyectos();
-        },
+        onAction: _openCreateProject,
       );
     }
 
@@ -555,7 +528,7 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return GridView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 460,
             mainAxisExtent: 220,

@@ -37,14 +37,14 @@ class DocumentModel {
       categoria: json['categoria'],
       filePath: json['file_path'],
       fileExtension: json['file_extension'],
-      fileSize: json['file_size'] is int 
-          ? json['file_size'] 
+      fileSize: json['file_size'] is int
+          ? json['file_size']
           : int.parse(json['file_size'].toString()),
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
           : null,
-      partida: json['partida'] != null 
-          ? Partida.fromJson(json['partida']) 
+      partida: json['partida'] != null
+          ? Partida.fromJson(json['partida'])
           : null,
     );
   }
@@ -65,5 +65,6 @@ class DocumentModel {
   }
 
   bool get isPdf => fileExtension.toLowerCase() == 'pdf';
-  bool get isImage => ['jpg', 'jpeg', 'png'].contains(fileExtension.toLowerCase());
+  bool get isImage =>
+      ['jpg', 'jpeg', 'png'].contains(fileExtension.toLowerCase());
 }
