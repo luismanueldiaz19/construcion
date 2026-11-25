@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../models/proyecto.dart';
 import '../../projects/projects_provider.dart';
-import '../../projects/project_details_screen.dart';
+import '../../projects/project_detail/project_detail_screen.dart';
 import '../../projects/project_form_screen.dart';
 import '../../../widgets/app_button.dart';
 import '../../../widgets/app_empty_state.dart';
@@ -61,9 +61,7 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
   Future<void> _openCreateProject() async {
     final created = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ProjectFormScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ProjectFormScreen()),
     );
     if (created == true) {
       _loadProyectos();
@@ -192,10 +190,7 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: (val) => setState(() => _searchQuery = val),
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF0F172A),
-              ),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: 'Buscar obra, cliente o ubicación...',
                 hintStyle: const TextStyle(
@@ -565,7 +560,7 @@ class _HomeProyectosScreenState extends State<HomeProyectosScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ProjectDetailsScreen(
+              builder: (context) => ProjectDetailScreen(
                 proyecto: proyecto,
                 onRefresh: _loadProyectos,
               ),

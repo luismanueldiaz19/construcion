@@ -80,33 +80,33 @@ class AppButton extends StatelessWidget {
   double get _height {
     switch (size) {
       case AppButtonSize.compact:
-        return 36.0;
+        return 34.0;
       case AppButtonSize.standard:
-        return 42.0;
+        return 40.0;
       case AppButtonSize.large:
-        return 50.0;
+        return 48.0;
     }
   }
 
   double get _fontSize {
     switch (size) {
       case AppButtonSize.compact:
-        return 13.0;
+        return 12.0;
       case AppButtonSize.standard:
-        return 14.0;
+        return 13.0;
       case AppButtonSize.large:
-        return 15.0;
+        return 14.5;
     }
   }
 
   double get _iconSize {
     switch (size) {
       case AppButtonSize.compact:
-        return 16.0;
+        return 15.0;
       case AppButtonSize.standard:
-        return 18.0;
+        return 17.0;
       case AppButtonSize.large:
-        return 20.0;
+        return 19.0;
     }
   }
 
@@ -163,15 +163,19 @@ class AppButton extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: _iconSize, color: textColor),
-                const SizedBox(width: 8),
+                SizedBox(width: size == AppButtonSize.compact ? 5 : 7),
               ],
-              Text(
-                text,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: _fontSize,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+              Flexible(
+                child: Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: _fontSize,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
             ],
@@ -182,18 +186,18 @@ class AppButton extends StatelessWidget {
       foregroundColor: textColor,
       disabledBackgroundColor: bgColor.withValues(alpha: 0.55),
       disabledForegroundColor: textColor.withValues(alpha: 0.7),
-      elevation: variant == AppButtonVariant.primary ? 4 : 0,
+      elevation: variant == AppButtonVariant.primary ? 2 : 0,
       shadowColor: variant == AppButtonVariant.primary
-          ? AppTheme.accentColor.withValues(alpha: 0.4)
+          ? AppTheme.accentColor.withValues(alpha: 0.35)
           : Colors.transparent,
       minimumSize: Size(isFullWidth ? double.infinity : 0, _height),
       padding: EdgeInsets.symmetric(
-        horizontal: size == AppButtonSize.compact ? 12 : 20,
+        horizontal: size == AppButtonSize.compact ? 10 : 16,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
         side: variant == AppButtonVariant.outlined
-            ? BorderSide(color: bgColor, width: 1.5)
+            ? BorderSide(color: textColor.withValues(alpha: 0.4), width: 1.2)
             : BorderSide.none,
       ),
     );

@@ -4,6 +4,7 @@ import '../../../models/partida.dart';
 import '../../../models/proyecto.dart';
 import '../../../models/subpartida.dart';
 import '../../../services/project_service.dart';
+import '../../../widgets/app_alert.dart';
 
 class ProjectFormProvider extends ChangeNotifier {
   final ProjectService _projectService = ProjectService();
@@ -27,7 +28,29 @@ class ProjectFormProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> partidas = [];
 
+  int get totalSubpartidas => partidas.fold<int>(
+        0,
+        (sum, p) => sum + (p['subpartidas'] as List).length,
+      );
+
+  bool get hasUnsavedChanges =>
+      nombreController.text.trim().isNotEmpty ||
+      ubicacionController.text.trim().isNotEmpty ||
+      notasController.text.trim().isNotEmpty ||
+      selectedClient != null ||
+      partidas.isNotEmpty;
+
+  double partidaSubtotal(int pIndex) {
+    if (pIndex < 0 || pIndex >= partidas.length) return 0;
+    double total = 0;
+    for (final s in (partidas[pIndex]['subpartidas'] as List)) {
+      total += (s['cantidad'] as double) * (s['costo_unitario'] as double);
+    }
+    return total;
+  }
+
   void setStep(int step) {
+    if (step < 0 || step > 2 || step == currentStep) return;
     currentStep = step;
     notifyListeners();
   }
@@ -66,6 +89,36 @@ class ProjectFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Map<String, dynamic> _normalizePartidaUppercase(
+    Map<String, dynamic> partida,
+  ) {
+    final subs = (partida['subpartidas'] as List? ?? []).map((s) {
+      final sub = Map<String, dynamic>.from(s as Map);
+      sub['descripcion'] =
+          (sub['descripcion']?.toString() ?? '').trim().toUpperCase();
+      final ud = (sub['unidad']?.toString() ?? 'GL').trim().toUpperCase();
+      sub['unidad'] = ud.isEmpty ? 'GL' : ud;
+      return sub;
+    }).toList();
+
+    return {
+      ...partida,
+      'descripcion':
+          (partida['descripcion']?.toString() ?? '').trim().toUpperCase(),
+      'subpartidas': subs,
+    };
+  }
+
+  void savePartidaData(Map<String, dynamic> partidaData, {int? editIndex}) {
+    final normalized = _normalizePartidaUppercase(partidaData);
+    if (editIndex != null && editIndex >= 0 && editIndex < partidas.length) {
+      partidas[editIndex] = normalized;
+    } else {
+      partidas.add(normalized);
+    }
+    notifyListeners();
+  }
+
   void addPartida() {
     partidas.add({
       'descripcion': '',
@@ -100,24 +153,24 @@ class ProjectFormProvider extends ChangeNotifier {
         (partidas.first['subpartidas'] as List).first['descripcion']
             .toString()
             .isEmpty) {
-      // If the current list only has the default empty item, replace it
       partidas.clear();
       notifyListeners();
     }
 
-    // Chunking the rendering to prevent UI freeze on very large lists
+    final normalizedImport =
+        importedPartidas.map(_normalizePartidaUppercase).toList();
+
     const chunkSize = 5;
-    for (var i = 0; i < importedPartidas.length; i += chunkSize) {
-      final end = (i + chunkSize < importedPartidas.length)
+    for (var i = 0; i < normalizedImport.length; i += chunkSize) {
+      final end = (i + chunkSize < normalizedImport.length)
           ? i + chunkSize
-          : importedPartidas.length;
-      partidas.addAll(importedPartidas.sublist(i, end));
+          : normalizedImport.length;
+      partidas.addAll(normalizedImport.sublist(i, end));
 
       suggestItbis();
       suggestTransporte();
       notifyListeners();
 
-      // Yield to the UI thread to render the chunk and keep animations smooth
       await Future.delayed(const Duration(milliseconds: 30));
     }
   }
@@ -151,8 +204,8 @@ class ProjectFormProvider extends ChangeNotifier {
 
   double get subtotal {
     double total = 0;
-    for (var p in partidas) {
-      for (var s in (p['subpartidas'] as List)) {
+    for (final p in partidas) {
+      for (final s in (p['subpartidas'] as List)) {
         total += (s['cantidad'] as double) * (s['costo_unitario'] as double);
       }
     }
@@ -182,18 +235,25 @@ class ProjectFormProvider extends ChangeNotifier {
   }
 
   Future<bool> saveProject(BuildContext context) async {
-    if (!formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, completa todos los campos requeridos.'),
-        ),
+    final isValid = formKey.currentState?.validate() ?? false;
+    if (!isValid || nombreController.text.trim().isEmpty) {
+      currentStep = 0;
+      notifyListeners();
+      AppAlert.showToast(
+        context,
+        'Completa el nombre y los campos requeridos en Información.',
+        type: AppAlertType.warning,
       );
       return false;
     }
 
     if (partidas.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes agregar al menos una partida.')),
+      currentStep = 1;
+      notifyListeners();
+      AppAlert.showToast(
+        context,
+        'Debes agregar al menos una partida en Presupuesto.',
+        type: AppAlertType.warning,
       );
       return false;
     }
@@ -203,10 +263,10 @@ class ProjectFormProvider extends ChangeNotifier {
 
     try {
       final proyecto = Proyecto(
-        nombre: nombreController.text,
+        nombre: nombreController.text.trim().toUpperCase(),
         cliente: selectedClient?.name ?? '',
         clientId: selectedClient?.id,
-        ubicacion: ubicacionController.text,
+        ubicacion: ubicacionController.text.trim().toUpperCase(),
         fechaInicio: fechaInicio,
         fechaFin: fechaFin,
         presupuestoEstimado: subtotal,
@@ -215,15 +275,17 @@ class ProjectFormProvider extends ChangeNotifier {
         supervisionTecnica: double.tryParse(supervisionController.text) ?? 0,
         otrosCostos: double.tryParse(otrosCostosController.text) ?? 0,
         estado: estado,
-        notas: notasController.text,
+        notas: notasController.text.trim().toUpperCase(),
         partidas: partidas.map((p) {
           return Partida(
             codigo: '',
-            descripcion: p['descripcion'],
+            descripcion: (p['descripcion']?.toString() ?? '').trim().toUpperCase(),
             subpartidas: (p['subpartidas'] as List).map((s) {
+              final ud = (s['unidad']?.toString() ?? 'GL').trim().toUpperCase();
               return Subpartida(
-                descripcion: s['descripcion'],
-                unidad: s['unidad'],
+                descripcion:
+                    (s['descripcion']?.toString() ?? '').trim().toUpperCase(),
+                unidad: ud.isEmpty ? 'GL' : ud,
                 cantidad: s['cantidad'],
                 costoUnitario: s['costo_unitario'],
                 totalPresupuestado: s['cantidad'] * s['costo_unitario'],
@@ -236,9 +298,13 @@ class ProjectFormProvider extends ChangeNotifier {
       await _projectService.createProyecto(proyecto);
       return true;
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (context.mounted) {
+        AppAlert.showToast(
+          context,
+          'Error al guardar: $e',
+          type: AppAlertType.error,
+        );
+      }
       return false;
     } finally {
       isLoading = false;

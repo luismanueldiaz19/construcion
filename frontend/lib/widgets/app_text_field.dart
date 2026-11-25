@@ -6,13 +6,18 @@ import '../core/app_theme.dart';
 /// iconos integrados, toggle de visibilidad para contraseñas y validaciones limpias.
 class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
+  final String? initialValue;
   final String? hintText;
   final String? labelText;
+  final String? prefixText;
   final Widget? prefixIcon;
   final IconData? prefixIconData;
   final Widget? suffixIcon;
   final bool isPassword;
   final bool isDark;
+  final bool isDense;
+  final bool uppercase;
+  final TextAlign textAlign;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final String? Function(String?)? validator;
@@ -27,13 +32,18 @@ class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
     this.controller,
+    this.initialValue,
     this.hintText,
     this.labelText,
+    this.prefixText,
     this.prefixIcon,
     this.prefixIconData,
     this.suffixIcon,
     this.isPassword = false,
     this.isDark = false,
+    this.isDense = true,
+    this.uppercase = false,
+    this.textAlign = TextAlign.start,
     this.keyboardType,
     this.inputFormatters,
     this.validator,
@@ -42,7 +52,7 @@ class AppTextField extends StatefulWidget {
     this.maxLines = 1,
     this.readOnly = false,
     this.onTap,
-    this.borderRadius = 12.0,
+    this.borderRadius = 10.0,
     this.contentPadding,
   });
 
@@ -113,36 +123,66 @@ class _AppTextFieldState extends State<AppTextField> {
       borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
     );
 
+    final effectiveFormatters = <TextInputFormatter>[
+      ...?widget.inputFormatters,
+      if (widget.uppercase) const _UpperCaseTextFormatter(),
+    ];
+
     return TextFormField(
       controller: widget.controller,
+      initialValue: widget.controller == null ? widget.initialValue : null,
       obscureText: _obscureText,
+      textAlign: widget.textAlign,
+      textCapitalization: widget.uppercase
+          ? TextCapitalization.characters
+          : TextCapitalization.none,
       keyboardType: widget.keyboardType,
-      inputFormatters: widget.inputFormatters,
+      inputFormatters:
+          effectiveFormatters.isEmpty ? null : effectiveFormatters,
       validator: widget.validator,
       onChanged: widget.onChanged,
       onFieldSubmitted: widget.onFieldSubmitted,
       maxLines: widget.maxLines,
       readOnly: widget.readOnly,
       onTap: widget.onTap,
-      style: TextStyle(color: textColor, fontSize: 14),
+      style: TextStyle(color: textColor, fontSize: 13),
       decoration: InputDecoration(
         labelText: widget.labelText,
-        labelStyle: TextStyle(color: hintColor, fontSize: 13),
+        labelStyle: TextStyle(color: hintColor, fontSize: 12),
         hintText: widget.hintText,
-        hintStyle: TextStyle(color: hintColor, fontSize: 13),
+        hintStyle: TextStyle(color: hintColor, fontSize: 12.5),
+        prefixText: widget.prefixText,
+        prefixStyle: TextStyle(
+          color: hintColor,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+        ),
         prefixIcon: prefix,
         suffixIcon: suffix,
         filled: true,
         fillColor: fillColor,
+        isDense: widget.isDense,
         contentPadding: widget.contentPadding ??
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         border: border,
         enabledBorder: border,
         focusedBorder: focusedBorder,
         errorBorder: errorBorder,
         focusedErrorBorder: errorBorder,
-        errorStyle: const TextStyle(fontSize: 11.5, color: Colors.redAccent),
+        errorStyle: const TextStyle(fontSize: 11.0, color: Colors.redAccent),
       ),
     );
+  }
+}
+
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  const _UpperCaseTextFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
   }
 }
