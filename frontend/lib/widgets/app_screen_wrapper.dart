@@ -162,29 +162,52 @@ class _ScreenHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleWidget = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final bool canPop = Navigator.canPop(context);
+    final titleWidget = Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
-            letterSpacing: 0.2,
+        if (canPop) ...[
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: AppTheme.textPrimary,
+              size: 20,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+            tooltip: 'Atrás',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: const TextStyle(
+                    fontSize: 12.0,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle!,
-            style: const TextStyle(
-              fontSize: 12.0,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
       ],
     );
 

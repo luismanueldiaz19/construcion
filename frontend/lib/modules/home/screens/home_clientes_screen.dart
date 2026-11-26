@@ -8,8 +8,8 @@ import '../../../widgets/app_confirm_dialog.dart';
 import '../../../widgets/app_empty_state.dart';
 import '../../../widgets/app_status_badge.dart';
 import '../../../widgets/app_text_field.dart';
+import '../../../widgets/cliente_dialog.dart';
 import '../../clients/widgets/client_detail_sheet.dart';
-import '../../clients/widgets/client_form_screen.dart';
 
 /// Directorio moderno y compacto de Clientes dentro del Home unificado.
 class HomeClientesScreen extends StatefulWidget {
@@ -89,11 +89,12 @@ class _HomeClientesScreenState extends State<HomeClientesScreen> {
   }
 
   Future<void> _openForm([Client? client]) async {
-    final saved = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => ClientFormScreen(client: client)),
+    final saved = await showDialog<Client>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ClienteDialog(client: client),
     );
-    if (saved == true) {
+    if (saved != null) {
       _loadClients();
     }
   }

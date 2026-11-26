@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Documento;
 use App\Models\Proyecto;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -38,9 +39,16 @@ class DocumentoController extends Controller
 
         $proyectoId = $request->proyecto_id;
         $file = $request->file('archivo');
+        $ext = strtolower($file->getClientOriginalExtension());
         
-        // Generar ruta: proyectos/{id}/documentos/{tipo}
-        $path = $file->store("proyectos/{$proyectoId}/documentos", 'public');
+        $folder = "proyectos/{$proyectoId}/documentos";
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+            $path = ImageOptimizer::optimizeAndStore($file, $folder, 'public');
+            $fileSize = Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : $file->getSize();
+        } else {
+            $path = $file->store($folder, 'public');
+            $fileSize = $file->getSize();
+        }
 
         $documento = Documento::create([
             'proyecto_id' => $proyectoId,
@@ -49,8 +57,8 @@ class DocumentoController extends Controller
             'tipo' => $request->tipo,
             'categoria' => $request->categoria,
             'file_path' => $path,
-            'file_extension' => $file->getClientOriginalExtension(),
-            'file_size' => $file->getSize(),
+            'file_extension' => $ext,
+            'file_size' => $fileSize,
         ]);
 
         return response()->json([

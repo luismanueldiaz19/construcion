@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Proyecto;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProyectoController extends Controller
 {
@@ -170,7 +172,7 @@ class ProyectoController extends Controller
     public function uploadLogo(Request $request, $id)
     {
         $request->validate([
-            'logo' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:15360', // 15MB max
+            'logo' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:35840', // 35MB max (comprimido automáticamente)
         ]);
 
         $proyecto = Proyecto::findOrFail($id);
@@ -178,21 +180,26 @@ class ProyectoController extends Controller
         if ($request->hasFile('logo')) {
             // Eliminar logo anterior si existe
             if ($proyecto->logo_path) {
-                \Storage::disk('public')->delete($proyecto->logo_path);
+                Storage::disk('public')->delete($proyecto->logo_path);
             }
 
             $year = date('Y');
             $folder = "proyectos/{$year}/{$id}";
-            $extension = $request->file('logo')->getClientOriginalExtension();
-            $filename = 'logo-' . time() . '.' . $extension;
             
-            $path = $request->file('logo')->storeAs($folder, $filename, 'public');
+            // Optimiza y recomprime la imagen (reduciendo archivos de 20MB a ~150KB-300KB)
+            $path = ImageOptimizer::optimizeAndStore(
+                $request->file('logo'),
+                $folder,
+                'public',
+                1600, // Dimensión máxima proporcional
+                80    // Calidad de compresión
+            );
             $proyecto->update(['logo_path' => $path]);
 
             return response()->json([
                 'message' => 'Logo subido correctamente',
                 'logo_path' => $path,
-                'logo_url' => \Storage::url($path)
+                'logo_url' => Storage::url($path)
             ]);
         }
 

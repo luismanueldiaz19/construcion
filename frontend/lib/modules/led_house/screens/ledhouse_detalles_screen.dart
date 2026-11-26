@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../../core/constants.dart';
 import '../../../core/app_theme.dart';
 import '../providers/ledhouse_provider.dart';
 import '../componentes/ganancia_neta_chart_widget.dart';
@@ -25,7 +23,6 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
 
   String? _startDate;
   String? _endDate;
-  String _selectedRange = 'Todo el año';
   String _selectedModuloFilter = 'TODOS';
   final currencyFormatter = NumberFormat.currency(
     symbol: '\$',
@@ -60,7 +57,6 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
 
   void _applyQuickFilter(String range) {
     setState(() {
-      _selectedRange = range;
       final now = DateTime.now();
 
       const meses = [
@@ -243,6 +239,7 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
   }
 
   Widget _buildHeader(LedhouseProvider provider) {
+    final bool canPop = Navigator.canPop(context);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -251,9 +248,22 @@ class _LedhouseDetallesScreenState extends State<LedhouseDetallesScreen> {
           colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        canPop ? 12 : 24,
+        MediaQuery.of(context).padding.top + 16,
+        16,
+        16,
+      ),
       child: Row(
         children: [
+          if (canPop) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+              tooltip: 'Regresar',
+            ),
+            const SizedBox(width: 8),
+          ],
           Container(
             width: 44,
             height: 44,

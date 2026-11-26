@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PagoCliente;
 use App\Models\CatalogoCuenta;
 use App\Services\AsientoService;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +28,7 @@ class PagoClienteController extends Controller
             'metodo_pago' => 'required|string',
             'banco_id' => 'nullable|exists:catalogo_cuentas,id',
             'comentario' => 'nullable|string',
-            'comprobante' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+            'comprobante' => 'nullable|file|mimes:jpeg,png,jpg,pdf,webp|max:35840',
         ]);
 
         return DB::transaction(function () use ($validated, $request) {
@@ -50,7 +51,11 @@ class PagoClienteController extends Controller
             
             $comprobantePath = null;
             if ($request->hasFile('comprobante')) {
-                $comprobantePath = $request->file('comprobante')->store('comprobantes_pagos', 'public');
+                $comprobantePath = ImageOptimizer::optimizeAndStore(
+                    $request->file('comprobante'),
+                    'comprobantes_pagos',
+                    'public'
+                );
             }
 
             // 1. Determinar cuentas

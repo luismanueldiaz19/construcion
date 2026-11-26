@@ -9,6 +9,7 @@ use App\Models\CatalogoCuenta;
 use App\Models\CuentaPorPagar;
 use App\Models\PagoCompra;
 use App\Services\AsientoService;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -233,13 +234,13 @@ class CompraController extends Controller
         $compra = Compra::findOrFail($id);
 
         $request->validate([
-            'documento' => 'required|file|mimes:pdf,jpeg,png,jpg|max:15360',
+            'documento' => 'required|file|mimes:pdf,jpeg,png,jpg,webp|max:35840',
         ]);
 
         if ($request->hasFile('documento')) {
             $file = $request->file('documento');
             $originalName = $file->getClientOriginalName();
-            $path = $file->store('compras_documentos', 'public');
+            $path = ImageOptimizer::optimizeAndStore($file, 'compras_documentos', 'public');
 
             $compra->documentos()->create([
                 'file_path' => $path,

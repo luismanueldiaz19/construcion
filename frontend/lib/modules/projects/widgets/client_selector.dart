@@ -6,7 +6,7 @@ import '../../../widgets/app_button.dart';
 import '../../../widgets/app_empty_state.dart';
 import '../../../widgets/app_status_badge.dart';
 import '../../../widgets/app_text_field.dart';
-import '../../clients/screens/clients_screen.dart';
+import '../../../widgets/cliente_dialog.dart';
 
 /// Selector compacto de cliente con modal de búsqueda y creación rápida.
 class ClientSelector extends StatelessWidget {
@@ -164,13 +164,16 @@ class _ClientSearchModalState extends State<_ClientSearchModal> {
 
   Future<void> _openCreateClient() async {
     FocusScope.of(context).unfocus();
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ClientsScreen(autoOpenAdd: true),
-      ),
+    final created = await showDialog<Client>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const ClienteDialog(),
     );
-    _loadClients(_searchController.text);
+    if (created != null) {
+      widget.onSelected(created);
+    } else {
+      _loadClients(_searchController.text);
+    }
   }
 
   @override

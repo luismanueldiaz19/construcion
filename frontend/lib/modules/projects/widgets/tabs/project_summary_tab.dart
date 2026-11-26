@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants.dart';
+import '../../../../core/utils/image_compressor.dart';
 import '../../../../widgets/custom_text_field.dart';
 import '../../../../widgets/custom_button.dart';
 import '../../providers/project_details_provider.dart';
@@ -94,7 +95,7 @@ class ProjectSummaryTab extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              proyecto.nombre ?? '',
+                              proyecto.nombre,
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontSize: 28,
@@ -126,7 +127,7 @@ class ProjectSummaryTab extends StatelessWidget {
                 Expanded(
                   child: _buildInfoColumn(
                     'Cliente',
-                    proyecto.cliente ?? 'N/A',
+                    proyecto.cliente.isNotEmpty ? proyecto.cliente : 'N/A',
                     Colors.black87,
                     icon: Icons.person_outline,
                   ),
@@ -177,7 +178,7 @@ class ProjectSummaryTab extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            proyecto.estado ?? '',
+                            proyecto.estado,
                             style: TextStyle(
                               color: _getEstadoColor(proyecto.estado),
                               fontSize: 13,
@@ -418,18 +419,29 @@ class ProjectSummaryTab extends StatelessWidget {
     final proyecto = provider.proyecto!;
     return GestureDetector(
       onTap: () async {
+        final compressedImage = await ImageCompressor.pickAndCompressWithModal(context);
+        if (compressedImage == null) return;
+
         try {
-          await provider.pickAndUploadLogo();
+          await provider.pickAndUploadLogo(preselectedImage: compressedImage);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Logo actualizado correctamente')),
+              const SnackBar(
+                content: Text('Foto / Logo optimizado y subido correctamente'),
+                backgroundColor: Color(0xFF16A34A),
+                behavior: SnackBarBehavior.floating,
+              ),
             );
           }
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(e.toString())));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error al subir: $e'),
+                backgroundColor: const Color(0xFFDC2626),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
         }
       },

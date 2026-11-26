@@ -79,12 +79,15 @@ class ProjectDetailsProvider extends ChangeNotifier {
 
 
 
-  Future<void> pickAndUploadLogo() async {
+  Future<void> pickAndUploadLogo({ImageSource source = ImageSource.gallery, XFile? preselectedImage}) async {
     if (_proyecto == null) return;
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    final XFile? image = preselectedImage ??
+        await _picker.pickImage(
+          source: source,
+          imageQuality: 80,
+          maxWidth: 1600,
+          maxHeight: 1600,
+        );
     if (image != null) {
       _setLoading(true);
       try {

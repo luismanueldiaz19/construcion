@@ -270,6 +270,7 @@ class _CuentaCatalogoScreenState extends State<CuentaCatalogoScreen>
   }
 
   Widget _buildHeader(int total, bool isLoading) {
+    final bool canPop = Navigator.canPop(context);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -278,9 +279,22 @@ class _CuentaCatalogoScreenState extends State<CuentaCatalogoScreen>
           colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        canPop ? 12 : 24,
+        MediaQuery.of(context).padding.top + 16,
+        16,
+        16,
+      ),
       child: Row(
         children: [
+          if (canPop) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+              tooltip: 'Regresar',
+            ),
+            const SizedBox(width: 8),
+          ],
           Container(
             width: 44,
             height: 44,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_theme.dart';
+import '../../../models/client.dart';
+import '../../../widgets/cliente_dialog.dart';
 import '../providers/clients_provider.dart';
 import '../widgets/client_metrics_cards.dart';
 import '../widgets/client_filter_sheet.dart';
@@ -61,66 +63,25 @@ class _ClientsScreenContentState extends State<_ClientsScreenContent> {
     super.dispose();
   }
 
-  void _showFormBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> _onCreateClientPressed(BuildContext context, bool isLargeScreen) async {
+    final created = await showDialog<Client>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      constraints: const BoxConstraints(maxWidth: 700),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return ChangeNotifierProvider.value(
-          value: context.read<ClientsProvider>(),
-          child: Builder(
-            builder: (sheetContext) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-                ),
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: ClientForm(
-                        isBottomSheet: true,
-                        onCancel: () {
-                          sheetContext.read<ClientsProvider>().cancelForm();
-                          Navigator.pop(sheetContext);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    ).then((_) {
-      if (mounted) {
-        context.read<ClientsProvider>().cancelForm();
-      }
-    });
-  }
-
-  void _onCreateClientPressed(BuildContext context, bool isLargeScreen) {
-    final provider = context.read<ClientsProvider>();
-    provider.startAddingClient();
-    if (!isLargeScreen) {
-      _showFormBottomSheet(context);
+      barrierDismissible: false,
+      builder: (ctx) => const ClienteDialog(),
+    );
+    if (created != null && mounted) {
+      this.context.read<ClientsProvider>().loadClients();
     }
   }
 
-  void _onEditClientPressed(BuildContext context, client, bool isLargeScreen) {
-    final provider = context.read<ClientsProvider>();
-    provider.selectClientForEdit(client);
-    if (!isLargeScreen) {
-      _showFormBottomSheet(context);
+  Future<void> _onEditClientPressed(BuildContext context, Client client, bool isLargeScreen) async {
+    final updated = await showDialog<Client>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => ClienteDialog(client: client),
+    );
+    if (updated != null && mounted) {
+      this.context.read<ClientsProvider>().loadClients();
     }
   }
 

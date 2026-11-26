@@ -515,6 +515,7 @@ class _LedhouseClientesScreenState extends State<LedhouseClientesScreen>
   }
 
   Widget _buildHeader(int total) {
+    final bool canPop = Navigator.canPop(context);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -523,9 +524,22 @@ class _LedhouseClientesScreenState extends State<LedhouseClientesScreen>
           colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        canPop ? 12 : 24,
+        MediaQuery.of(context).padding.top + 16,
+        16,
+        16,
+      ),
       child: Row(
         children: [
+          if (canPop) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+              tooltip: 'Regresar',
+            ),
+            const SizedBox(width: 8),
+          ],
           // Icono decorativo
           Container(
             width: 44,

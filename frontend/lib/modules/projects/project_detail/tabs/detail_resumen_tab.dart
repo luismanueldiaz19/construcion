@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/app_theme.dart';
 import '../../../../core/constants.dart';
+import '../../../../core/utils/image_compressor.dart';
 import '../../../../widgets/app_alert.dart';
 import '../../../../widgets/app_confirm_dialog.dart';
 import '../../../../widgets/app_status_badge.dart';
@@ -90,12 +91,15 @@ class DetailResumenTab extends StatelessWidget {
     BuildContext context,
     ProjectDetailProvider provider,
   ) async {
+    final image = await ImageCompressor.pickAndCompressWithModal(context);
+    if (image == null) return;
+
     try {
-      final uploaded = await provider.pickAndUploadLogo();
+      final uploaded = await provider.pickAndUploadLogo(preselectedImage: image);
       if (uploaded && context.mounted) {
         AppAlert.showToast(
           context,
-          'Logo actualizado correctamente.',
+          'Logo optimizado y actualizado correctamente.',
           type: AppAlertType.success,
         );
       }
